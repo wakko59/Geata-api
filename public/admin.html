@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Gate Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      color: #222;
+    }
+    header {
+      background: #333;
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+    }
+    main {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 16px;
+    }
+    section {
+      background: #fff;
+      border-radius: 6px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 12px;
+    }
+    section h2 {
+      margin-top: 0;
+      font-size: 16px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+    }
+    h3 {
+      margin-top: 10px;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    label {
+      display: block;
+      margin: 4px 0 2px;
+      font-size: 13px;
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="date"],
+    input[type="time"],
+    input[type="number"],
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 13px;
+    }
+    button {
+      padding: 6px 10px;
+      font-size: 13px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #eee;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    button.primary {
+      background: #007bff;
+      border-color: #007bff;
+      color: #fff;
+    }
+    button.danger {
+      background: #dc3545;
+      border-color: #dc3545;
+      color: #fff;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .row > div {
+      flex: 1;
+      min-width: 120px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 4px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    .small {
+      font-size: 12px;
+      color: #666;
+    }
+    #status {
+      font-size: 12px;
+      color: #fff;
+    }
+    #devicesList {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .device-item {
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 3px;
+    }
+    .device-item.selected {
+      background: #007bff;
+      color: #fff;
+    }
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Gate Admin Panel</h1>
+  <div style="font-size: 12px;">
+    <span id="status">Idle</span>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT COLUMN -->
+  <div>
+    <section>
+      <h2>Admin API Key</h2>
+      <label for="apiKey">x-api-key</label>
+      <input type="password" id="apiKey" placeholder="Enter admin API key" />
+      <button id="saveApiKeyBtn">Save</button>
+      <p class="small">
+        This key must match <code>ADMIN_API_KEY</code> from your server.
+        It is stored in <code>localStorage</code> on this browser.
+      </p>
+    </section>
+
+    <section>
+      <h2>Devices</h2>
+      <button id="refreshDevicesBtn">Refresh Devices</button>
+      <div id="devicesList"></div>
+
+      <hr />
+
+      <h3>Add New Device</h3>
+      <label for="newDeviceId">Device ID</label>
+      <input type="text" id="newDeviceId" placeholder="e.g. gate3" />
+
+      <label for="newDeviceName">Device Name</label>
+      <input type="text" id="newDeviceName" placeholder="e.g. Side Gate" />
+
+      <button id="addDeviceBtn" class="primary">Create Device</button>
+      <p class="small">
+        Uses <code>POST /devices</code> with your admin API key.
+      </p>
+    </section>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+    <section>
+      <h2>Device Users</h2>
+      <div class="small">
+        Selected device: <span id="selectedDeviceLabel">None</span>
+      </div>
+
+      <!-- Create/Re-use user & attach -->
+      <h3 style="margin-top:10px;">Create New User &amp; Attach</h3>
+      <p class="small">
+        Use this for <strong>both</strong> new and existing users. If the email already exists,
+        it will re-use that user and simply attach them to this device.
+      </p>
+      <div class="row" style="margin-top:4px;">
+  <div>
+    <label for="newUserName">Name</label>
+    <input type="text" id="newUserName" placeholder="e.g. Driver 2" />
+  </div>
+  <div>
+    <label for="newUserPhone">Phone</label>
+    <input type="text" id="newUserPhone" placeholder="e.g. 0871234567 or +353871234567" />
+  </div>
+</div>
+<div class="row">
+  <div>
+    <label for="newUserEmail">Email (optional)</label>
+    <input type="text" id="newUserEmail" placeholder="optional" />
+  </div>
+  <div>
+    <label for="newUserPassword">Password (optional)</label>
+    <input type="password" id="newUserPassword" placeholder="temporary password" />
+  </div>
+</div>
+      <div class="row">
+        <div>
+          <label for="newUserRole">Role</label>
+          <select id="newUserRole">
+            <option value="operator">operator</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+      </div>
+      <button id="createAttachUserBtn" class="primary">
+        Create/Re-use User &amp; Attach to Selected Device
+      </button>
+      <p class="small">
+        Uses <code>POST /devices/:id/users</code> with <code>{ name, email, phone, password, role }</code>.
+        If that email already exists, the user is reused and attached to this gate.
+      </p>
+
+      <hr />
+
+      <h3>Bulk Import from CSV</h3>
+      <p class="small">
+        CSV columns (header row required): <code>name,email,phone,role</code>.<br />
+        <code>role</code> can be <code>admin</code> or <code>operator</code> (default is operator).
+      </p>
+      <input type="file" id="csvFileInput" accept=".csv,text/csv" />
+      <button id="importCsvBtn">Import CSV for Selected Device</button>
+      <p class="small">
+        Parsed in the browser and sent to <code>POST /devices/:id/users/import</code>.
+      </p>
+
+      <!-- Users table -->
+      <table id="deviceUsersTable">
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Role</th>
+            <th>Edit</th>
+            <th>Schedule</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Edit Selected User on Device</h3>
+      <div class="small">
+        Selected user: <span id="editUserLabel">None</span>
+      </div>
+
+      <div class="row" style="margin-top:6px;">
+        <div>
+          <label for="editUserName">Name</label>
+          <input type="text" id="editUserName" />
+        </div>
+        <div>
+          <label for="editUserEmail">Email</label>
+          <input type="text" id="editUserEmail" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="editUserPhone">Phone</label>
+          <input type="text" id="editUserPhone" />
+        </div>
+        <div>
+          <label for="editUserPassword">New Password (optional)</label>
+          <input type="password" id="editUserPassword" placeholder="leave blank to keep" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="editUserRole">Role</label>
+          <select id="editUserRole">
+            <option value="operator">operator</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+      </div>
+      <button id="saveUserChangesBtn" class="primary">Save User Changes</button>
+      <p class="small">
+        Uses <code>PUT /devices/:id/users/:userId</code>. Password only changes if you fill it in.
+      </p>
+    </section>
+
+    <section>
+      <h2>User Schedule for Device</h2>
+      <div class="small">
+        Device: <span id="schedDeviceLabel">None</span> |
+        User: <span id="schedUserLabel">None</span>
+      </div>
+
+      <div class="row" style="margin-top:6px;">
+        <div>
+          <label for="schedActiveFrom">Active From (YYYY-MM-DD)</label>
+          <input type="date" id="schedActiveFrom" />
+        </div>
+        <div>
+          <label for="schedActiveTo">Active To (YYYY-MM-DD)</label>
+          <input type="date" id="schedActiveTo" />
+        </div>
+      </div>
+
+      <label>Days of Week</label>
+      <div class="row">
+        <label><input type="checkbox" class="sched-day" value="1" /> Mon</label>
+        <label><input type="checkbox" class="sched-day" value="2" /> Tue</label>
+        <label><input type="checkbox" class="sched-day" value="3" /> Wed</label>
+        <label><input type="checkbox" class="sched-day" value="4" /> Thu</label>
+        <label><input type="checkbox" class="sched-day" value="5" /> Fri</label>
+        <label><input type="checkbox" class="sched-day" value="6" /> Sat</label>
+        <label><input type="checkbox" class="sched-day" value="0" /> Sun</label>
+      </div>
+
+      <label>Time Windows (optional, up to 2)</label>
+      <div class="row">
+        <div>
+          <label>Window 1 Start</label>
+          <input type="time" id="win1Start" />
+        </div>
+        <div>
+          <label>Window 1 End</label>
+          <input type="time" id="win1End" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Window 2 Start</label>
+          <input type="time" id="win2Start" />
+        </div>
+        <div>
+          <label>Window 2 End</label>
+          <input type="time" id="win2End" />
+        </div>
+      </div>
+
+      <button id="loadScheduleBtn">Load Schedule</button>
+      <button id="saveScheduleBtn" class="primary">Save Schedule</button>
+
+      <p class="small">
+        No rule = 24/7 access. You can also date-bound access without time windows.
+      </p>
+    </section>
+
+    <section>
+      <h2>Recent Commands</h2>
+      <button id="refreshCommandsBtn">Refresh Commands</button>
+      <table id="commandsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Device</th>
+            <th>User</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Requested</th>
+            <th>Completed</th>
+            <th>Result</th>
+            <th>Duration (ms)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="small">
+        Uses <code>GET /commands</code>. This is your audit/log view.
+      </p>
+    </section>
+
+    <section>
+      <h2>User Lookup</h2>
+      <p class="small">
+        Search by name, email or phone to see which gates a user is enabled on.
+        You can also delete redundant users (those not attached to any devices).
+      </p>
+
+      <div class="row">
+        <div>
+          <label for="userSearchInput">Search</label>
+          <input type="text" id="userSearchInput" placeholder="e.g. driver, email, phone" />
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px;">
+          <button id="userSearchBtn">Search</button>
+          <button id="userShowAllBtn">Show All</button>
+        </div>
+      </div>
+
+      <table id="usersOverviewTable">
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Devices (gate(role))</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="small">
+        Uses <code>GET /users</code> (with optional <code>?q=</code>).
+      </p>
+    </section>
+  </div>
+</main>
+
+<script>
+  let apiKey = '';
+  let devices = [];
+  let selectedDeviceId = null;
+  let selectedScheduleUserId = null;
+  let selectedEditUser = null;
+
+  const statusEl = document.getElementById('status');
+  const apiKeyInput = document.getElementById('apiKey');
+
+  function setStatus(msg) {
+    statusEl.textContent = msg;
+  }
+
+  function loadApiKeyFromStorage() {
+    const stored = localStorage.getItem('adminApiKey');
+    if (stored) {
+      apiKey = stored;
+      apiKeyInput.value = stored;
+      setStatus('Loaded API key from storage');
+    }
+  }
+
+  function saveApiKey() {
+    apiKey = apiKeyInput.value.trim();
+    localStorage.setItem('adminApiKey', apiKey);
+    setStatus('API key saved');
+  }
+
+  document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
+
+  async function adminFetch(url, options = {}) {
+    if (!apiKey) throw new Error('Admin API key not set');
+    const opts = {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        ...(options.headers || {})
+      }
+    };
+    const res = await fetch(url, opts);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+  }
+
+  async function fetchJson(url) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+  }
+
+  // Devices
+  const devicesListEl = document.getElementById('devicesList');
+  const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
+  const addDeviceBtn = document.getElementById('addDeviceBtn');
+
+  async function loadDevices() {
+    try {
+      setStatus('Loading devices...');
+      const data = await fetchJson('/devices');
+      devices = data;
+      renderDevices();
+      setStatus(`Loaded ${devices.length} devices`);
+    } catch (err) {
+      console.error(err);
+      setStatus('Error loading devices: ' + err.message);
+    }
+  }
+
+  function renderDevices() {
+    devicesListEl.innerHTML = '';
+    devices.forEach(dev => {
+      const div = document.createElement('div');
+      div.className = 'device-item' + (dev.id === selectedDeviceId ? ' selected' : '');
+      div.textContent = dev.id + ' – ' + dev.name;
+      div.addEventListener('click', () => {
+        selectedDeviceId = dev.id;
+        document.getElementById('selectedDeviceLabel').textContent = dev.id + ' (' + dev.name + ')';
+        document.getElementById('schedDeviceLabel').textContent = dev.id;
+        selectedScheduleUserId = null;
+        document.getElementById('schedUserLabel').textContent = 'None';
+        selectedEditUser = null;
+        document.getElementById('editUserLabel').textContent = 'None';
+        clearEditUserForm();
+        clearScheduleForm();
+        renderDevices();
+        loadDeviceUsers();
+      });
+      devicesListEl.appendChild(div);
+    });
+  }
+
+  refreshDevicesBtn.addEventListener('click', loadDevices);
+
+  addDeviceBtn.addEventListener('click', async () => {
+    const id = document.getElementById('newDeviceId').value.trim();
+    const name = document.getElementById('newDeviceName').value.trim();
+    if (!id || !name) {
+      alert('Device ID and name are required');
+      return;
+    }
+    try {
+      setStatus('Creating device...');
+      await adminFetch('/devices', {
+        method: 'POST',
+        body: JSON.stringify({ id, name })
+      });
+      setStatus('Device created');
+      document.getElementById('newDeviceId').value = '';
+      document.getElementById('newDeviceName').value = '';
+      await loadDevices();
+    } catch (err) {
+      console.error(err);
+      setStatus('Error creating device: ' + err.message);
+      alert('Error creating device: ' + err.message);
+    }
+  });
+
+  // Device users
+  const deviceUsersTableBody = document.querySelector('#deviceUsersTable tbody');
+  const createAttachUserBtn = document.getElementById('createAttachUserBtn');
+
+  async function loadDeviceUsers() {
+    if (!selectedDeviceId) return;
+    try {
+      setStatus('Loading device users...');
+      const users = await adminFetch(`/devices/${encodeURIComponent(selectedDeviceId)}/users`);
+      renderDeviceUsers(users);
+      setStatus('Loaded device users');
+    } catch (err) {
+      console.error(err);
+      setStatus('Error loading device users: ' + err.message);
+    }
+  }
+
+  function renderDeviceUsers(users) {
+    deviceUsersTableBody.innerHTML = '';
+    users.forEach(u => {
+      const tr = document.createElement('tr');
+
+      function td(text) {
+        const cell = document.createElement('td');
+        cell.textContent = text || '';
+        return cell;
+      }
+
+      tr.appendChild(td(u.userId));
+      tr.appendChild(td(u.name || ''));
+      tr.appendChild(td(u.email || ''));
+      tr.appendChild(td(u.phone || ''));
+      tr.appendChild(td(u.role));
+
+      const tdEdit = document.createElement('td');
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => {
+        selectedEditUser = {
+          userId: u.userId,
+          name: u.name || '',
+          email: u.email || '',
+          phone: u.phone || '',
+          role: u.role
+        };
+        document.getElementById('editUserLabel').textContent = u.userId;
+        document.getElementById('editUserName').value = u.name || '';
+        document.getElementById('editUserEmail').value = u.email || '';
+        document.getElementById('editUserPhone').value = u.phone || '';
+        document.getElementById('editUserPassword').value = '';
+        document.getElementById('editUserRole').value = u.role || 'operator';
+      });
+      tdEdit.appendChild(editBtn);
+      tr.appendChild(tdEdit);
+
+      const tdSched = document.createElement('td');
+      const schedBtn = document.createElement('button');
+      schedBtn.textContent = 'Schedule';
+      schedBtn.addEventListener('click', () => {
+        selectedScheduleUserId = u.userId;
+        document.getElementById('schedUserLabel').textContent = u.userId;
+        clearScheduleForm();
+      });
+      tdSched.appendChild(schedBtn);
+      tr.appendChild(tdSched);
+
+      const tdRemove = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Remove';
+      delBtn.className = 'danger';
+      delBtn.addEventListener('click', () => {
+        if (confirm(`Remove user ${u.userId} from device ${selectedDeviceId}?`)) {
+          removeUserFromDevice(u.userId);
+        }
+      });
+      tdRemove.appendChild(delBtn);
+      tr.appendChild(tdRemove);
+
+      deviceUsersTableBody.appendChild(tr);
+    });
+  }
+
+  async function removeUserFromDevice(userId) {
+    if (!selectedDeviceId) return;
+    try {
+      setStatus('Removing user from device...');
+      await adminFetch(`/devices/${encodeURIComponent(selectedDeviceId)}/users/${encodeURIComponent(userId)}`, {
+        method: 'DELETE'
+      });
+      setStatus('User removed from device');
+      if (selectedEditUser && selectedEditUser.userId === userId) {
+        selectedEditUser = null;
+        document.getElementById('editUserLabel').textContent = 'None';
+        clearEditUserForm();
+      }
+      if (selectedScheduleUserId === userId) {
+        selectedScheduleUserId = null;
+        document.getElementById('schedUserLabel').textContent = 'None';
+        clearScheduleForm();
+      }
+      await loadDeviceUsers();
+      await loadUsersOverview();
+    } catch (err) {
+      console.error(err);
+      setStatus('Error removing user: ' + err.message);
+      alert('Error removing user: ' + err.message);
+    }
+  }
+
+ createAttachUserBtn.addEventListener('click', async () => {
+  if (!selectedDeviceId) {
+    alert('Select a device first');
+    return;
+  }
+  const name = document.getElementById('newUserName').value.trim();
+  const phone = document.getElementById('newUserPhone').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const password = document.getElementById('newUserPassword').value;
+  const role = document.getElementById('newUserRole').value;
+
+  if (!phone) {
+    alert('Phone is required');
+    return;
+  }
+
+  try {
+    setStatus('Creating/reusing user & attaching to device...');
+    await adminFetch(`/devices/${encodeURIComponent(selectedDeviceId)}/users`, {
+      method: 'POST',
+      body: JSON.stringify({ name, email, phone, password, role })
+    });
+
+    document.getElementById('newUserName').value = '';
+    document.getElementById('newUserPhone').value = '';
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserPassword').value = '';
+
+    setStatus('User created/reused and attached');
+    await loadDeviceUsers();
+    await loadUsersOverview();
+  } catch (err) {
+    console.error(err);
+    setStatus('Error creating/attaching user: ' + err.message);
+    alert('Error creating/attaching user: ' + err.message);
+  }
+});
+
+
+  // CSV import
+  const csvFileInput = document.getElementById('csvFileInput');
+  const importCsvBtn = document.getElementById('importCsvBtn');
+
+  function parseCsvToUsers(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length < 2) return [];
+    const headerLine = lines[0];
+    const headers = headerLine.split(',').map(h => h.trim().toLowerCase());
+
+    const idxName = headers.indexOf('name');
+    const idxEmail = headers.indexOf('email');
+    const idxPhone = headers.indexOf('phone');
+    const idxRole = headers.indexOf('role');
+
+    const users = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const cols = line.split(',');
+      const name = idxName >= 0 ? (cols[idxName] || '').trim() : '';
+      const email = idxEmail >= 0 ? (cols[idxEmail] || '').trim() : '';
+      const phone = idxPhone >= 0 ? (cols[idxPhone] || '').trim() : '';
+      const role = idxRole >= 0 ? (cols[idxRole] || '').trim() : '';
+      if (!name && !email && !phone) continue;
+      users.push({ name, email, phone, role });
+    }
+    return users;
+  }
+
+  importCsvBtn.addEventListener('click', () => {
+    if (!selectedDeviceId) {
+      alert('Select a device first');
+      return;
+    }
+    const file = csvFileInput.files[0];
+    if (!file) {
+      alert('Choose a CSV file first');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        setStatus('Parsing CSV...');
+        const text = e.target.result;
+        const users = parseCsvToUsers(text);
+        if (users.length === 0) {
+          alert('No valid rows found in CSV');
+          setStatus('No users found in CSV');
+          return;
+        }
+        setStatus(`Importing ${users.length} users...`);
+        await adminFetch(`/devices/${encodeURIComponent(selectedDeviceId)}/users/import`, {
+          method: 'POST',
+          body: JSON.stringify({ users })
+        });
+        setStatus('Import complete');
+        csvFileInput.value = '';
+        await loadDeviceUsers();
+        await loadUsersOverview();
+      } catch (err) {
+        console.error(err);
+        setStatus('Error importing CSV: ' + err.message);
+        alert('Error importing CSV: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // Edit user on device
+  const editUserName = document.getElementById('editUserName');
+  const editUserEmail = document.getElementById('editUserEmail');
+  const editUserPhone = document.getElementById('editUserPhone');
+  const editUserPassword = document.getElementById('editUserPassword');
+  const editUserRole = document.getElementById('editUserRole');
+  const saveUserChangesBtn = document.getElementById('saveUserChangesBtn');
+
+  function clearEditUserForm() {
+    editUserName.value = '';
+    editUserEmail.value = '';
+    editUserPhone.value = '';
+    editUserPassword.value = '';
+    editUserRole.value = 'operator';
+  }
+
+  saveUserChangesBtn.addEventListener('click', async () => {
+    if (!selectedDeviceId || !selectedEditUser) {
+      alert('Select a device and click "Edit" on a user in the table');
+      return;
+    }
+
+    const payload = {
+      name: editUserName.value.trim(),
+      email: editUserEmail.value.trim(),
+      phone: editUserPhone.value.trim(),
+      role: editUserRole.value
+    };
+    if (editUserPassword.value) {
+      payload.password = editUserPassword.value;
+    }
+
+    try {
+      setStatus('Saving user changes...');
+      await adminFetch(`/devices/${encodeURIComponent(selectedDeviceId)}/users/${encodeURIComponent(selectedEditUser.userId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      setStatus('User updated');
+      editUserPassword.value = '';
+      await loadDeviceUsers();
+      await loadUsersOverview();
+    } catch (err) {
+      console.error(err);
+      setStatus('Error saving user changes: ' + err.message);
+      alert('Error saving user changes: ' + err.message);
+    }
+  });
+
+  // Schedule
+  const schedActiveFrom = document.getElementById('schedActiveFrom');
+  const schedActiveTo = document.getElementById('schedActiveTo');
+  const dayCheckboxes = Array.from(document.querySelectorAll('.sched-day'));
+  const win1Start = document.getElementById('win1Start');
+  const win1End = document.getElementById('win1End');
+  const win2Start = document.getElementById('win2Start');
+  const win2End = document.getElementById('win2End');
+
+  function clearScheduleForm() {
+    schedActiveFrom.value = '';
+    schedActiveTo.value = '';
+    dayCheckboxes.forEach(cb => cb.checked = false);
+    win1Start.value = '';
+    win1End.value = '';
+    win2Start.value = '';
+    win2End.value = '';
+  }
+
+  document.getElementById('loadScheduleBtn').addEventListener('click', async () => {
+    if (!selectedDeviceId || !selectedScheduleUserId) {
+      alert('Select a device and click "Schedule" on a user in the table');
+      return;
+    }
+    try {
+      setStatus('Loading schedule...');
+      const data = await adminFetch(`/devices/${encodeURIComponent(selectedDeviceId)}/users/${encodeURIComponent(selectedScheduleUserId)}/schedule`);
+      clearScheduleForm();
+      if (data.defaultAccess) {
+        setStatus('No specific schedule – user has 24/7 access');
+        return;
+      }
+      if (data.activeFrom) schedActiveFrom.value = data.activeFrom;
+      if (data.activeTo) schedActiveTo.value = data.activeTo;
+      if (Array.isArray(data.daysOfWeek)) {
+        dayCheckboxes.forEach(cb => {
+          cb.checked = data.daysOfWeek.includes(parseInt(cb.value, 10));
+        });
+      }
+      if (Array.isArray(data.windows)) {
+        if (data.windows[0]) {
+          win1Start.value = data.windows[0].start || '';
+          win1End.value = data.windows[0].end || '';
+        }
+        if (data.windows[1]) {
+          win2Start.value = data.windows[1].start || '';
+          win2End.value = data.windows[1].end || '';
+        }
+      }
+      setStatus('Schedule loaded');
+    } catch (err) {
+      console.error(err);
+      setStatus('Error loading schedule: ' + err.message);
+    }
+  });
+
+  document.getElementById('saveScheduleBtn').addEventListener('click', async () => {
+    if (!selectedDeviceId || !selectedScheduleUserId) {
+      alert('Select a device and click "Schedule" on a user in the table');
+      return;
+    }
+
+    const activeFrom = schedActiveFrom.value || null;
+    const activeTo = schedActiveTo.value || null;
+    const daysOfWeek = dayCheckboxes.filter(cb => cb.checked).map(cb => parseInt(cb.value, 10));
+
+    const windows = [];
+    if (win1Start.value && win1End.value) {
+      windows.push({ start: win1Start.value, end: win1End.value });
+    }
+    if (win2Start.value && win2End.value) {
+      windows.push({ start: win2Start.value, end: win2End.value });
+    }
+
+    const payload = { activeFrom, activeTo, daysOfWeek, windows };
+
+    try {
+      setStatus('Saving schedule...');
+      await adminFetch(`/devices/${encodeURIComponent(selectedDeviceId)}/users/${encodeURIComponent(selectedScheduleUserId)}/schedule`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      setStatus('Schedule saved');
+    } catch (err) {
+      console.error(err);
+      setStatus('Error saving schedule: ' + err.message);
+      alert('Error saving schedule: ' + err.message);
+    }
+  });
+
+  // Commands
+  const refreshCommandsBtn = document.getElementById('refreshCommandsBtn');
+  const commandsTableBody = document.querySelector('#commandsTable tbody');
+
+  async function loadCommands() {
+    try {
+      setStatus('Loading recent commands...');
+      const cmds = await adminFetch('/commands');
+      renderCommands(cmds);
+      setStatus('Loaded recent commands');
+    } catch (err) {
+      console.error(err);
+      setStatus('Error loading commands: ' + err.message);
+    }
+  }
+
+  function renderCommands(cmds) {
+    commandsTableBody.innerHTML = '';
+    cmds.forEach(c => {
+      const tr = document.createElement('tr');
+      function td(text) {
+        const cell = document.createElement('td');
+        cell.textContent = text || '';
+        return cell;
+      }
+      tr.appendChild(td(c.id));
+      tr.appendChild(td(c.device_id));
+      tr.appendChild(td(c.user_id));
+      tr.appendChild(td(c.type));
+      tr.appendChild(td(c.status));
+      tr.appendChild(td(c.requested_at));
+      tr.appendChild(td(c.completed_at));
+      tr.appendChild(td(c.result));
+      tr.appendChild(td(c.duration_ms));
+      commandsTableBody.appendChild(tr);
+    });
+  }
+
+  refreshCommandsBtn.addEventListener('click', loadCommands);
+
+  // User lookup + delete
+  const userSearchInput = document.getElementById('userSearchInput');
+  const userSearchBtn = document.getElementById('userSearchBtn');
+  const userShowAllBtn = document.getElementById('userShowAllBtn');
+  const usersOverviewTableBody = document.querySelector('#usersOverviewTable tbody');
+
+  async function loadUsersOverview(query) {
+    try {
+      setStatus('Loading users overview...');
+      let url = '/users';
+      if (query && query.trim().length > 0) {
+        url += `?q=${encodeURIComponent(query.trim())}`;
+      }
+      const users = await adminFetch(url);
+      renderUsersOverview(users);
+      setStatus(`Loaded ${users.length} users`);
+    } catch (err) {
+      console.error(err);
+      setStatus('Error loading users: ' + err.message);
+    }
+  }
+
+  function renderUsersOverview(users) {
+    usersOverviewTableBody.innerHTML = '';
+    users.forEach(u => {
+      const tr = document.createElement('tr');
+
+      function td(text) {
+        const cell = document.createElement('td');
+        cell.textContent = text || '';
+        return cell;
+      }
+
+      tr.appendChild(td(u.id));
+      tr.appendChild(td(u.name || ''));
+      tr.appendChild(td(u.email || ''));
+      tr.appendChild(td(u.phone || ''));
+
+      let devicesText = '';
+      if (Array.isArray(u.devices) && u.devices.length > 0) {
+        devicesText = u.devices
+          .map(d => d.deviceId + (d.role ? `(${d.role})` : ''))
+          .join(', ');
+      }
+      tr.appendChild(td(devicesText));
+
+      const tdActions = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Delete';
+      delBtn.className = 'danger';
+      delBtn.addEventListener('click', () => {
+        if (confirm(`Delete user ${u.id}? This only works if they are not attached to any devices.`)) {
+          deleteUser(u.id);
+        }
+      });
+      tdActions.appendChild(delBtn);
+      tr.appendChild(tdActions);
+
+      usersOverviewTableBody.appendChild(tr);
+    });
+  }
+
+  async function deleteUser(userId) {
+    try {
+      setStatus('Deleting user...');
+      await adminFetch(`/users/${encodeURIComponent(userId)}`, {
+        method: 'DELETE'
+      });
+      setStatus('User deleted');
+      await loadUsersOverview(userSearchInput.value);
+      await loadDeviceUsers();
+    } catch (err) {
+      console.error(err);
+      setStatus('Error deleting user: ' + err.message);
+      alert('Error deleting user: ' + err.message + '\nUser may still be attached to a device.');
+    }
+  }
+
+  userSearchBtn.addEventListener('click', () => {
+    const q = userSearchInput.value;
+    loadUsersOverview(q);
+  });
+
+  userShowAllBtn.addEventListener('click', () => {
+    userSearchInput.value = '';
+    loadUsersOverview();
+  });
+
+  // Init
+  loadApiKeyFromStorage();
+  loadDevices();
+  loadUsersOverview();
+</script>
+</body>
+</html>

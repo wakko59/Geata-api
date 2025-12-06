@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#007bff" />
+  <meta charset="utf-8" />
+  <title>Gate Control App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: light dark;
+    }
+
+    body {
+      margin: 0;
+      background: #111827;
+      color: #f9fafb;
+      display: flex;
+      min-height: 100vh;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      background: #1f2937;
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin: 16px 0 8px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin: 6px 0 2px;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="number"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid #374151;
+      background: #111827;
+      color: #f9fafb;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      color: #f9fafb;
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    button.secondary {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+    }
+
+    button.small {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .status {
+      font-size: 12px;
+      margin-top: 8px;
+      color: #9ca3af;
+      min-height: 16px;
+    }
+
+    .status.error {
+      color: #fca5a5;
+    }
+
+    .status.ok {
+      color: #6ee7b7;
+    }
+
+    .devices {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .device-card {
+      background: #111827;
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid #374151;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .device-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .device-name {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .device-id {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .device-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .duration-input {
+      max-width: 110px;
+    }
+
+    .pill {
+      background: #111827;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      border: 1px solid #374151;
+      color: #9ca3af;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .user-label {
+      font-size: 12px;
+      color: #9ca3af;
+      max-width: 70%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #111827;
+      border: 1px solid #374151;
+      color: #9ca3af;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #d1d5db;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card" id="loginCard">
+      <h1>Gate Access</h1>
+      <div class="subtitle">
+        Log in with the email &amp; password you were given.
+      </div>
+
+      <label for="emailInput">Email</label>
+      <input type="email" id="emailInput" autocomplete="email" placeholder="you@example.com" />
+
+      <label for="passwordInput">Password</label>
+      <input type="password" id="passwordInput" autocomplete="current-password" />
+
+      <button class="primary" id="loginBtn">
+        <span id="loginBtnText">Log In</span>
+        <span id="loginSpinner" class="spinner hidden"></span>
+      </button>
+
+      <div id="loginStatus" class="status"></div>
+    </div>
+
+    <div class="card hidden" id="mainCard">
+      <div class="top-bar">
+        <div>
+          <h1 style="margin-bottom: 4px;">My Gates</h1>
+          <div class="user-label" id="userLabel"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span class="badge" id="deviceCountBadge">0 devices</span>
+          <button class="secondary small" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+
+      <div class="subtitle">
+        Tap <strong>Open</strong> to trigger a gate. Duration is in milliseconds (1000 ms = 1s).
+      </div>
+
+      <button class="secondary small" id="refreshDevicesBtn" style="margin-bottom:6px;">
+        Refresh Devices
+      </button>
+
+      <div id="devicesContainer" class="devices"></div>
+
+      <div id="mainStatus" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const loginCard = document.getElementById('loginCard');
+    const mainCard = document.getElementById('mainCard');
+
+    const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const loginSpinner = document.getElementById('loginSpinner');
+    const loginStatus = document.getElementById('loginStatus');
+
+    const userLabel = document.getElementById('userLabel');
+    const deviceCountBadge = document.getElementById('deviceCountBadge');
+    const devicesContainer = document.getElementById('devicesContainer');
+    const mainStatus = document.getElementById('mainStatus');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
+
+    const STORAGE_KEY_TOKEN = 'gateAppToken';
+    const STORAGE_KEY_USER = 'gateAppUser';
+
+    let token = null;
+    let currentUser = null;
+
+    function setLoginLoading(loading) {
+      if (loading) {
+        loginBtn.disabled = true;
+        loginSpinner.classList.remove('hidden');
+        loginBtnText.textContent = 'Logging in...';
+      } else {
+        loginBtn.disabled = false;
+        loginSpinner.classList.add('hidden');
+        loginBtnText.textContent = 'Log In';
+      }
+    }
+
+    function setLoginStatus(text, isError = false) {
+      loginStatus.textContent = text || '';
+      loginStatus.classList.toggle('error', !!isError);
+      loginStatus.classList.toggle('ok', !isError && !!text);
+    }
+
+    function setMainStatus(text, type = '') {
+      mainStatus.textContent = text || '';
+      mainStatus.classList.remove('error', 'ok');
+      if (type === 'error') mainStatus.classList.add('error');
+      if (type === 'ok') mainStatus.classList.add('ok');
+    }
+
+    function saveAuth(tokenValue, userObj) {
+      token = tokenValue;
+      currentUser = userObj;
+      localStorage.setItem(STORAGE_KEY_TOKEN, tokenValue);
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(userObj));
+    }
+
+    function clearAuth() {
+      token = null;
+      currentUser = null;
+      localStorage.removeItem(STORAGE_KEY_TOKEN);
+      localStorage.removeItem(STORAGE_KEY_USER);
+    }
+
+    function showLogin() {
+      loginCard.classList.remove('hidden');
+      mainCard.classList.add('hidden');
+      setLoginStatus('');
+      setMainStatus('');
+      passwordInput.value = '';
+    }
+
+    function showMain() {
+      loginCard.classList.add('hidden');
+      mainCard.classList.remove('hidden');
+      setMainStatus('');
+      if (currentUser) {
+        userLabel.textContent = currentUser.email || currentUser.name || currentUser.id || '';
+      }
+      loadDevices();
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = options.headers || {};
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+      }
+      return fetch(path, {
+        ...options,
+        headers
+      });
+    }
+
+    async function login() {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email || !password) {
+        setLoginStatus('Email and password are required', true);
+        return;
+      }
+
+      setLoginLoading(true);
+      setLoginStatus('');
+
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          let msg = 'Login failed';
+          try {
+            const data = JSON.parse(text);
+            if (data.error) msg = data.error;
+          } catch (_) {}
+          setLoginStatus(msg, true);
+          setLoginLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        saveAuth(data.token, data.user);
+
+        setLoginLoading(false);
+        setLoginStatus('');
+        showMain();
+      } catch (err) {
+        console.error(err);
+        setLoginStatus('Network error: ' + err.message, true);
+        setLoginLoading(false);
+      }
+    }
+
+    async function loadDevices() {
+      if (!token) return;
+      setMainStatus('Loading devices...');
+      devicesContainer.innerHTML = '';
+
+      try {
+        const res = await apiFetch('/me/devices');
+        if (res.status === 401) {
+          // Token expired/invalid
+          clearAuth();
+          showLogin();
+          setLoginStatus('Session expired, please log in again', true);
+          return;
+        }
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('Error loading devices:', text);
+          setMainStatus('Error loading devices', 'error');
+          return;
+        }
+
+        const devices = await res.json();
+        renderDevices(devices);
+        deviceCountBadge.textContent =
+          (devices.length || 0) + (devices.length === 1 ? ' device' : ' devices');
+        if (devices.length === 0) {
+          setMainStatus('No devices assigned to your account yet.', '');
+        } else {
+          setMainStatus('Ready.');
+        }
+      } catch (err) {
+        console.error(err);
+        setMainStatus('Network error: ' + err.message, 'error');
+      }
+    }
+
+    function renderDevices(devices) {
+      devicesContainer.innerHTML = '';
+      devices.forEach(dev => {
+        const card = document.createElement('div');
+        card.className = 'device-card';
+
+        const header = document.createElement('div');
+        header.className = 'device-header';
+
+        const nameDiv = document.createElement('div');
+        const nameSpan = document.createElement('div');
+        nameSpan.className = 'device-name';
+        nameSpan.textContent = dev.name || dev.id;
+        const idSpan = document.createElement('div');
+        idSpan.className = 'device-id';
+        idSpan.textContent = dev.id;
+        nameDiv.appendChild(nameSpan);
+        nameDiv.appendChild(idSpan);
+
+        const statusPill = document.createElement('div');
+        statusPill.className = 'pill';
+        statusPill.textContent = 'Idle';
+
+        header.appendChild(nameDiv);
+        header.appendChild(statusPill);
+        card.appendChild(header);
+
+        const controls = document.createElement('div');
+        controls.className = 'device-controls';
+
+        const durationInput = document.createElement('input');
+        durationInput.type = 'number';
+        durationInput.min = '100';
+        durationInput.step = '100';
+        durationInput.value = '1000';
+        durationInput.className = 'duration-input';
+        durationInput.inputMode = 'numeric';
+
+        const durLabel = document.createElement('span');
+        durLabel.className = 'device-id';
+        durLabel.textContent = 'ms';
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'primary small';
+        openBtn.textContent = 'Open';
+
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner hidden';
+
+        openBtn.appendChild(spinner);
+
+        controls.appendChild(durationInput);
+        controls.appendChild(durLabel);
+        controls.appendChild(openBtn);
+
+        card.appendChild(controls);
+
+        openBtn.addEventListener('click', async () => {
+          const durationMs = parseInt(durationInput.value, 10) || 1000;
+          await openDevice(dev.id, durationMs, {
+            statusPill,
+            spinner,
+            openBtn
+          });
+        });
+
+        devicesContainer.appendChild(card);
+      });
+    }
+
+    async function openDevice(deviceId, durationMs, ui) {
+      if (!token) return;
+      ui.openBtn.disabled = true;
+      ui.spinner.classList.remove('hidden');
+      ui.statusPill.textContent = 'Sending...';
+
+      try {
+        const res = await apiFetch('/devices/' + encodeURIComponent(deviceId) + '/open', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ durationMs })
+        });
+
+        if (res.status === 401) {
+          clearAuth();
+          showLogin();
+          setLoginStatus('Session expired, please log in again', true);
+          return;
+        }
+
+        const text = await res.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) {}
+
+        if (!res.ok) {
+          let msg = 'Error triggering gate';
+          if (data && data.error) msg = data.error;
+          setMainStatus(msg, 'error');
+          ui.statusPill.textContent = 'Error';
+        } else {
+          ui.statusPill.textContent = 'Opened';
+          setMainStatus('Gate ' + deviceId + ' opened for ' + durationMs + ' ms.', 'ok');
+        }
+      } catch (err) {
+        console.error(err);
+        ui.statusPill.textContent = 'Error';
+        setMainStatus('Network error: ' + err.message, 'error');
+      } finally {
+        ui.openBtn.disabled = false;
+        ui.spinner.classList.add('hidden');
+        setTimeout(() => {
+          ui.statusPill.textContent = 'Idle';
+        }, 1500);
+      }
+    }
+
+    logoutBtn.addEventListener('click', () => {
+      clearAuth();
+      showLogin();
+    });
+
+    refreshDevicesBtn.addEventListener('click', () => {
+      loadDevices();
+    });
+
+    loginBtn.addEventListener('click', login);
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        login();
+      }
+    });
+
+    // Initial load: see if we have a saved token
+    (function init() {
+      const savedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+      const savedUser = localStorage.getItem(STORAGE_KEY_USER);
+      if (savedToken && savedUser) {
+        try {
+          token = savedToken;
+          currentUser = JSON.parse(savedUser);
+          showMain();
+        } catch (err) {
+          console.error('Error restoring auth:', err);
+          clearAuth();
+          showLogin();
+        }
+      } else {
+        showLogin();
+      }
+    })();
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(function (reg) {
+          console.log('Service worker registered:', reg.scope);
+        })
+        .catch(function (err) {
+          console.error('Service worker registration failed:', err);
+        });
+    });
+  }
+</script>
+</body>
+</html>
