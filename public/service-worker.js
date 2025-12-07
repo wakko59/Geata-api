@@ -1,6 +1,6 @@
 // Simple service worker for Gate PWA
 
-const CACHE_NAME = 'gate-app-cache-v1';
+const CACHE_NAME = 'gate-app-cache-v2';
 
 // Add any static files your app needs to run
 const ASSETS_TO_CACHE = [
