@@ -1,618 +1,387 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <title>Gate Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#007bff" />
-  <meta charset="utf-8" />
-  <title>Gate Control App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color-scheme: light dark;
-    }
-
     body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      background: #111827;
-      color: #f9fafb;
-      display: flex;
-      min-height: 100vh;
-      justify-content: center;
-      align-items: stretch;
+      padding: 0;
+      background: #f5f5f5;
+      color: #333;
     }
-
-    .app {
-      width: 100%;
+    .container {
       max-width: 480px;
+      margin: 0 auto;
       padding: 16px;
-      box-sizing: border-box;
     }
-
+    h1, h2 {
+      text-align: center;
+    }
     .card {
-      background: #1f2937;
-      border-radius: 16px;
-      padding: 16px 18px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
     }
-
-    h1 {
-      font-size: 20px;
-      margin: 0 0 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    h2 {
-      font-size: 16px;
-      margin: 16px 0 8px;
-    }
-
-    .subtitle {
-      font-size: 12px;
-      color: #9ca3af;
-      margin-bottom: 8px;
-    }
-
     label {
       display: block;
-      font-size: 13px;
-      margin: 6px 0 2px;
+      margin-bottom: 4px;
+      font-size: 14px;
     }
-
-    input[type="email"],
-    input[type="password"],
-    input[type="number"] {
+    input {
       width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 16px;
       box-sizing: border-box;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 1px solid #374151;
-      background: #111827;
-      color: #f9fafb;
-      font-size: 14px;
-      outline: none;
     }
-
-    input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 1px #3b82f6;
-    }
-
     button {
+      padding: 10px 16px;
+      border-radius: 4px;
       border: none;
-      border-radius: 999px;
-      padding: 10px 14px;
-      font-size: 14px;
-      font-weight: 500;
+      background: #007bff;
+      color: #fff;
+      font-size: 16px;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
     }
-
-    button.primary {
-      background: linear-gradient(135deg, #3b82f6, #06b6d4);
-      color: #f9fafb;
-      width: 100%;
-      margin-top: 12px;
-    }
-
-    button.secondary {
-      background: #111827;
-      color: #e5e7eb;
-      border: 1px solid #374151;
-    }
-
-    button.small {
-      padding: 6px 10px;
-      font-size: 12px;
-    }
-
-    button:disabled {
+    button[disabled] {
       opacity: 0.6;
       cursor: default;
     }
-
-    .status {
-      font-size: 12px;
-      margin-top: 8px;
-      color: #9ca3af;
-      min-height: 16px;
+    .btn-secondary {
+      background: #6c757d;
     }
-
-    .status.error {
-      color: #fca5a5;
+    .device-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
     }
-
-    .status.ok {
-      color: #6ee7b7;
-    }
-
-    .devices {
-      margin-top: 8px;
+    .device-item {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .device-card {
-      background: #111827;
-      border-radius: 12px;
-      padding: 10px 12px;
-      border: 1px solid #374151;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .device-header {
-      display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
     }
-
-    .device-name {
-      font-size: 15px;
-      font-weight: 500;
+    .status {
+      font-size: 14px;
+      margin-top: 8px;
+      min-height: 18px;
     }
-
-    .device-id {
-      font-size: 11px;
-      color: #9ca3af;
+    .status.error {
+      color: #b00020;
     }
-
-    .device-controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 2px;
+    .status.ok {
+      color: #007b00;
     }
-
-    .duration-input {
-      max-width: 110px;
-    }
-
-    .pill {
-      background: #111827;
-      border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 11px;
-      border: 1px solid #374151;
-      color: #9ca3af;
-    }
-
     .top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
       margin-bottom: 8px;
     }
-
-    .user-label {
-      font-size: 12px;
-      color: #9ca3af;
-      max-width: 70%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .badge {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: #111827;
-      border: 1px solid #374151;
-      color: #9ca3af;
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid #d1d5db;
-      border-top-color: transparent;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .hidden {
-      display: none;
+    .user-info {
+      font-size: 14px;
+      opacity: 0.8;
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="card" id="loginCard">
-      <h1>Gate Access</h1>
-      <div class="subtitle">
-        Log in with the email &amp; password you were given.
-      </div>
+  <div class="container">
 
-      <label for="emailInput">Email</label>
-      <input type="email" id="emailInput" autocomplete="email" placeholder="you@example.com" />
+    <!-- LOGIN VIEW -->
+    <div id="loginView" class="card">
+      <h2>Sign In</h2>
+      <p style="font-size:14px;">
+        Enter your phone number and password to control your gates.
+      </p>
+      <label for="phoneInput">Phone</label>
+      <input id="phoneInput" type="tel" placeholder="e.g. 0871234567 or +353871234567" />
 
       <label for="passwordInput">Password</label>
-      <input type="password" id="passwordInput" autocomplete="current-password" />
+      <input id="passwordInput" type="password" placeholder="Your password" />
 
-      <button class="primary" id="loginBtn">
-        <span id="loginBtnText">Log In</span>
-        <span id="loginSpinner" class="spinner hidden"></span>
-      </button>
-
+      <button id="loginBtn">Login</button>
       <div id="loginStatus" class="status"></div>
     </div>
 
-    <div class="card hidden" id="mainCard">
+    <!-- APP VIEW -->
+    <div id="appView" class="card" style="display:none;">
       <div class="top-bar">
         <div>
-          <h1 style="margin-bottom: 4px;">My Gates</h1>
-          <div class="user-label" id="userLabel"></div>
+          <h2 style="margin:0;">My Gates</h2>
+          <div id="userInfo" class="user-info"></div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          <span class="badge" id="deviceCountBadge">0 devices</span>
-          <button class="secondary small" id="logoutBtn">Log Out</button>
-        </div>
+        <button id="logoutBtn" class="btn-secondary">Logout</button>
       </div>
 
-      <div class="subtitle">
-        Tap <strong>Open</strong> to trigger a gate. Duration is in milliseconds (1000 ms = 1s).
-      </div>
-
-      <button class="secondary small" id="refreshDevicesBtn" style="margin-bottom:6px;">
-        Refresh Devices
-      </button>
-
-      <div id="devicesContainer" class="devices"></div>
-
-      <div id="mainStatus" class="status"></div>
+      <ul id="deviceList" class="device-list"></ul>
+      <div id="appStatus" class="status"></div>
     </div>
+
   </div>
 
   <script>
-    const loginCard = document.getElementById('loginCard');
-    const mainCard = document.getElementById('mainCard');
-
-    const emailInput = document.getElementById('emailInput');
-    const passwordInput = document.getElementById('passwordInput');
+    const loginView = document.getElementById('loginView');
+    const appView = document.getElementById('appView');
     const loginBtn = document.getElementById('loginBtn');
-    const loginBtnText = document.getElementById('loginBtnText');
-    const loginSpinner = document.getElementById('loginSpinner');
     const loginStatus = document.getElementById('loginStatus');
+    const phoneInput = document.getElementById('phoneInput');
+    const passwordInput = document.getElementById('passwordInput');
 
-    const userLabel = document.getElementById('userLabel');
-    const deviceCountBadge = document.getElementById('deviceCountBadge');
-    const devicesContainer = document.getElementById('devicesContainer');
-    const mainStatus = document.getElementById('mainStatus');
     const logoutBtn = document.getElementById('logoutBtn');
-    const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
+    const deviceList = document.getElementById('deviceList');
+    const appStatus = document.getElementById('appStatus');
+    const userInfo = document.getElementById('userInfo');
 
-    const STORAGE_KEY_TOKEN = 'gateAppToken';
-    const STORAGE_KEY_USER = 'gateAppUser';
+    function setLoginStatus(msg, isError) {
+      loginStatus.textContent = msg || '';
+      loginStatus.className = 'status' + (isError ? ' error' : ' ok');
+    }
 
-    let token = null;
-    let currentUser = null;
+    function setAppStatus(msg, isError) {
+      appStatus.textContent = msg || '';
+      appStatus.className = 'status' + (isError ? ' error' : ' ok');
+    }
 
-    function setLoginLoading(loading) {
-      if (loading) {
-        loginBtn.disabled = true;
-        loginSpinner.classList.remove('hidden');
-        loginBtnText.textContent = 'Logging in...';
+    function getToken() {
+      return localStorage.getItem('gateToken');
+    }
+
+    function setToken(token) {
+      if (token) {
+        localStorage.setItem('gateToken', token);
       } else {
-        loginBtn.disabled = false;
-        loginSpinner.classList.add('hidden');
-        loginBtnText.textContent = 'Log In';
+        localStorage.removeItem('gateToken');
       }
     }
 
-    function setLoginStatus(text, isError = false) {
-      loginStatus.textContent = text || '';
-      loginStatus.classList.toggle('error', !!isError);
-      loginStatus.classList.toggle('ok', !isError && !!text);
+    function setUser(user) {
+      if (user) {
+        localStorage.setItem('gateUser', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('gateUser');
+      }
     }
 
-    function setMainStatus(text, type = '') {
-      mainStatus.textContent = text || '';
-      mainStatus.classList.remove('error', 'ok');
-      if (type === 'error') mainStatus.classList.add('error');
-      if (type === 'ok') mainStatus.classList.add('ok');
-    }
-
-    function saveAuth(tokenValue, userObj) {
-      token = tokenValue;
-      currentUser = userObj;
-      localStorage.setItem(STORAGE_KEY_TOKEN, tokenValue);
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(userObj));
-    }
-
-    function clearAuth() {
-      token = null;
-      currentUser = null;
-      localStorage.removeItem(STORAGE_KEY_TOKEN);
-      localStorage.removeItem(STORAGE_KEY_USER);
+    function getUser() {
+      const raw = localStorage.getItem('gateUser');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
     }
 
     function showLogin() {
-      loginCard.classList.remove('hidden');
-      mainCard.classList.add('hidden');
-      setLoginStatus('');
-      setMainStatus('');
-      passwordInput.value = '';
+      loginView.style.display = 'block';
+      appView.style.display = 'none';
+      setLoginStatus('', false);
+      setAppStatus('', false);
     }
 
-    function showMain() {
-      loginCard.classList.add('hidden');
-      mainCard.classList.remove('hidden');
-      setMainStatus('');
-      if (currentUser) {
-        userLabel.textContent = currentUser.email || currentUser.name || currentUser.id || '';
+    function showApp() {
+      loginView.style.display = 'none';
+      appView.style.display = 'block';
+      const u = getUser();
+      if (u) {
+        userInfo.textContent = (u.name || '') + ' ' + (u.phone ? '(' + u.phone + ')' : '');
+      } else {
+        userInfo.textContent = '';
       }
       loadDevices();
     }
 
     async function apiFetch(path, options = {}) {
+      const token = getToken();
       const headers = options.headers || {};
       if (token) {
         headers['Authorization'] = 'Bearer ' + token;
       }
+      headers['Content-Type'] = 'application/json';
       return fetch(path, {
         ...options,
         headers
       });
     }
 
-    async function login() {
-      const email = emailInput.value.trim();
+    async function handleLogin() {
+      const phone = phoneInput.value.trim();
       const password = passwordInput.value;
 
-      if (!email || !password) {
-        setLoginStatus('Email and password are required', true);
+      if (!phone || !password) {
+        setLoginStatus('Phone and password are required', true);
         return;
       }
 
-      setLoginLoading(true);
-      setLoginStatus('');
+      loginBtn.disabled = true;
+      setLoginStatus('Logging in...', false);
 
       try {
         const res = await fetch('/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ phone, password })
         });
 
         if (!res.ok) {
-          const text = await res.text();
-          let msg = 'Login failed';
-          try {
-            const data = JSON.parse(text);
-            if (data.error) msg = data.error;
-          } catch (_) {}
+          const data = await res.json().catch(() => ({}));
+          const msg = data.error || 'Login failed';
           setLoginStatus(msg, true);
-          setLoginLoading(false);
+          loginBtn.disabled = false;
           return;
         }
 
         const data = await res.json();
-        saveAuth(data.token, data.user);
+        setToken(data.token);
+        setUser(data.user);
 
-        setLoginLoading(false);
-        setLoginStatus('');
-        showMain();
+        phoneInput.value = '';
+        passwordInput.value = '';
+        setLoginStatus('', false);
+
+        showApp();
       } catch (err) {
         console.error(err);
-        setLoginStatus('Network error: ' + err.message, true);
-        setLoginLoading(false);
+        setLoginStatus('Network error', true);
+      } finally {
+        loginBtn.disabled = false;
       }
     }
 
     async function loadDevices() {
-      if (!token) return;
-      setMainStatus('Loading devices...');
-      devicesContainer.innerHTML = '';
+      deviceList.innerHTML = '';
+      setAppStatus('Loading devices...', false);
 
       try {
         const res = await apiFetch('/me/devices');
-        if (res.status === 401) {
-          // Token expired/invalid
-          clearAuth();
+        if (res.status === 401 || res.status === 403) {
+          // Token invalid or expired -> force login
+          setToken(null);
+          setUser(null);
           showLogin();
-          setLoginStatus('Session expired, please log in again', true);
           return;
         }
 
         if (!res.ok) {
-          const text = await res.text();
-          console.error('Error loading devices:', text);
-          setMainStatus('Error loading devices', 'error');
+          const data = await res.json().catch(() => ({}));
+          const msg = data.error || 'Failed to load devices';
+          setAppStatus(msg, true);
           return;
         }
 
         const devices = await res.json();
-        renderDevices(devices);
-        deviceCountBadge.textContent =
-          (devices.length || 0) + (devices.length === 1 ? ' device' : ' devices');
-        if (devices.length === 0) {
-          setMainStatus('No devices assigned to your account yet.', '');
-        } else {
-          setMainStatus('Ready.');
-        }
-      } catch (err) {
-        console.error(err);
-        setMainStatus('Network error: ' + err.message, 'error');
-      }
-    }
-
-    function renderDevices(devices) {
-      devicesContainer.innerHTML = '';
-      devices.forEach(dev => {
-        const card = document.createElement('div');
-        card.className = 'device-card';
-
-        const header = document.createElement('div');
-        header.className = 'device-header';
-
-        const nameDiv = document.createElement('div');
-        const nameSpan = document.createElement('div');
-        nameSpan.className = 'device-name';
-        nameSpan.textContent = dev.name || dev.id;
-        const idSpan = document.createElement('div');
-        idSpan.className = 'device-id';
-        idSpan.textContent = dev.id;
-        nameDiv.appendChild(nameSpan);
-        nameDiv.appendChild(idSpan);
-
-        const statusPill = document.createElement('div');
-        statusPill.className = 'pill';
-        statusPill.textContent = 'Idle';
-
-        header.appendChild(nameDiv);
-        header.appendChild(statusPill);
-        card.appendChild(header);
-
-        const controls = document.createElement('div');
-        controls.className = 'device-controls';
-
-        const durationInput = document.createElement('input');
-        durationInput.type = 'number';
-        durationInput.min = '100';
-        durationInput.step = '100';
-        durationInput.value = '1000';
-        durationInput.className = 'duration-input';
-        durationInput.inputMode = 'numeric';
-
-        const durLabel = document.createElement('span');
-        durLabel.className = 'device-id';
-        durLabel.textContent = 'ms';
-
-        const openBtn = document.createElement('button');
-        openBtn.className = 'primary small';
-        openBtn.textContent = 'Open';
-
-        const spinner = document.createElement('span');
-        spinner.className = 'spinner hidden';
-
-        openBtn.appendChild(spinner);
-
-        controls.appendChild(durationInput);
-        controls.appendChild(durLabel);
-        controls.appendChild(openBtn);
-
-        card.appendChild(controls);
-
-        openBtn.addEventListener('click', async () => {
-          const durationMs = parseInt(durationInput.value, 10) || 1000;
-          await openDevice(dev.id, durationMs, {
-            statusPill,
-            spinner,
-            openBtn
-          });
-        });
-
-        devicesContainer.appendChild(card);
-      });
-    }
-
-    async function openDevice(deviceId, durationMs, ui) {
-      if (!token) return;
-      ui.openBtn.disabled = true;
-      ui.spinner.classList.remove('hidden');
-      ui.statusPill.textContent = 'Sending...';
-
-      try {
-        const res = await apiFetch('/devices/' + encodeURIComponent(deviceId) + '/open', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ durationMs })
-        });
-
-        if (res.status === 401) {
-          clearAuth();
-          showLogin();
-          setLoginStatus('Session expired, please log in again', true);
+        if (!devices || devices.length === 0) {
+          setAppStatus('No devices assigned to your account.', false);
+          deviceList.innerHTML = '';
           return;
         }
 
-        const text = await res.text();
-        let data = null;
-        try { data = JSON.parse(text); } catch (_) {}
+        deviceList.innerHTML = '';
+        devices.forEach(d => {
+          const li = document.createElement('li');
+          li.className = 'device-item';
 
-        if (!res.ok) {
-          let msg = 'Error triggering gate';
-          if (data && data.error) msg = data.error;
-          setMainStatus(msg, 'error');
-          ui.statusPill.textContent = 'Error';
-        } else {
-          ui.statusPill.textContent = 'Opened';
-          setMainStatus('Gate ' + deviceId + ' opened for ' + durationMs + ' ms.', 'ok');
-        }
+          const label = document.createElement('div');
+          label.textContent = d.name + ' (' + d.id + ')';
+
+          const btn = document.createElement('button');
+          btn.textContent = 'Open';
+          btn.addEventListener('click', () => openDevice(d.id, btn));
+
+          li.appendChild(label);
+          li.appendChild(btn);
+          deviceList.appendChild(li);
+        });
+
+        setAppStatus('', false);
       } catch (err) {
         console.error(err);
-        ui.statusPill.textContent = 'Error';
-        setMainStatus('Network error: ' + err.message, 'error');
-      } finally {
-        ui.openBtn.disabled = false;
-        ui.spinner.classList.add('hidden');
-        setTimeout(() => {
-          ui.statusPill.textContent = 'Idle';
-        }, 1500);
+        setAppStatus('Network error while loading devices', true);
       }
     }
 
-    logoutBtn.addEventListener('click', () => {
-      clearAuth();
+    async function openDevice(deviceId, btn) {
+      btn.disabled = true;
+      setAppStatus('Opening ' + deviceId + '...', false);
+      try {
+        const res = await apiFetch('/devices/' + encodeURIComponent(deviceId) + '/open', {
+          method: 'POST',
+          body: JSON.stringify({ durationMs: 1000 })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          setToken(null);
+          setUser(null);
+          showLogin();
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = data.error || 'Failed to open device';
+          setAppStatus(msg, true);
+          return;
+        }
+
+        setAppStatus('Command sent (id: ' + data.id + ')', false);
+      } catch (err) {
+        console.error(err);
+        setAppStatus('Network error while sending command', true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function handleLogout() {
+      setToken(null);
+      setUser(null);
+      deviceList.innerHTML = '';
+      userInfo.textContent = '';
       showLogin();
-    });
+    }
 
-    refreshDevicesBtn.addEventListener('click', () => {
-      loadDevices();
-    });
-
-    loginBtn.addEventListener('click', login);
+    loginBtn.addEventListener('click', handleLogin);
     passwordInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        login();
+        handleLogin();
       }
     });
+    logoutBtn.addEventListener('click', handleLogout);
 
-    // Initial load: see if we have a saved token
-    (function init() {
-      const savedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
-      const savedUser = localStorage.getItem(STORAGE_KEY_USER);
-      if (savedToken && savedUser) {
-        try {
-          token = savedToken;
-          currentUser = JSON.parse(savedUser);
-          showMain();
-        } catch (err) {
-          console.error('Error restoring auth:', err);
-          clearAuth();
-          showLogin();
-        }
+    // On load: if we already have a token, try to show app; otherwise show login
+    window.addEventListener('load', () => {
+      const token = getToken();
+      if (token) {
+        showApp();
       } else {
         showLogin();
       }
-    })();
-  </script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(function (reg) {
-          console.log('Service worker registered:', reg.scope);
-        })
-        .catch(function (err) {
-          console.error('Service worker registration failed:', err);
-        });
     });
-  }
-</script>
+  </script>
+
+  <!-- Service worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(function (reg) {
+            console.log('Service worker registered:', reg.scope);
+          })
+          .catch(function (err) {
+            console.error('Service worker registration failed:', err);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
