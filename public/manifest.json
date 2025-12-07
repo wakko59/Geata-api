@@ -1,6 +1,6 @@
 {
-  "name": "Gate Controller",
-  "short_name": "Gate",
+  "name": "AccSec Controller",
+  "short_name": "AccSec",
   "start_url": "/app.html",
   "scope": "/",
   "display": "standalone",
