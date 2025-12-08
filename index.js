@@ -14,6 +14,10 @@ const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+console.log('*** GEATA BACKEND STARTING ***');
+console.log('*** USING INDEX.JS AT:', __filename);
+
+
 const app = express();
 
 // Parse JSON bodies
@@ -169,6 +173,27 @@ function createUser({ name, email, phone, password }) {
   );
 
   return getUserById(id);
+}
+function updateUser(userId, { name, email, phone, password }) {
+  const user = getUserById(userId);
+  if (!user) return null;
+
+  const newName = name && String(name).trim() ? String(name).trim() : user.name;
+  const newEmail = email && String(email).trim() ? String(email).trim() : user.email;
+  const newPhone = phone ? normalizePhone(phone) : user.phone;
+
+  let newHash = user.password_hash;
+  if (typeof password === 'string' && password.length > 0) {
+    newHash = bcrypt.hashSync(password, 10);
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET name = ?, email = ?, phone = ?, password_hash = ?
+    WHERE id = ?
+  `).run(newName, newEmail, newPhone, newHash, userId);
+
+  return getUserById(userId);
 }
 
 // Device-users mapping
@@ -465,15 +490,18 @@ app.post('/auth/register', (req, res) => {
     }
   });
 });
-
 // Login: phone OR email + password -> JWT
 app.post('/auth/login', (req, res) => {
   const { phone, email, password } = req.body;
 
+  console.log('*** /auth/login CALLED ***');
+  console.log('*** BODY:', req.body);
+
   if ((!phone && !email) || !password) {
+    console.log('*** /auth/login MISSING FIELDS:', { phone, email, password });
     return res
       .status(400)
-      .json({ error: 'phone or email and password are required' });
+      .json({ error: 'MISSING_PHONE_OR_EMAIL_OR_PASSWORD' });
   }
 
   let user = null;
@@ -485,15 +513,19 @@ app.post('/auth/login', (req, res) => {
   }
 
   if (!user || !user.password_hash) {
+    console.log('*** /auth/login INVALID USER OR NO PASSWORD_HASH');
     return res.status(401).json({ error: 'Invalid login or password' });
   }
 
   const ok = bcrypt.compareSync(password, user.password_hash);
   if (!ok) {
+    console.log('*** /auth/login BAD PASSWORD');
     return res.status(401).json({ error: 'Invalid login or password' });
   }
 
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+
+  console.log('*** /auth/login SUCCESS for userId:', user.id);
 
   res.json({
     token,
@@ -505,6 +537,54 @@ app.post('/auth/login', (req, res) => {
     }
   });
 });
+
+
+// Login: phone OR email + password -> JWT
+app.post('/auth/login', (req, res) => {  const { phone, email, password } = req.body;
+
+  console.log('DEBUG /auth/login body:', req.body);
+
+  if ((!phone && !email) || !password) {
+    console.log('DEBUG /auth/login missing fields:', { phone, email, password });
+    return res
+      .status(400)
+      .json({ error: 'MISSING_PHONE_OR_EMAIL_OR_PASSWORD' });
+  }
+
+  let user = null;
+  if (phone) {
+    user = getUserByPhone(phone);
+  }
+  if (!user && email) {
+    user = getUserByEmail(email);
+  }
+
+  if (!user || !user.password_hash) {
+    console.log('DEBUG /auth/login invalid user or no password_hash');
+    return res.status(401).json({ error: 'Invalid login or password' });
+  }
+
+  const ok = bcrypt.compareSync(password, user.password_hash);
+  if (!ok) {
+    console.log('DEBUG /auth/login bad password');
+    return res.status(401).json({ error: 'Invalid login or password' });
+  }
+
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+
+  console.log('DEBUG /auth/login success for userId:', user.id);
+
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email
+    }
+  });
+});
+
 
 // ---- Simple health route ----
 
@@ -541,27 +621,73 @@ app.get('/devices/:id/users', requireAdminKey, (req, res) => {
 
 // Add user to device (admin)
 // Expects JSON: { userId, role } where userId already exists in users table
+// Create/reuse user and attach to device (admin)
+//
+// Accepts either:
+//  - { userId, role }
+//  - or { name, email, phone, password, role } (create or reuse by phone/email)
+//
 app.post('/devices/:id/users', requireAdminKey, (req, res) => {
   const deviceId = req.params.id;
-  const { userId, role } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: 'userId is required' });
-  }
-
-  const user = getUserById(userId);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
+  let { userId, name, email, phone, password, role } = req.body;
 
   const device = getDeviceById(deviceId);
   if (!device) {
     return res.status(404).json({ error: 'Device not found' });
   }
 
+  let user = null;
+
+  // Case 1: attach existing user by id
+  if (userId) {
+    user = getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+  } else {
+    // Case 2: create or reuse by phone/email
+    if (!phone && !email) {
+      return res.status(400).json({
+        error: 'userId or phone/email is required'
+      });
+    }
+
+    // Try to find by phone/email first
+    if (phone) {
+      user = getUserByPhone(phone);
+    }
+    if (!user && email) {
+      user = getUserByEmail(email);
+    }
+
+    if (!user) {
+      // New user
+      user = createUser({ name, email, phone, password });
+    } else {
+      // Existing user: optionally update details / password
+      updateUser(user.id, { name, email, phone, password });
+    }
+
+    userId = user.id;
+  }
+
+  // Attach to this device with role
   addUserToDevice(deviceId, userId, role || 'operator');
-  res.status(201).json({ deviceId, userId, role: role || 'operator' });
+
+  res.status(201).json({
+    deviceId,
+    userId,
+    role: role || 'operator',
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone
+    }
+  });
 });
+
+
 
 // Remove user from device (admin)
 app.delete('/devices/:id/users/:userId', requireAdminKey, (req, res) => {
@@ -664,6 +790,31 @@ app.get('/users', requireAdminKey, (req, res) => {
   const users = listUsersWithDevices(q || null);
   res.json(users);
 });
+// DELETE /users/:userId (admin)
+// Removes the user from all devices and deletes the user record
+app.delete('/users/:userId', requireAdminKey, (req, res) => {
+  const userId = req.params.userId;
+
+  const user = getUserById(userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  // Remove from all devices
+  db.prepare('DELETE FROM device_users WHERE user_id = ?').run(userId);
+
+  // Remove any access rules for this user
+  db.prepare('DELETE FROM user_access_rules WHERE user_id = ?').run(userId);
+
+  // Optionally: keep commands history, or delete them.
+  // For now, we leave commands so logs still show "user_id" even if user is gone.
+
+  // Delete the user record itself
+  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+
+  res.json({ status: 'deleted', userId });
+});
+
 
 // ---- User-facing endpoints ----
 
