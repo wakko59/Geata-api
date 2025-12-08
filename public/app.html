@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Gate Control</title>
+  <title>Geata Gate Control</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#007bff" />
@@ -194,7 +194,8 @@
       appView.style.display = 'block';
       const u = getUser();
       if (u) {
-        userInfo.textContent = (u.name || '') + ' ' + (u.phone ? '(' + u.phone + ')' : '');
+        const phoneText = u.phone ? ' (' + u.phone + ')' : '';
+        userInfo.textContent = (u.name || '') + phoneText;
       } else {
         userInfo.textContent = '';
       }
@@ -233,15 +234,15 @@
           body: JSON.stringify({ phone, password })
         });
 
+        const data = await res.json().catch(() => ({}));
+
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
           const msg = data.error || 'Login failed';
           setLoginStatus(msg, true);
           loginBtn.disabled = false;
           return;
         }
 
-        const data = await res.json();
         setToken(data.token);
         setUser(data.user);
 
@@ -265,7 +266,6 @@
       try {
         const res = await apiFetch('/me/devices');
         if (res.status === 401 || res.status === 403) {
-          // Token invalid or expired -> force login
           setToken(null);
           setUser(null);
           showLogin();
@@ -319,6 +319,8 @@
           body: JSON.stringify({ durationMs: 1000 })
         });
 
+        const data = await res.json().catch(() => ({}));
+
         if (res.status === 401 || res.status === 403) {
           setToken(null);
           setUser(null);
@@ -326,7 +328,6 @@
           return;
         }
 
-        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           const msg = data.error || 'Failed to open device';
           setAppStatus(msg, true);
@@ -358,7 +359,6 @@
     });
     logoutBtn.addEventListener('click', handleLogout);
 
-    // On load: if we already have a token, try to show app; otherwise show login
     window.addEventListener('load', () => {
       const token = getToken();
       if (token) {

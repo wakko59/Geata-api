@@ -1,70 +1,76 @@
-// Simple service worker for Gate PWA
+const CACHE_NAME = 'geata-app-cache-v3';
 
-const CACHE_NAME = 'gate-app-cache-v2';
-
-// Add any static files your app needs to run
-const ASSETS_TO_CACHE = [
-  '/',
+// Files to cache for offline shell
+const APP_SHELL = [
   '/app.html',
+  '/admin.html',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
-  // add '/app.js', '/app.css', etc. if you have them
 ];
 
-// Install: cache the app "shell"
+// Install: pre-cache core assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(APP_SHELL);
     })
   );
+  self.skipWaiting();
 });
 
 // Activate: clean up old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      )
-    )
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      );
+    })
   );
+  self.clients.claim();
 });
 
-// Fetch: cache-first for static, network for API
+// Fetch: cache-first for app shell, network-first for others
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  const url = new URL(req.url);
 
-  // If it's an API call (adjust this if needed)
-  if (url.pathname.startsWith('/auth/') ||
-      url.pathname.startsWith('/devices') ||
-      url.pathname.startsWith('/me/') ||
-      url.pathname.startsWith('/device/poll') ||
-      url.pathname.startsWith('/commands') ||
-      url.pathname.startsWith('/users')) {
-    // Network-first for dynamic/API
+  // Only handle GET requests
+  if (req.method !== 'GET') {
+    return;
+  }
+
+  // Same-origin only
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  const isShell =
+    url.pathname === '/' ||
+    url.pathname === '/app.html' ||
+    url.pathname === '/admin.html' ||
+    url.pathname === '/manifest.json' ||
+    url.pathname.startsWith('/icons/');
+
+  if (isShell) {
+    // cache-first for shell assets
     event.respondWith(
-      fetch(event.request).catch(() => {
-        // Optional: fallback if offline
-        return new Response(
-          JSON.stringify({ error: 'Offline' }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
-        );
+      caches.match(req).then(cached => {
+        if (cached) return cached;
+        return fetch(req).then(res => {
+          const resClone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, resClone));
+          return res;
+        });
       })
     );
     return;
   }
 
-  // For everything else (app shell), cache-first
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request);
-    })
-  );
+  // For everything else (including API calls), just go to network.
+  // The app JS already shows "Network error" when fetch fails.
+  // You COULD add cache fallback here if you want.
 });
