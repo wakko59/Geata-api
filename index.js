@@ -158,22 +158,23 @@ function getUserByPhone(phone) {
 }
 
 function createUser({ name, email, phone, password }) {
-  const id = 'u_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-  const normPhone = normalizePhone(phone);
+  const id = 'u_' + Date.now();
   const hash = password ? bcrypt.hashSync(password, 10) : null;
+  const normPhone = phone ? normalizePhone(phone) : null;
 
   db.prepare(
     'INSERT INTO users (id, name, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)'
   ).run(
     id,
     name || email || normPhone || id,
-    email ? String(email).trim() : null,
+    email || null,
     normPhone,
     hash
   );
 
   return getUserById(id);
 }
+
 function updateUser(userId, { name, email, phone, password }) {
   const user = getUserById(userId);
   if (!user) return null;
