@@ -3,13 +3,15 @@
 // - Phone/email + password login (JWT)
 // - Devices, users, device_users
 // - Schedules, commands, device poll
-// - Admin APIs + global user editing
+// - Admin APIs + global user editing + CSV import
+// - Device tokens (user_devices) for PWA auto-login
 
 const express = require('express');
 const path = require('path');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 console.log('*** GEATA BACKEND STARTING ***');
 console.log('*** USING INDEX.JS AT:', __filename);
@@ -71,6 +73,17 @@ function initDb() {
       result       TEXT,
       duration_ms  INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS user_devices (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      TEXT NOT NULL,
+      device_token TEXT UNIQUE NOT NULL,
+      created_at   TEXT NOT NULL,
+      last_seen_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_devices_user_id
+      ON user_devices(user_id);
   `);
 
   // Seed example devices if none
@@ -86,7 +99,7 @@ initDb();
 
 // ---- Helper functions ----
 
-// Phone normalisation
+// Phone normalisation (Irish-centric)
 function normalizePhone(phone) {
   if (!phone) return null;
   let p = String(phone).trim();
@@ -418,6 +431,43 @@ function listUsersWithDevices(query) {
   });
 }
 
+// Device tokens
+function generateDeviceToken() {
+  return crypto.randomBytes(32).toString('hex'); // 64-char hex
+}
+
+function createOrReplaceDeviceTokenForUser(userId) {
+  const nowIso = new Date().toISOString();
+  // One device per user (for now): remove any existing tokens
+  db.prepare('DELETE FROM user_devices WHERE user_id = ?').run(userId);
+
+  const token = generateDeviceToken();
+  db.prepare(`
+    INSERT INTO user_devices (user_id, device_token, created_at, last_seen_at)
+    VALUES (?, ?, ?, ?)
+  `).run(userId, token, nowIso, nowIso);
+
+  return token;
+}
+
+function findUserByDeviceToken(token) {
+  if (!token) return null;
+  const row = db.prepare(`
+    SELECT u.*
+    FROM user_devices ud
+    JOIN users u ON u.id = ud.user_id
+    WHERE ud.device_token = ?
+  `).get(token);
+  return row || null;
+}
+
+function touchDeviceToken(token) {
+  if (!token) return;
+  const nowIso = new Date().toISOString();
+  db.prepare('UPDATE user_devices SET last_seen_at = ? WHERE device_token = ?')
+    .run(nowIso, token);
+}
+
 // ---- Middleware ----
 
 function requireAdminKey(req, res, next) {
@@ -443,9 +493,24 @@ function requireUser(req, res, next) {
   }
 }
 
+function requireDeviceToken(req, res, next) {
+  const token = req.header('x-device-token');
+  if (!token) {
+    return res.status(401).json({ error: 'Missing device token' });
+  }
+  const user = findUserByDeviceToken(token);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid device token' });
+  }
+  touchDeviceToken(token);
+  req.user = { id: user.id };
+  req.deviceToken = token;
+  next();
+}
+
 // ---- Auth endpoints ----
 
-// Register (demo only; not critical in production)
+// Register (demo; not critical in production)
 app.post('/auth/register', (req, res) => {
   const { name, email, phone, password } = req.body;
 
@@ -537,12 +602,12 @@ app.get('/', (req, res) => {
   res.send('Geata API is running');
 });
 
-// List all devices (unp rotected; app uses /me/devices for user-specific)
+// List all devices (for debug/admin; app uses /me/devices*)
 app.get('/devices', (req, res) => {
   res.json(getDevices());
 });
 
-// Devices for logged-in user
+// Devices for logged-in user (JWT)
 app.get('/me/devices', requireUser, (req, res) => {
   const userId = req.user.id;
   const rows = db.prepare(`
@@ -555,8 +620,52 @@ app.get('/me/devices', requireUser, (req, res) => {
   res.json(rows);
 });
 
-// Open gate (user-facing)
+// Devices for user identified by device token
+app.get('/me/devices-by-token', requireDeviceToken, (req, res) => {
+  const userId = req.user.id;
+  const rows = db.prepare(`
+    SELECT d.id, d.name, du.role
+    FROM devices d
+    JOIN device_users du ON du.device_id = d.id
+    WHERE du.user_id = ?
+    ORDER BY d.name
+  `).all(userId);
+  res.json(rows);
+});
+
+// Create or replace device token for logged-in user
+app.post('/device/activate', requireUser, (req, res) => {
+  const userId = req.user.id;
+  const token = createOrReplaceDeviceTokenForUser(userId);
+  res.json({ deviceToken: token });
+});
+
+// Open gate (user-facing, JWT)
 app.post('/devices/:id/open', requireUser, (req, res) => {
+  const deviceId = req.params.id;
+  const { durationMs } = req.body;
+
+  const device = getDeviceById(deviceId);
+  if (!device) {
+    return res.status(404).json({ error: 'Device not found' });
+  }
+
+  const userId = req.user.id;
+
+  if (!isUserAllowedOnDevice(deviceId, userId)) {
+    return res.status(403).json({ error: 'User not allowed on this device' });
+  }
+
+  if (!isWithinUserSchedule(deviceId, userId)) {
+    return res.status(403).json({ error: 'Access not allowed at this time' });
+  }
+
+  const cmd = createCommand(deviceId, userId, 'OPEN', durationMs || 1000);
+  res.status(201).json(cmd);
+});
+
+// Open gate using device token
+app.post('/devices/:id/open-by-token', requireDeviceToken, (req, res) => {
   const deviceId = req.params.id;
   const { durationMs } = req.body;
 
@@ -658,6 +767,55 @@ app.post('/devices/:id/users', requireAdminKey, (req, res) => {
       phone: user.phone
     }
   });
+});
+
+// Bulk import users CSV for a device
+app.post('/devices/:id/users/import', requireAdminKey, (req, res) => {
+  const deviceId = req.params.id;
+  const { rows } = req.body;
+
+  const device = getDeviceById(deviceId);
+  if (!device) {
+    return res.status(404).json({ error: 'Device not found' });
+  }
+
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ error: 'rows array is required' });
+  }
+
+  const created = [];
+  const reused  = [];
+
+  rows.forEach(row => {
+    const name  = row.name || '';
+    const email = row.email || '';
+    const phone = row.phone || '';
+    const role  = row.role || 'operator';
+
+    if (!email && !phone && !name) return;
+
+    let user = null;
+
+    if (phone) {
+      user = getUserByPhone(phone);
+    }
+    if (!user && email) {
+      user = getUserByEmail(email);
+    }
+
+    if (!user) {
+      user = createUser({ name, email, phone, password: null });
+      created.push({ id: user.id, name: user.name, email: user.email, phone: user.phone });
+    } else {
+      const updated = updateUser(user.id, { name, email, phone, password: null });
+      reused.push({ id: updated.id, name: updated.name, email: updated.email, phone: updated.phone });
+      user = updated;
+    }
+
+    addUserToDevice(deviceId, user.id, role);
+  });
+
+  res.json({ created, reused });
 });
 
 // Remove user from a device
@@ -768,6 +926,7 @@ app.delete('/users/:userId', requireAdminKey, (req, res) => {
 
   db.prepare('DELETE FROM device_users WHERE user_id = ?').run(userId);
   db.prepare('DELETE FROM user_access_rules WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM user_devices WHERE user_id = ?').run(userId);
   db.prepare('DELETE FROM users WHERE id = ?').run(userId);
 
   res.json({ status: 'deleted', userId });
