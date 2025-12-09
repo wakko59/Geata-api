@@ -188,7 +188,6 @@
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Role</th>
-                <th>Edit</th>
                 <th>Schedule</th>
                 <th>Remove</th>
               </tr>
@@ -201,9 +200,10 @@
     </div>
 
     <div class="card">
-      <h2>Edit User Details (for the current device)</h2>
+      <h2>Edit User Details (global)</h2>
       <p class="small">
-        Select a device, then click "Edit" on a user in the table above.
+        Use the lookup table below, click <strong>Edit</strong> on a user, then change their details here.<br />
+        Changes apply to all devices that user has access to.
       </p>
       <div id="editUserPanel">
         <label>User ID</label>
@@ -220,12 +220,6 @@
 
         <label for="editUserPassword">New Password</label>
         <input id="editUserPassword" type="password" placeholder="Leave blank to keep existing" />
-
-        <label for="editUserRole">Role for this device</label>
-        <select id="editUserRole">
-          <option value="operator">operator</option>
-          <option value="admin">admin</option>
-        </select>
 
         <button id="saveUserChangesBtn">Save Changes</button>
         <div id="editUserStatus" class="status"></div>
@@ -290,6 +284,7 @@
             <th>Email</th>
             <th>Phone</th>
             <th>Devices (gate(role))</th>
+            <th>Edit</th>
             <th>Remove User</th>
           </tr>
         </thead>
@@ -330,7 +325,6 @@
     const editUserEmail       = document.getElementById('editUserEmail');
     const editUserPhone       = document.getElementById('editUserPhone');
     const editUserPassword    = document.getElementById('editUserPassword');
-    const editUserRole        = document.getElementById('editUserRole');
     const saveUserChangesBtn  = document.getElementById('saveUserChangesBtn');
     const editUserStatus      = document.getElementById('editUserStatus');
 
@@ -353,8 +347,6 @@
     const userLookupTbody     = userLookupTable.querySelector('tbody');
     const userLookupStatus    = document.getElementById('userLookupStatus');
 
-    let currentEditDeviceId = null; // which device's user we're editing
-
     function getAdminKey() {
       return adminKeyInput.value.trim();
     }
@@ -365,7 +357,7 @@
       el.className = 'status' + (isError ? ' error' : ' ok');
     }
 
-    // ------------- DEVICES -------------
+    // --------- DEVICES ---------
 
     async function loadDevices() {
       try {
@@ -394,7 +386,7 @@
       }
     }
 
-    // ------------- DEVICE USERS -------------
+    // --------- DEVICE USERS ---------
 
     async function loadDeviceUsers() {
       const adminKey = getAdminKey();
@@ -443,15 +435,6 @@
           const tdRole = document.createElement('td');
           tdRole.textContent = u.role || '';
           tr.appendChild(tdRole);
-
-          const tdEdit = document.createElement('td');
-          const editBtn = document.createElement('button');
-          editBtn.textContent = 'Edit';
-          editBtn.addEventListener('click', () => {
-            openEditUser(deviceId, u);
-          });
-          tdEdit.appendChild(editBtn);
-          tr.appendChild(tdEdit);
 
           const tdSchedule = document.createElement('td');
           const schedBtn = document.createElement('button');
@@ -503,14 +486,14 @@
           return;
         }
         loadDeviceUsers();
-        loadUserLookup(); // refresh global view
+        loadUserLookup();
       } catch (err) {
         console.error(err);
         alert('Network error removing user');
       }
     }
 
-    // ------------- CREATE / ATTACH USER -------------
+    // --------- CREATE / ATTACH USER ---------
 
     async function handleCreateAttachUser() {
       const adminKey = getAdminKey();
@@ -554,7 +537,11 @@
           return;
         }
 
-        setStatus(createUserStatus, 'User attached: ' + (data.user && data.user.id ? data.user.id : data.userId), false);
+        setStatus(
+          createUserStatus,
+          'User attached: ' + (data.user && data.user.id ? data.user.id : data.userId),
+          false
+        );
         newUserName.value = '';
         newUserEmail.value = '';
         newUserPhone.value = '';
@@ -569,7 +556,7 @@
       }
     }
 
-    // ------------- CSV IMPORT (FILE INPUT) -------------
+    // --------- CSV IMPORT (FILE INPUT) ---------
 
     function parseCsvText(text) {
       const trimmed = text.trim();
@@ -670,28 +657,21 @@
       reader.readAsText(file);
     }
 
-    // ------------- EDIT USER -------------
+    // --------- GLOBAL EDIT USER ---------
 
-    function openEditUser(deviceId, u) {
-      currentEditDeviceId = deviceId;
-      editUserId.value       = u.userId || u.id;
+    function openGlobalEditUser(u) {
+      editUserId.value       = u.id;
       editUserName.value     = u.name || '';
       editUserEmail.value    = u.email || '';
       editUserPhone.value    = u.phone || '';
       editUserPassword.value = '';
-      editUserRole.value     = u.role || 'operator';
-      setStatus(editUserStatus, 'Editing user ' + (u.userId || u.id), false);
+      setStatus(editUserStatus, 'Editing user ' + u.id, false);
     }
 
     async function handleSaveUserChanges() {
       const adminKey = getAdminKey();
       if (!adminKey) {
         setStatus(editUserStatus, 'Admin key is required', true);
-        return;
-      }
-      const deviceId = currentEditDeviceId || deviceSelect.value;
-      if (!deviceId) {
-        setStatus(editUserStatus, 'No device selected for edit', true);
         return;
       }
       const userId = editUserId.value.trim();
@@ -704,22 +684,18 @@
       const email    = editUserEmail.value.trim();
       const phone    = editUserPhone.value.trim();
       const password = editUserPassword.value;
-      const role     = editUserRole.value;
 
       setStatus(editUserStatus, 'Saving...', false);
 
       try {
-        const res = await fetch(
-          '/devices/' + encodeURIComponent(deviceId) + '/users/' + encodeURIComponent(userId),
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': adminKey
-            },
-            body: JSON.stringify({ name, email, phone, password, role })
-          }
-        );
+        const res = await fetch('/users/' + encodeURIComponent(userId), {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': adminKey
+          },
+          body: JSON.stringify({ name, email, phone, password })
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           setStatus(editUserStatus, data.error || ('HTTP ' + res.status), true);
@@ -728,14 +704,14 @@
         setStatus(editUserStatus, 'User updated', false);
         editUserPassword.value = '';
         loadDeviceUsers();
-        loadUserLookup();
+        loadUserLookup(userSearchInput.value);
       } catch (err) {
         console.error(err);
         setStatus(editUserStatus, 'Network error saving user', true);
       }
     }
 
-    // ------------- SCHEDULE -------------
+    // --------- SCHEDULE ---------
 
     function clearScheduleForm() {
       activeFromInput.value = '';
@@ -858,7 +834,7 @@
       }
     }
 
-    // ------------- USER LOOKUP (GLOBAL) -------------
+    // --------- USER LOOKUP (GLOBAL) ---------
 
     async function loadUserLookup(query) {
       const adminKey = getAdminKey();
@@ -915,6 +891,15 @@
           }
           tr.appendChild(tdDevices);
 
+          const tdEdit = document.createElement('td');
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'Edit';
+          editBtn.addEventListener('click', () => {
+            openGlobalEditUser(u);
+          });
+          tdEdit.appendChild(editBtn);
+          tr.appendChild(tdEdit);
+
           const tdRemove = document.createElement('td');
           const remBtn = document.createElement('button');
           remBtn.textContent = 'Delete User';
@@ -962,7 +947,7 @@
       }
     }
 
-    // ------------- EVENT WIRING -------------
+    // --------- EVENT WIRING ---------
 
     refreshDevicesBtn.addEventListener('click', loadDevices);
     deviceSelect.addEventListener('change', loadDeviceUsers);
@@ -987,7 +972,7 @@
     window.addEventListener('load', () => {
       setStatus(adminStatus, 'Enter your admin key to manage devices', false);
       loadDevices();
-      // User lookup will show only after key is entered and you press "Show All" or Search
+      // User lookup: press "Show All" or "Search" after entering key
     });
   </script>
 </body>

@@ -1,12 +1,9 @@
-// index.js
-// Backend for Geata:
-// - Express + SQLite (better-sqlite3)
-// - Admin API (x-api-key)
-// - Users with name / phone / email / password_hash
-// - Phone-or-email login (JWT)
-// - Per-device user lists, CSV import
-// - Commands queue + /device/poll for ESP/4G module
-// - PWA static files served from /public
+// index.js - Geata backend
+// - SQLite (better-sqlite3)
+// - Phone/email + password login (JWT)
+// - Devices, users, device_users
+// - Schedules, commands, device poll
+// - Admin APIs + global user editing
 
 const express = require('express');
 const path = require('path');
@@ -17,53 +14,19 @@ const jwt = require('jsonwebtoken');
 console.log('*** GEATA BACKEND STARTING ***');
 console.log('*** USING INDEX.JS AT:', __filename);
 
-
 const app = express();
-
-// Parse JSON bodies
 app.use(express.json());
-
-// Serve static files (app.html, admin.html, manifest, icons, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ---- Config ----
 
-// Admin API key (used by admin.html via x-api-key header)
-// On Render, set ADMIN_API_KEY as an environment variable.
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'dev-only-admin-key';
-
-// JWT secret for user tokens
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-jwt-secret';
+const PORT = process.env.PORT || 3000;
 
 // ---- SQLite setup ----
 
 const db = new Database('myapi.db');
-
-// Phone normalisation helper (basic, Irish-friendly)
-//
-// - Removes spaces/dashes
-// - "00353..." → "+353..."
-// - "0xxxx..." → "+353xxxx..." (assumes IE as default country)
-// - "+..." left as-is
-//
-function normalizePhone(phone) {
-  if (!phone) return null;
-  let s = String(phone).trim();
-
-  // remove spaces, hyphens, parentheses
-  s = s.replace(/[\s\-()]/g, '');
-
-  if (s.startsWith('00')) {
-    s = '+' + s.slice(2);
-  } else if (s.startsWith('+')) {
-    // already international
-  } else if (s.startsWith('0')) {
-    // assume Irish default country code
-    s = '+353' + s.slice(1);
-  }
-
-  return s;
-}
 
 function initDb() {
   db.exec(`
@@ -76,7 +39,7 @@ function initDb() {
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
       email         TEXT UNIQUE,
-      phone         TEXT UNIQUE,
+      phone         TEXT,
       password_hash TEXT
     );
 
@@ -110,20 +73,40 @@ function initDb() {
     );
   `);
 
-  // Seed example devices if none exist
+  // Seed example devices if none
   const countDevices = db.prepare('SELECT COUNT(*) AS c FROM devices').get().c;
   if (countDevices === 0) {
     const insertDevice = db.prepare('INSERT INTO devices (id, name) VALUES (?, ?)');
     insertDevice.run('gate1', 'Warehouse Gate');
     insertDevice.run('gate2', 'Yard Barrier');
   }
-
-  // We no longer seed any users by default.
 }
 
 initDb();
 
 // ---- Helper functions ----
+
+// Phone normalisation
+function normalizePhone(phone) {
+  if (!phone) return null;
+  let p = String(phone).trim();
+
+  // 00353... -> +353...
+  if (p.startsWith('00')) {
+    p = '+' + p.slice(2);
+  }
+
+  // If no +, assume Irish and leading 0 if present
+  if (!p.startsWith('+')) {
+    if (p.startsWith('0')) {
+      p = '+353' + p.slice(1);
+    } else {
+      p = '+353' + p;
+    }
+  }
+
+  return p;
+}
 
 // Devices
 function getDevices() {
@@ -146,14 +129,12 @@ function getUserById(id) {
 
 function getUserByEmail(email) {
   if (!email) return null;
-  const e = String(email).trim();
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(e);
+  return db.prepare('SELECT * FROM users WHERE email = ?').get(email);
 }
 
 function getUserByPhone(phone) {
   if (!phone) return null;
   const norm = normalizePhone(phone);
-  if (!norm) return null;
   return db.prepare('SELECT * FROM users WHERE phone = ?').get(norm);
 }
 
@@ -179,8 +160,10 @@ function updateUser(userId, { name, email, phone, password }) {
   const user = getUserById(userId);
   if (!user) return null;
 
-  const newName = name && String(name).trim() ? String(name).trim() : user.name;
-  const newEmail = email && String(email).trim() ? String(email).trim() : user.email;
+  const newName =
+    name && String(name).trim() ? String(name).trim() : user.name;
+  const newEmail =
+    email && String(email).trim() ? String(email).trim() : user.email;
   const newPhone = phone ? normalizePhone(phone) : user.phone;
 
   let newHash = user.password_hash;
@@ -197,10 +180,15 @@ function updateUser(userId, { name, email, phone, password }) {
   return getUserById(userId);
 }
 
-// Device-users mapping
+// Device users
 function getDeviceUsers(deviceId) {
   return db.prepare(`
-    SELECT du.user_id AS userId, du.role, u.name, u.email, u.phone
+    SELECT
+      du.user_id AS userId,
+      du.role,
+      u.name,
+      u.email,
+      u.phone
     FROM device_users du
     LEFT JOIN users u ON u.id = du.user_id
     WHERE du.device_id = ?
@@ -228,16 +216,6 @@ function isUserAllowedOnDevice(deviceId, userId) {
   return !!row;
 }
 
-function getUserDevices(userId) {
-  return db.prepare(`
-    SELECT d.id, d.name, du.role
-    FROM device_users du
-    JOIN devices d ON d.id = du.device_id
-    WHERE du.user_id = ?
-    ORDER BY d.id
-  `).all(userId);
-}
-
 // Access rules
 function getUserAccessRuleRow(deviceId, userId) {
   return db.prepare(`
@@ -247,7 +225,7 @@ function getUserAccessRuleRow(deviceId, userId) {
   `).get(deviceId, userId);
 }
 
-function normalizeRuleRow(row) {
+function normalizeRule(row) {
   if (!row) return null;
   return {
     id: row.id,
@@ -290,7 +268,7 @@ function upsertUserAccessRule(deviceId, userId, ruleData) {
     `).run(activeFrom, activeTo, daysJson, windowsJson, existing.id);
   }
 
-  return normalizeRuleRow(getUserAccessRuleRow(deviceId, userId));
+  return normalizeRule(getUserAccessRuleRow(deviceId, userId));
 }
 
 function isWithinUserSchedule(deviceId, userId, now = new Date()) {
@@ -299,9 +277,9 @@ function isWithinUserSchedule(deviceId, userId, now = new Date()) {
   // No rule = 24/7 access
   if (!row) return true;
 
-  const rule = normalizeRuleRow(row);
+  const rule = normalizeRule(row);
 
-  const day = now.getDay(); // 0–6 (Sun–Sat)
+  const day = now.getDay(); // 0–6
   const timeStr = now.toTimeString().slice(0, 5); // "HH:MM"
   const dateStr = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
@@ -324,7 +302,7 @@ function isWithinUserSchedule(deviceId, userId, now = new Date()) {
 
 // Commands
 function createCommand(deviceId, userId, type, durationMs) {
-  const id = 'cmd_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  const id = 'cmd_' + Date.now();
   const nowIso = new Date().toISOString();
   db.prepare(`
     INSERT INTO commands
@@ -379,55 +357,69 @@ function getRecentCommands(limit = 20) {
   `).all(limit);
 }
 
-// All users + their devices (for admin lookup)
-function listUsersWithDevices(searchTerm) {
-  let where = '';
-  let param = null;
-  if (searchTerm) {
-    where = `
-      WHERE u.name LIKE ?
-         OR u.email LIKE ?
-         OR u.phone LIKE ?
-    `;
-    const like = `%${searchTerm}%`;
-    param = [like, like, like];
+// User lookup with devices
+function listUsersWithDevices(query) {
+  let rows;
+  if (query && query.trim()) {
+    const q = '%' + query.trim().toLowerCase() + '%';
+    rows = db.prepare(`
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        COALESCE(
+          GROUP_CONCAT(du.device_id || ':' || du.role),
+          ''
+        ) AS devices_str
+      FROM users u
+      LEFT JOIN device_users du ON du.user_id = u.id
+      WHERE lower(u.name) LIKE ?
+         OR lower(IFNULL(u.email, '')) LIKE ?
+         OR lower(IFNULL(u.phone, '')) LIKE ?
+      GROUP BY u.id
+      ORDER BY u.name
+    `).all(q, q, q);
+  } else {
+    rows = db.prepare(`
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        COALESCE(
+          GROUP_CONCAT(du.device_id || ':' || du.role),
+          ''
+        ) AS devices_str
+      FROM users u
+      LEFT JOIN device_users du ON du.user_id = u.id
+      GROUP BY u.id
+      ORDER BY u.name
+    `).all();
   }
 
-  const users = db.prepare(
-    `SELECT u.id, u.name, u.email, u.phone
-     FROM users u
-     ${where}
-     ORDER BY u.name COLLATE NOCASE`
-  ).all(param || []);
-
-  const duRows = db.prepare(`
-    SELECT du.device_id, du.user_id, du.role, d.name AS device_name
-    FROM device_users du
-    JOIN devices d ON d.id = du.device_id
-  `).all();
-
-  const deviceMap = {};
-  duRows.forEach(r => {
-    if (!deviceMap[r.user_id]) deviceMap[r.user_id] = [];
-    deviceMap[r.user_id].push({
-      deviceId: r.device_id,
-      deviceName: r.device_name,
-      role: r.role
-    });
+  return rows.map(r => {
+    const devices = [];
+    if (r.devices_str) {
+      r.devices_str.split(',').forEach(entry => {
+        const [deviceId, role] = entry.split(':');
+        if (deviceId) {
+          devices.push({ deviceId, role: role || 'operator' });
+        }
+      });
+    }
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      phone: r.phone,
+      devices
+    };
   });
-
-  return users.map(u => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    phone: u.phone,
-    devices: deviceMap[u.id] || []
-  }));
 }
 
 // ---- Middleware ----
 
-// Admin key (for admin endpoints & admin.html)
 function requireAdminKey(req, res, next) {
   const key = req.header('x-api-key');
   if (!key || key !== ADMIN_API_KEY) {
@@ -436,7 +428,6 @@ function requireAdminKey(req, res, next) {
   next();
 }
 
-// User auth (JWT) for app endpoints
 function requireUser(req, res, next) {
   const auth = req.header('authorization') || '';
   if (!auth.startsWith('Bearer ')) {
@@ -454,9 +445,9 @@ function requireUser(req, res, next) {
 
 // ---- Auth endpoints ----
 
-// Register a new user (phone OR email + password)
+// Register (demo only; not critical in production)
 app.post('/auth/register', (req, res) => {
-  const { name, phone, email, password } = req.body;
+  const { name, email, phone, password } = req.body;
 
   if ((!phone && !email) || !password) {
     return res
@@ -464,17 +455,17 @@ app.post('/auth/register', (req, res) => {
       .json({ error: 'phone or email and password are required' });
   }
 
-  let existing = null;
+  if (email) {
+    const existingEmail = getUserByEmail(email);
+    if (existingEmail) {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+  }
   if (phone) {
-    existing = getUserByPhone(phone);
-  }
-  if (!existing && email) {
-    existing = getUserByEmail(email);
-  }
-  if (existing) {
-    return res
-      .status(409)
-      .json({ error: 'User with this phone/email already exists' });
+    const existingPhone = getUserByPhone(phone);
+    if (existingPhone) {
+      return res.status(409).json({ error: 'User with this phone already exists' });
+    }
   }
 
   const user = createUser({ name, email, phone, password });
@@ -486,12 +477,13 @@ app.post('/auth/register', (req, res) => {
     user: {
       id: user.id,
       name: user.name,
-      phone: user.phone,
-      email: user.email
+      email: user.email,
+      phone: user.phone
     }
   });
 });
-// Login: phone OR email + password -> JWT
+
+// Login with phone or email
 app.post('/auth/login', (req, res) => {
   const { phone, email, password } = req.body;
 
@@ -499,13 +491,13 @@ app.post('/auth/login', (req, res) => {
   console.log('*** BODY:', req.body);
 
   if ((!phone && !email) || !password) {
-    console.log('*** /auth/login MISSING FIELDS:', { phone, email, password });
     return res
       .status(400)
-      .json({ error: 'MISSING_PHONE_OR_EMAIL_OR_PASSWORD' });
+      .json({ error: 'phone or email and password are required' });
   }
 
   let user = null;
+
   if (phone) {
     user = getUserByPhone(phone);
   }
@@ -533,299 +525,37 @@ app.post('/auth/login', (req, res) => {
     user: {
       id: user.id,
       name: user.name,
-      phone: user.phone,
-      email: user.email
-    }
-  });
-});
-
-
-// Login: phone OR email + password -> JWT
-app.post('/auth/login', (req, res) => {  const { phone, email, password } = req.body;
-
-  console.log('DEBUG /auth/login body:', req.body);
-
-  if ((!phone && !email) || !password) {
-    console.log('DEBUG /auth/login missing fields:', { phone, email, password });
-    return res
-      .status(400)
-      .json({ error: 'MISSING_PHONE_OR_EMAIL_OR_PASSWORD' });
-  }
-
-  let user = null;
-  if (phone) {
-    user = getUserByPhone(phone);
-  }
-  if (!user && email) {
-    user = getUserByEmail(email);
-  }
-
-  if (!user || !user.password_hash) {
-    console.log('DEBUG /auth/login invalid user or no password_hash');
-    return res.status(401).json({ error: 'Invalid login or password' });
-  }
-
-  const ok = bcrypt.compareSync(password, user.password_hash);
-  if (!ok) {
-    console.log('DEBUG /auth/login bad password');
-    return res.status(401).json({ error: 'Invalid login or password' });
-  }
-
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-
-  console.log('DEBUG /auth/login success for userId:', user.id);
-
-  res.json({
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      phone: user.phone,
-      email: user.email
-    }
-  });
-});
-
-
-// ---- Simple health route ----
-
-app.get('/', (req, res) => {
-  res.send('Geata API is running');
-});
-
-// ---- Devices (admin + public list) ----
-
-// Public devices list (for debugging / admin)
-app.get('/devices', (req, res) => {
-  res.json(getDevices());
-});
-
-// Create a new device (admin)
-app.post('/devices', requireAdminKey, (req, res) => {
-  const { id, name } = req.body;
-  if (!id || !name) {
-    return res.status(400).json({ error: 'id and name are required' });
-  }
-  const existing = getDeviceById(id);
-  if (existing) {
-    return res.status(409).json({ error: 'Device with this id already exists' });
-  }
-  const dev = createDevice(id, name);
-  res.status(201).json(dev);
-});
-
-// List users attached to a device (admin)
-app.get('/devices/:id/users', requireAdminKey, (req, res) => {
-  const deviceId = req.params.id;
-  res.json(getDeviceUsers(deviceId));
-});
-
-// Add user to device (admin)
-// Expects JSON: { userId, role } where userId already exists in users table
-// Create/reuse user and attach to device (admin)
-//
-// Accepts either:
-//  - { userId, role }
-//  - or { name, email, phone, password, role } (create or reuse by phone/email)
-//
-app.post('/devices/:id/users', requireAdminKey, (req, res) => {
-  const deviceId = req.params.id;
-  let { userId, name, email, phone, password, role } = req.body;
-
-  const device = getDeviceById(deviceId);
-  if (!device) {
-    return res.status(404).json({ error: 'Device not found' });
-  }
-
-  let user = null;
-
-  // Case 1: attach existing user by id
-  if (userId) {
-    user = getUserById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-  } else {
-    // Case 2: create or reuse by phone/email
-    if (!phone && !email) {
-      return res.status(400).json({
-        error: 'userId or phone/email is required'
-      });
-    }
-
-    // Try to find by phone/email first
-    if (phone) {
-      user = getUserByPhone(phone);
-    }
-    if (!user && email) {
-      user = getUserByEmail(email);
-    }
-
-    if (!user) {
-      // New user
-      user = createUser({ name, email, phone, password });
-    } else {
-      // Existing user: optionally update details / password
-      updateUser(user.id, { name, email, phone, password });
-    }
-
-    userId = user.id;
-  }
-
-  // Attach to this device with role
-  addUserToDevice(deviceId, userId, role || 'operator');
-
-  res.status(201).json({
-    deviceId,
-    userId,
-    role: role || 'operator',
-    user: {
-      id: user.id,
-      name: user.name,
       email: user.email,
       phone: user.phone
     }
   });
 });
 
+// ---- User-facing / app routes ----
 
-
-// Remove user from device (admin)
-app.delete('/devices/:id/users/:userId', requireAdminKey, (req, res) => {
-  const deviceId = req.params.id;
-  const userId = req.params.userId;
-
-  const ok = removeUserFromDevice(deviceId, userId);
-  if (!ok) {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  res.json({ status: 'removed' });
+app.get('/', (req, res) => {
+  res.send('Geata API is running');
 });
 
-// Get user schedule (admin)
-app.get('/devices/:id/users/:userId/schedule', requireAdminKey, (req, res) => {
-  const deviceId = req.params.id;
-  const userId = req.params.userId;
-
-  const row = getUserAccessRuleRow(deviceId, userId);
-  if (!row) {
-    return res.json({
-      deviceId,
-      userId,
-      defaultAccess: true,
-      message: 'No specific schedule; user has 24/7 access'
-    });
-  }
-
-  res.json(normalizeRuleRow(row));
+// List all devices (unp rotected; app uses /me/devices for user-specific)
+app.get('/devices', (req, res) => {
+  res.json(getDevices());
 });
 
-// Set/replace user schedule (admin)
-app.put('/devices/:id/users/:userId/schedule', requireAdminKey, (req, res) => {
-  const deviceId = req.params.id;
-  const userId = req.params.userId;
-
-  const updated = upsertUserAccessRule(deviceId, userId, req.body);
-  res.json(updated);
-});
-
-// Bulk import users for a device (admin)
-// Expects JSON: { rows: [ { name, email, phone, role }, ... ] }
-app.post('/devices/:id/users/import', requireAdminKey, (req, res) => {
-  const deviceId = req.params.id;
-  const { rows } = req.body;
-
-  const device = getDeviceById(deviceId);
-  if (!device) {
-    return res.status(404).json({ error: 'Device not found' });
-  }
-
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return res.status(400).json({ error: 'rows array is required' });
-  }
-
-  const created = [];
-  const reused = [];
-
-  rows.forEach((r) => {
-    const name = r.name && String(r.name).trim() ? String(r.name).trim() : null;
-    const email = r.email && String(r.email).trim() ? String(r.email).trim() : null;
-    const phone = r.phone && String(r.phone).trim() ? String(r.phone).trim() : null;
-    const role = r.role && String(r.role).trim() ? String(r.role).trim() : 'operator';
-
-    if (!phone && !email) {
-      return;
-    }
-
-    let user = null;
-    if (phone) {
-      user = getUserByPhone(phone);
-    }
-    if (!user && email) {
-      user = getUserByEmail(email);
-    }
-
-    if (!user) {
-      user = createUser({ name, email, phone, password: null });
-      created.push(user.id);
-    } else {
-      reused.push(user.id);
-    }
-
-    addUserToDevice(deviceId, user.id, role);
-  });
-
-  res.json({
-    status: 'ok',
-    created,
-    reused
-  });
-});
-
-// ---- User lookup for admin ----
-
-// GET /users?q=...  (admin)
-// Returns all users (optionally filtered) + their devices
-app.get('/users', requireAdminKey, (req, res) => {
-  const q = (req.query.q || '').trim();
-  const users = listUsersWithDevices(q || null);
-  res.json(users);
-});
-// DELETE /users/:userId (admin)
-// Removes the user from all devices and deletes the user record
-app.delete('/users/:userId', requireAdminKey, (req, res) => {
-  const userId = req.params.userId;
-
-  const user = getUserById(userId);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-
-  // Remove from all devices
-  db.prepare('DELETE FROM device_users WHERE user_id = ?').run(userId);
-
-  // Remove any access rules for this user
-  db.prepare('DELETE FROM user_access_rules WHERE user_id = ?').run(userId);
-
-  // Optionally: keep commands history, or delete them.
-  // For now, we leave commands so logs still show "user_id" even if user is gone.
-
-  // Delete the user record itself
-  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
-
-  res.json({ status: 'deleted', userId });
-});
-
-
-// ---- User-facing endpoints ----
-
-// Current user's devices (for app.html)
+// Devices for logged-in user
 app.get('/me/devices', requireUser, (req, res) => {
-  const devices = getUserDevices(req.user.id);
-  res.json(devices);
+  const userId = req.user.id;
+  const rows = db.prepare(`
+    SELECT d.id, d.name, du.role
+    FROM devices d
+    JOIN device_users du ON du.device_id = d.id
+    WHERE du.user_id = ?
+    ORDER BY d.name
+  `).all(userId);
+  res.json(rows);
 });
 
-// Open gate (user-facing) – requires JWT, uses logged-in user
+// Open gate (user-facing)
 app.post('/devices/:id/open', requireUser, (req, res) => {
   const deviceId = req.params.id;
   const { durationMs } = req.body;
@@ -849,16 +579,133 @@ app.post('/devices/:id/open', requireUser, (req, res) => {
   res.status(201).json(cmd);
 });
 
-// Recent commands (admin)
+// ---- Admin routes ----
+
+// Create a new device
+app.post('/devices', requireAdminKey, (req, res) => {
+  const { id, name } = req.body;
+  if (!id || !name) {
+    return res.status(400).json({ error: 'id and name are required' });
+  }
+  const existing = getDeviceById(id);
+  if (existing) {
+    return res.status(409).json({ error: 'Device with this id already exists' });
+  }
+  const dev = createDevice(id, name);
+  res.status(201).json(dev);
+});
+
+// List users attached to a device
+app.get('/devices/:id/users', requireAdminKey, (req, res) => {
+  const deviceId = req.params.id;
+  res.json(getDeviceUsers(deviceId));
+});
+
+// Create/reuse user and attach to device
+//
+// Accepts either:
+//  - { userId, role }
+//  - or { name, email, phone, password, role }
+app.post('/devices/:id/users', requireAdminKey, (req, res) => {
+  const deviceId = req.params.id;
+  let { userId, name, email, phone, password, role } = req.body;
+
+  const device = getDeviceById(deviceId);
+  if (!device) {
+    return res.status(404).json({ error: 'Device not found' });
+  }
+
+  let user = null;
+
+  if (userId) {
+    user = getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+  } else {
+    if (!phone && !email) {
+      return res.status(400).json({
+        error: 'userId or phone/email is required'
+      });
+    }
+
+    if (phone) {
+      user = getUserByPhone(phone);
+    }
+    if (!user && email) {
+      user = getUserByEmail(email);
+    }
+
+    if (!user) {
+      user = createUser({ name, email, phone, password });
+    } else {
+      user = updateUser(user.id, { name, email, phone, password });
+    }
+
+    userId = user.id;
+  }
+
+  addUserToDevice(deviceId, userId, role || 'operator');
+
+  res.status(201).json({
+    deviceId,
+    userId,
+    role: role || 'operator',
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone
+    }
+  });
+});
+
+// Remove user from a device
+app.delete('/devices/:id/users/:userId', requireAdminKey, (req, res) => {
+  const deviceId = req.params.id;
+  const userId = req.params.userId;
+
+  const ok = removeUserFromDevice(deviceId, userId);
+  if (!ok) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  res.json({ status: 'removed' });
+});
+
+// Get user schedule for a device
+app.get('/devices/:id/users/:userId/schedule', requireAdminKey, (req, res) => {
+  const deviceId = req.params.id;
+  const userId = req.params.userId;
+
+  const row = getUserAccessRuleRow(deviceId, userId);
+  if (!row) {
+    return res.json({
+      deviceId,
+      userId,
+      defaultAccess: true,
+      message: 'No specific schedule; user has 24/7 access'
+    });
+  }
+
+  res.json(normalizeRule(row));
+});
+
+// Set/replace user schedule for a device
+app.put('/devices/:id/users/:userId/schedule', requireAdminKey, (req, res) => {
+  const deviceId = req.params.id;
+  const userId = req.params.userId;
+
+  const updated = upsertUserAccessRule(deviceId, userId, req.body);
+  res.json(updated);
+});
+
+// Recent commands
 app.get('/commands', requireAdminKey, (req, res) => {
   res.json(getRecentCommands(20));
 });
 
 // ---- Device route: ESP/gate polls here ----
-//
-// Body: { deviceId, lastResults: [ { commandId, result }, ... ] }
-// Response: { commands: [ { commandId, type, durationMs }, ... ] }
-//
+
 app.post('/device/poll', (req, res) => {
   const { deviceId, lastResults } = req.body;
 
@@ -883,9 +730,51 @@ app.post('/device/poll', (req, res) => {
   res.json({ commands: toSend });
 });
 
+// ---- User lookup for admin ----
+
+// GET /users?q=...
+app.get('/users', requireAdminKey, (req, res) => {
+  const q = (req.query.q || '').trim();
+  const users = listUsersWithDevices(q || null);
+  res.json(users);
+});
+
+// PUT /users/:userId – global user edit
+app.put('/users/:userId', requireAdminKey, (req, res) => {
+  const userId = req.params.userId;
+  const { name, email, phone, password } = req.body;
+
+  const updated = updateUser(userId, { name, email, phone, password });
+  if (!updated) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json({
+    id: updated.id,
+    name: updated.name,
+    email: updated.email,
+    phone: updated.phone
+  });
+});
+
+// DELETE /users/:userId – remove completely
+app.delete('/users/:userId', requireAdminKey, (req, res) => {
+  const userId = req.params.userId;
+
+  const user = getUserById(userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  db.prepare('DELETE FROM device_users WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM user_access_rules WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+
+  res.json({ status: 'deleted', userId });
+});
+
 // ---- Start server ----
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Geata API listening on port ${PORT}`);
   console.log(`Admin API key is: ${ADMIN_API_KEY}`);
