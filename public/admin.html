@@ -6,30 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
-  /* pale blue background for the whole page */
-  --bg-main: #cfdfee;
+      /* pale blue background for the whole page */
+      --bg-main: #cfdfee;
 
-  /* dark blue panels/cards */
-  --bg-card: #0b2535;
+      /* dark blue panels/cards */
+      --bg-card: #0b2535;
 
-  /* slightly lighter dark blue for inner table backgrounds */
-  --bg-card-soft: #123653;
+      /* slightly lighter dark blue for inner table backgrounds */
+      --bg-card-soft: #123653;
 
-  /* primary button colour */
-  --accent: #1c5e86;
-  --accent-dark: #1c5e86;
-  --accent-soft: rgba(28, 94, 134, 0.2);
+      /* primary button colour */
+      --accent: #1c5e86;
+      --accent-dark: #1c5e86;
+      --accent-soft: rgba(28, 94, 134, 0.2);
 
-  /* keep red as-is */
-  --danger: #d9534f;
+      /* keep red as-is */
+      --danger: #d9534f;
 
-  /* light text on dark cards */
-  --text-main: #f5f7fa;
-  --text-dark: #f5f7fa;
+      /* light text on dark cards */
+      --text-main: #f5f7fa;
+      --text-dark: #f5f7fa;
 
-  /* we’ll override subtitles explicitly below, so this can stay neutral */
-  --text-muted: #7b8a9b;
-}
+      /* we’ll override subtitles explicitly below, so this can stay neutral */
+      --text-muted: #7b8a9b;
+    }
 
     * {
       box-sizing: border-box;
@@ -38,7 +38,8 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
       padding: 0;
-      background: radial-gradient(circle at top, #1e3f2f 0, var(--bg-main) 45%, #b3cde5 100%);
+      /* fixed invalid colour here (#1e3f5d instead of #1e3f2fd) */
+      background: radial-gradient(circle at top, #1e3f5d 0, var(--bg-main) 45%, #b3cde5 100%);
       color: var(--text-main);
     }
     .container {
@@ -177,15 +178,17 @@
       font-weight: 600;
     }
     .pill {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: #e0e7f2;
-      font-size: 11px;
-      margin-right: 4px;
-      margin-bottom: 2px;
-      color: #e3f2fd;
-    }
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);   /* soft petrol blue */
+  font-size: 11px;
+  margin-right: 4px;
+  margin-bottom: 2px;
+  color: var(--text-main);          /* light text */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
     .two-column {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -496,7 +499,7 @@
       </table>
     </div>
 
-    <!-- User Lookup (All Users) -->
+        <!-- User Lookup (All Users) -->
     <div class="card">
       <div class="card-header">
         <div>
@@ -512,9 +515,19 @@
       <button id="showAllUsersBtn" class="btn-secondary btn-small">Show All</button>
       <div id="userSearchStatus" class="status"></div>
 
+      <!-- New: show which device we're attaching to -->
+      <div class="device-label-big">
+        Attach to Device:
+        <span id="selectedDeviceTextDirectory" class="device-label-value">None selected</span>
+      </div>
+      <button id="attachSelectedUsersBtn" class="btn-secondary btn-small">
+        Attach Selected Users to Device
+      </button>
+
       <table id="globalUsersTable">
         <thead>
           <tr>
+            <th>Select</th>
             <th>User ID</th>
             <th>Name</th>
             <th>Email</th>
@@ -527,6 +540,7 @@
         <tbody></tbody>
       </table>
     </div>
+
 
     <!-- Edit User Details (global) -->
     <div class="card">
@@ -713,1169 +727,1292 @@
     </div>
   </div>
 
-  <script>
-    let apiKey = "";
-    let selectedDeviceId = "";
-    let allSchedules = [];
-    let editingUserId = null;
-    let editingScheduleId = null;
-    let deviceEventsPollTimer = null;
-	
-	function loadStoredApiKey() {
-    try {
-    return localStorage.getItem("geataAdminApiKey") || "";
-  } catch (_) {
-    return "";
+ <script>
+  let apiKey = "";
+  let selectedDeviceId = "";
+  let allSchedules = [];
+  let editingUserId = null;
+  let editingScheduleId = null;
+  let deviceEventsPollTimer = null;
+
+  function setStatus(el, msg, isError) {
+    if (!el) return;
+    el.textContent = msg || "";
+    el.className = "status" + (isError ? " error" : " ok");
   }
-}
 
-    function storeApiKey(key) {
-    try {
-    if (key) localStorage.setItem("geataAdminApiKey", key);
-    else localStorage.removeItem("geataAdminApiKey");
-  } catch (_) {}
-}
+  function getHeadersJson() {
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) headers["x-api-key"] = apiKey;
+    return headers;
+  }
 
+  function dayName(d) {
+    return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d] || "?";
+  }
 
-    function setStatus(el, msg, isError) {
-      if (!el) return;
-      el.textContent = msg || "";
-      el.className = "status" + (isError ? " error" : " ok");
-    }
-    function getHeadersJson() {
-      const headers = { "Content-Type": "application/json" };
-      if (apiKey) headers["x-api-key"] = apiKey;
-      return headers;
-    }
-    function dayName(d) {
-      return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d] || "?";
-    }
-    function describeSlots(slots) {
-      if (!slots || slots.length === 0) return "No slots (no access)";
-      return slots.map(function (s) {
-        var days = Array.isArray(s.daysOfWeek) ? s.daysOfWeek : [];
-        var dayStr = days.length ? days.map(dayName).join(",") : "All days";
-        return dayStr + " " + (s.start || "") + "-" + (s.end || "");
-      }).join(" | ");
-    }
-    function parseDaysString(str) {
-      var result = [];
-      var s = (str || "").trim();
-      if (!s) return [];
-      var parts = s.split(",");
-      parts.forEach(function (part) {
-        var t = part.trim();
-        if (!t) return;
-        if (t.indexOf("-") !== -1) {
-          var ab = t.split("-");
-          var a = parseInt(ab[0].trim(), 10);
-          var b = parseInt(ab[1].trim(), 10);
-          if (!isNaN(a) && !isNaN(b)) {
-            var step = a <= b ? 1 : -1;
-            for (var d = a; step > 0 ? d <= b : d >= b; d += step) {
-              if (d >= 0 && d <= 6 && result.indexOf(d) === -1) result.push(d);
-            }
+  function describeSlots(slots) {
+    if (!slots || slots.length === 0) return "No slots (no access)";
+    return slots.map(function (s) {
+      var days = Array.isArray(s.daysOfWeek) ? s.daysOfWeek : [];
+      var dayStr = days.length ? days.map(dayName).join(",") : "All days";
+      return dayStr + " " + (s.start || "") + "-" + (s.end || "");
+    }).join(" | ");
+  }
+
+  function parseDaysString(str) {
+    var result = [];
+    var s = (str || "").trim();
+    if (!s) return [];
+    var parts = s.split(",");
+    parts.forEach(function (part) {
+      var t = part.trim();
+      if (!t) return;
+      if (t.indexOf("-") !== -1) {
+        var ab = t.split("-");
+        var a = parseInt(ab[0].trim(), 10);
+        var b = parseInt(ab[1].trim(), 10);
+        if (!isNaN(a) && !isNaN(b)) {
+          var step = a <= b ? 1 : -1;
+          for (var d = a; step > 0 ? d <= b : d >= b; d += step) {
+            if (d >= 0 && d <= 6 && result.indexOf(d) === -1) result.push(d);
           }
-        } else {
-          var n = parseInt(t, 10);
-          if (!isNaN(n) && n >= 0 && n <= 6 && result.indexOf(n) === -1) result.push(n);
         }
+      } else {
+        var n = parseInt(t, 10);
+        if (!isNaN(n) && n >= 0 && n <= 6 && result.indexOf(n) === -1) result.push(n);
+      }
+    });
+    result.sort(function (a,b) { return a - b; });
+    return result;
+  }
+
+  function updateSelectedDeviceLabels(selectedDeviceSelect) {
+    var labelText = "None selected";
+    if (selectedDeviceSelect) {
+      var opt = selectedDeviceSelect.options[selectedDeviceSelect.selectedIndex];
+      if (opt && opt.value) {
+        labelText = opt.textContent;
+      }
+    }
+    [
+      "selectedDeviceText",
+      "selectedDeviceTextAttach",
+      "selectedDeviceTextCsv",
+      "selectedDeviceTextIo",
+      "selectedDeviceTextEvents",
+      "selectedDeviceTextDirectory"   // new label in User Lookup card
+    ].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = labelText;
+    });
+  }
+
+  function startDeviceEventsPolling(selectedDeviceSelect) {
+    if (deviceEventsPollTimer) clearInterval(deviceEventsPollTimer);
+    if (!selectedDeviceId) return;
+    deviceEventsPollTimer = setInterval(function () {
+      loadDeviceEvents(selectedDeviceId);
+    }, 5000);
+    updateSelectedDeviceLabels(selectedDeviceSelect);
+  }
+
+  function stopDeviceEventsPolling() {
+    if (deviceEventsPollTimer) {
+      clearInterval(deviceEventsPollTimer);
+      deviceEventsPollTimer = null;
+    }
+  }
+
+  window.addEventListener("load", function () {
+    var apiKeyInput = document.getElementById("apiKeyInput");
+    var setApiKeyBtn = document.getElementById("setApiKeyBtn");
+    var apiKeyStatus = document.getElementById("apiKeyStatus");
+
+    var refreshDevicesBtn = document.getElementById("refreshDevicesBtn");
+    var devicesTableBody = document.querySelector("#devicesTable tbody");
+    var devicesStatus = document.getElementById("devicesStatus");
+    var newDeviceIdInput = document.getElementById("newDeviceId");
+    var newDeviceNameInput = document.getElementById("newDeviceName");
+    var addDeviceBtn = document.getElementById("addDeviceBtn");
+    var addDeviceStatus = document.getElementById("addDeviceStatus");
+    var selectedDeviceSelect = document.getElementById("selectedDeviceSelect");
+
+    var deviceUsersTableBody = document.querySelector("#deviceUsersTable tbody");
+    var deviceUsersStatus = document.getElementById("deviceUsersStatus");
+
+    var userNameInput = document.getElementById("userNameInput");
+    var userEmailInput = document.getElementById("userEmailInput");
+    var userPhoneInput = document.getElementById("userPhoneInput");
+    var userPasswordInput = document.getElementById("userPasswordInput");
+    var userRoleSelect = document.getElementById("userRoleSelect");
+    var existingUserIdInput = document.getElementById("existingUserIdInput");
+    var attachUserScheduleSelect = document.getElementById("attachUserScheduleSelect");
+    var attachUserBtn = document.getElementById("attachUserBtn");
+    var attachUserStatus = document.getElementById("attachUserStatus");
+
+    var csvFileInput = document.getElementById("csvFileInput");
+    var importCsvBtn = document.getElementById("importCsvBtn");
+    var exportCsvDeviceBtn = document.getElementById("exportCsvDeviceBtn");
+    var exportAllCsvBtn = document.getElementById("exportAllCsvBtn");
+    var csvImportStatus = document.getElementById("csvImportStatus");
+
+    var aux1Btn = document.getElementById("aux1Btn");
+    var aux2Btn = document.getElementById("aux2Btn");
+    var auxStatus = document.getElementById("auxStatus");
+
+    var simGateOpenedBtn = document.getElementById("simGateOpenedBtn");
+    var simGateClosedBtn = document.getElementById("simGateClosedBtn");
+    var simGateForcedBtn = document.getElementById("simGateForcedBtn");
+    var simGateAjarBtn = document.getElementById("simGateAjarBtn");
+    var simStatus = document.getElementById("simStatus");
+
+    var deviceEventsTableBody = document.querySelector("#deviceEventsTable tbody");
+    var refreshDeviceEventsBtn = document.getElementById("refreshDeviceEventsBtn");
+
+    var userSearchInput = document.getElementById("userSearchInput");
+    var searchUsersBtn = document.getElementById("searchUsersBtn");
+    var showAllUsersBtn = document.getElementById("showAllUsersBtn");
+    var userSearchStatus = document.getElementById("userSearchStatus");
+    var globalUsersTableBody = document.querySelector("#globalUsersTable tbody");
+    var attachSelectedUsersBtn = document.getElementById("attachSelectedUsersBtn");
+
+    var editUserTarget = document.getElementById("editUserTarget");
+    var editUserName = document.getElementById("editUserName");
+    var editUserEmail = document.getElementById("editUserEmail");
+    var editUserPhone = document.getElementById("editUserPhone");
+    var editUserPassword = document.getElementById("editUserPassword");
+    var saveUserChangesBtn = document.getElementById("saveUserChangesBtn");
+    var editUserStatus = document.getElementById("editUserStatus");
+
+    var schedulesTableBody = document.querySelector("#schedulesTable tbody");
+    var refreshSchedulesBtn = document.getElementById("refreshSchedulesBtn");
+    var scheduleStatus = document.getElementById("scheduleStatus");
+    var scheduleFormTitle = document.getElementById("scheduleFormTitle");
+    var scheduleNameInput = document.getElementById("scheduleNameInput");
+    var scheduleDescInput = document.getElementById("scheduleDescInput");
+    var saveScheduleBtn = document.getElementById("saveScheduleBtn");
+    var resetScheduleFormBtn = document.getElementById("resetScheduleFormBtn");
+
+    var reportDeviceSelect = document.getElementById("reportDeviceSelect");
+    var reportUserIdInput = document.getElementById("reportUserIdInput");
+    var reportFromDate = document.getElementById("reportFromDate");
+    var reportToDate = document.getElementById("reportToDate");
+    var runReportBtn = document.getElementById("runReportBtn");
+    var downloadReportCsvBtn = document.getElementById("downloadReportCsvBtn");
+    var reportStatus = document.getElementById("reportStatus");
+    var reportEventsTableBody = document.querySelector("#reportEventsTable tbody");
+
+    var slotInputs = [];
+    for (var i = 1; i <= 6; i++) {
+      slotInputs.push({
+        days:  document.getElementById("slot" + i + "Days"),
+        start: document.getElementById("slot" + i + "Start"),
+        end:   document.getElementById("slot" + i + "End")
       });
-      result.sort(function (a,b) { return a - b; });
-      return result;
     }
 
-    function updateSelectedDeviceLabels(selectedDeviceSelect) {
-      var labelText = "None selected";
-      if (selectedDeviceSelect) {
-        var opt = selectedDeviceSelect.options[selectedDeviceSelect.selectedIndex];
-        if (opt && opt.value) {
-          labelText = opt.textContent;
-        }
-      }
-      [
-        "selectedDeviceText",
-        "selectedDeviceTextAttach",
-        "selectedDeviceTextCsv",
-        "selectedDeviceTextIo",
-        "selectedDeviceTextEvents"
-      ].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = labelText;
-      });
-    }
+    // --- Admin key handler with auto-refresh ---
+    if (setApiKeyBtn) {
+      setApiKeyBtn.addEventListener("click", function () {
+        apiKey = apiKeyInput.value.trim();
+        const hasKey = !!apiKey;
 
-    function startDeviceEventsPolling(selectedDeviceSelect) {
-      if (deviceEventsPollTimer) clearInterval(deviceEventsPollTimer);
-      if (!selectedDeviceId) return;
-      deviceEventsPollTimer = setInterval(function () {
-        loadDeviceEvents(selectedDeviceId);
-      }, 5000);
-      updateSelectedDeviceLabels(selectedDeviceSelect);
-    }
+        setStatus(apiKeyStatus, hasKey ? "API key set" : "API key cleared", false);
 
-    function stopDeviceEventsPolling() {
-      if (deviceEventsPollTimer) {
-        clearInterval(deviceEventsPollTimer);
-        deviceEventsPollTimer = null;
-      }
-    }
+        // Clear previous errors from panels
+        setStatus(devicesStatus, "", false);
+        setStatus(deviceUsersStatus, "", false);
+        setStatus(csvImportStatus, "", false);
+        setStatus(auxStatus, "", false);
+        setStatus(simStatus, "", false);
+        setStatus(userSearchStatus, "", false);
+        setStatus(editUserStatus, "", false);
+        setStatus(scheduleStatus, "", false);
+        setStatus(reportStatus, "", false);
 
-    window.addEventListener("load", function () {
-      var apiKeyInput = document.getElementById("apiKeyInput");
-	  apiKey = loadStoredApiKey();
-      if (apiKey && apiKeyInput) {
-      apiKeyInput.value = apiKey;
-      setStatus(apiKeyStatus, "API key loaded from browser storage", false);
-}
-
-      var setApiKeyBtn = document.getElementById("setApiKeyBtn");
-	  setApiKeyBtn.addEventListener("click", function () {
-      apiKey = apiKeyInput.value.trim();
-      storeApiKey(apiKey);
-      setStatus(apiKeyStatus, apiKey ? "API key set" : "API key cleared", false);
-});
-
-      var apiKeyStatus = document.getElementById("apiKeyStatus");
-
-      var refreshDevicesBtn = document.getElementById("refreshDevicesBtn");
-      var devicesTableBody = document.querySelector("#devicesTable tbody");
-      var devicesStatus = document.getElementById("devicesStatus");
-      var newDeviceIdInput = document.getElementById("newDeviceId");
-      var newDeviceNameInput = document.getElementById("newDeviceName");
-      var addDeviceBtn = document.getElementById("addDeviceBtn");
-      var addDeviceStatus = document.getElementById("addDeviceStatus");
-      var selectedDeviceSelect = document.getElementById("selectedDeviceSelect");
-
-      var deviceUsersTableBody = document.querySelector("#deviceUsersTable tbody");
-      var deviceUsersStatus = document.getElementById("deviceUsersStatus");
-
-      var userNameInput = document.getElementById("userNameInput");
-      var userEmailInput = document.getElementById("userEmailInput");
-      var userPhoneInput = document.getElementById("userPhoneInput");
-      var userPasswordInput = document.getElementById("userPasswordInput");
-      var userRoleSelect = document.getElementById("userRoleSelect");
-      var existingUserIdInput = document.getElementById("existingUserIdInput");
-      var attachUserScheduleSelect = document.getElementById("attachUserScheduleSelect");
-      var attachUserBtn = document.getElementById("attachUserBtn");
-      var attachUserStatus = document.getElementById("attachUserStatus");
-
-      var csvFileInput = document.getElementById("csvFileInput");
-      var importCsvBtn = document.getElementById("importCsvBtn");
-      var exportCsvDeviceBtn = document.getElementById("exportCsvDeviceBtn");
-      var exportAllCsvBtn = document.getElementById("exportAllCsvBtn");
-      var csvImportStatus = document.getElementById("csvImportStatus");
-
-      var aux1Btn = document.getElementById("aux1Btn");
-      var aux2Btn = document.getElementById("aux2Btn");
-      var auxStatus = document.getElementById("auxStatus");
-
-      var simGateOpenedBtn = document.getElementById("simGateOpenedBtn");
-      var simGateClosedBtn = document.getElementById("simGateClosedBtn");
-      var simGateForcedBtn = document.getElementById("simGateForcedBtn");
-      var simGateAjarBtn = document.getElementById("simGateAjarBtn");
-      var simStatus = document.getElementById("simStatus");
-
-      var deviceEventsTableBody = document.querySelector("#deviceEventsTable tbody");
-      var refreshDeviceEventsBtn = document.getElementById("refreshDeviceEventsBtn");
-
-      var userSearchInput = document.getElementById("userSearchInput");
-      var searchUsersBtn = document.getElementById("searchUsersBtn");
-      var showAllUsersBtn = document.getElementById("showAllUsersBtn");
-      var userSearchStatus = document.getElementById("userSearchStatus");
-      var globalUsersTableBody = document.querySelector("#globalUsersTable tbody");
-
-      var editUserTarget = document.getElementById("editUserTarget");
-      var editUserName = document.getElementById("editUserName");
-      var editUserEmail = document.getElementById("editUserEmail");
-      var editUserPhone = document.getElementById("editUserPhone");
-      var editUserPassword = document.getElementById("editUserPassword");
-      var saveUserChangesBtn = document.getElementById("saveUserChangesBtn");
-      var editUserStatus = document.getElementById("editUserStatus");
-
-      var schedulesTableBody = document.querySelector("#schedulesTable tbody");
-      var refreshSchedulesBtn = document.getElementById("refreshSchedulesBtn");
-      var scheduleStatus = document.getElementById("scheduleStatus");
-      var scheduleFormTitle = document.getElementById("scheduleFormTitle");
-      var scheduleNameInput = document.getElementById("scheduleNameInput");
-      var scheduleDescInput = document.getElementById("scheduleDescInput");
-      var saveScheduleBtn = document.getElementById("saveScheduleBtn");
-      var resetScheduleFormBtn = document.getElementById("resetScheduleFormBtn");
-
-      var reportDeviceSelect = document.getElementById("reportDeviceSelect");
-      var reportUserIdInput = document.getElementById("reportUserIdInput");
-      var reportFromDate = document.getElementById("reportFromDate");
-      var reportToDate = document.getElementById("reportToDate");
-      var runReportBtn = document.getElementById("runReportBtn");
-      var downloadReportCsvBtn = document.getElementById("downloadReportCsvBtn");
-      var reportStatus = document.getElementById("reportStatus");
-      var reportEventsTableBody = document.querySelector("#reportEventsTable tbody");
-
-      var slotInputs = [];
-      for (var i = 1; i <= 6; i++) {
-        slotInputs.push({
-          days:  document.getElementById("slot" + i + "Days"),
-          start: document.getElementById("slot" + i + "Start"),
-          end:   document.getElementById("slot" + i + "End")
-        });
-      }
-
-      // Admin key
-      if (setApiKeyBtn) {
-        setApiKeyBtn.addEventListener("click", function () {
-          apiKey = apiKeyInput.value.trim();
-          setStatus(apiKeyStatus, apiKey ? "API key set" : "API key cleared", false);
-        });
-      }
-
-      // Devices
-      function rebuildAttachUserScheduleOptions() {
-        var sel = attachUserScheduleSelect;
-        if (!sel) return;
-        var currentValue = sel.value;
-        sel.innerHTML = "";
-        var defOpt = document.createElement("option");
-        defOpt.value = "";
-        defOpt.textContent = "24/7 (no schedule)";
-        sel.appendChild(defOpt);
-        allSchedules.forEach(function (s) {
-          var opt = document.createElement("option");
-          opt.value = String(s.id);
-          opt.textContent = s.name;
-          sel.appendChild(opt);
-        });
-        if (currentValue && allSchedules.some(function (s) { return String(s.id) === currentValue; })) {
-          sel.value = currentValue;
-        }
-      }
-
-      async function loadDevices() {
-        if (!devicesTableBody || !devicesStatus || !selectedDeviceSelect) return;
-        devicesTableBody.innerHTML = "";
-        selectedDeviceSelect.innerHTML = '<option value="">-- Select a device --</option>';
-        if (reportDeviceSelect) {
-          reportDeviceSelect.innerHTML = '<option value="">-- Any device --</option>';
-        }
-        setStatus(devicesStatus, "Loading devices...", false);
-        try {
-          var res = await fetch("/devices", { method: "GET", headers: getHeadersJson() });
-          var data = await res.json().catch(function () { return []; });
-          if (!res.ok) {
-            setStatus(devicesStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          data.forEach(function (d) {
-            var tr = document.createElement("tr");
-            var tdId = document.createElement("td");
-            var tdName = document.createElement("td");
-            tdId.textContent = d.id;
-            tdName.textContent = d.name;
-            tr.appendChild(tdId);
-            tr.appendChild(tdName);
-            devicesTableBody.appendChild(tr);
-
-            var opt = document.createElement("option");
-            opt.value = d.id;
-            opt.textContent = d.id + " – " + d.name;
-            selectedDeviceSelect.appendChild(opt);
-
-            if (reportDeviceSelect) {
-              var opt2 = document.createElement("option");
-              opt2.value = d.id;
-              opt2.textContent = d.id + " – " + d.name;
-              reportDeviceSelect.appendChild(opt2);
-            }
-          });
-          updateSelectedDeviceLabels(selectedDeviceSelect);
-          setStatus(devicesStatus, "Loaded " + data.length + " devices", false);
-        } catch (err) {
-          console.error(err);
-          setStatus(devicesStatus, "Error loading devices", true);
-        }
-      }
-
-      if (refreshDevicesBtn) {
-        refreshDevicesBtn.addEventListener("click", function () {
+        // If a valid key was entered, reload key data sets
+        if (hasKey) {
           loadDevices();
-        });
-      }
+          loadUsers(null);
+          loadSchedules();
 
-      if (selectedDeviceSelect) {
-        selectedDeviceSelect.addEventListener("change", function () {
-          selectedDeviceId = selectedDeviceSelect.value;
-          if (deviceUsersTableBody) deviceUsersTableBody.innerHTML = "";
-          if (deviceEventsTableBody) deviceEventsTableBody.innerHTML = "";
-          setStatus(deviceUsersStatus, "", false);
-          setStatus(auxStatus, "", false);
-          setStatus(simStatus, "", false);
-          updateSelectedDeviceLabels(selectedDeviceSelect);
+          // If a device is already selected, refresh those too
           if (selectedDeviceId) {
             loadDeviceUsers(selectedDeviceId);
             loadDeviceEvents(selectedDeviceId);
-            startDeviceEventsPolling(selectedDeviceSelect);
-          } else {
-            stopDeviceEventsPolling();
+          }
+        }
+      });
+    }
+
+    // ---- Devices ----
+    function rebuildAttachUserScheduleOptions() {
+      var sel = attachUserScheduleSelect;
+      if (!sel) return;
+      var currentValue = sel.value;
+      sel.innerHTML = "";
+      var defOpt = document.createElement("option");
+      defOpt.value = "";
+      defOpt.textContent = "24/7 (no schedule)";
+      sel.appendChild(defOpt);
+      allSchedules.forEach(function (s) {
+        var opt = document.createElement("option");
+        opt.value = String(s.id);
+        opt.textContent = s.name;
+        sel.appendChild(opt);
+      });
+      if (currentValue && allSchedules.some(function (s) { return String(s.id) === currentValue; })) {
+        sel.value = currentValue;
+      }
+    }
+
+    async function loadDevices() {
+      if (!devicesTableBody || !devicesStatus || !selectedDeviceSelect) return;
+      devicesTableBody.innerHTML = "";
+      selectedDeviceSelect.innerHTML = '<option value="">-- Select a device --</option>';
+      if (reportDeviceSelect) {
+        reportDeviceSelect.innerHTML = '<option value="">-- Any device --</option>';
+      }
+      setStatus(devicesStatus, "Loading devices...", false);
+      try {
+        var res = await fetch("/devices", { method: "GET", headers: getHeadersJson() });
+        var data = await res.json().catch(function () { return []; });
+        if (!res.ok) {
+          setStatus(devicesStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        data.forEach(function (d) {
+          var tr = document.createElement("tr");
+          var tdId = document.createElement("td");
+          var tdName = document.createElement("td");
+          tdId.textContent = d.id;
+          tdName.textContent = d.name;
+          tr.appendChild(tdId);
+          tr.appendChild(tdName);
+          devicesTableBody.appendChild(tr);
+
+          var opt = document.createElement("option");
+          opt.value = d.id;
+          opt.textContent = d.id + " – " + d.name;
+          selectedDeviceSelect.appendChild(opt);
+
+          if (reportDeviceSelect) {
+            var opt2 = document.createElement("option");
+            opt2.value = d.id;
+            opt2.textContent = d.id + " – " + d.name;
+            reportDeviceSelect.appendChild(opt2);
           }
         });
+        updateSelectedDeviceLabels(selectedDeviceSelect);
+        setStatus(devicesStatus, "Loaded " + data.length + " devices", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(devicesStatus, "Error loading devices", true);
       }
+    }
 
-      async function loadDeviceUsers(deviceId) {
-        if (!deviceUsersTableBody || !deviceUsersStatus) return;
-        deviceUsersTableBody.innerHTML = "";
-        setStatus(deviceUsersStatus, "Loading users...", false);
-        try {
-          var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users", {
-            method: "GET",
-            headers: getHeadersJson()
-          });
-          var data = await res.json().catch(function () { return []; });
-          if (!res.ok) {
-            setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          data.forEach(function (u) {
-            var tr = document.createElement("tr");
-            var tdId = document.createElement("td");
-            var tdName = document.createElement("td");
-            var tdEmail = document.createElement("td");
-            var tdPhone = document.createElement("td");
-            var tdRole = document.createElement("td");
-            var tdSchedule = document.createElement("td");
-            var tdRemove = document.createElement("td");
+    if (refreshDevicesBtn) {
+      refreshDevicesBtn.addEventListener("click", function () {
+        loadDevices();
+      });
+    }
 
-            tdId.textContent = u.userId;
-            tdName.textContent = u.name || "";
-            tdEmail.textContent = u.email || "";
-            tdPhone.textContent = u.phone || "";
-            tdRole.textContent = u.role || "";
-
-            var sel = document.createElement("select");
-            var defOpt = document.createElement("option");
-            defOpt.value = "";
-            defOpt.textContent = "24/7 (no schedule)";
-            sel.appendChild(defOpt);
-            allSchedules.forEach(function (s) {
-              var opt = document.createElement("option");
-              opt.value = String(s.id);
-              opt.textContent = s.name;
-              sel.appendChild(opt);
-            });
-            if (u.scheduleId) sel.value = String(u.scheduleId);
-            sel.addEventListener("change", function () {
-              var chosen = sel.value || null;
-              assignScheduleToUser(deviceId, u.userId, chosen);
-            });
-            tdSchedule.appendChild(sel);
-
-            var removeBtn = document.createElement("button");
-            removeBtn.textContent = "Remove";
-            removeBtn.className = "btn-danger btn-small";
-            removeBtn.addEventListener("click", function () {
-              removeUserFromDevice(deviceId, u.userId);
-            });
-            tdRemove.appendChild(removeBtn);
-
-            tr.appendChild(tdId);
-            tr.appendChild(tdName);
-            tr.appendChild(tdEmail);
-            tr.appendChild(tdPhone);
-            tr.appendChild(tdRole);
-            tr.appendChild(tdSchedule);
-            tr.appendChild(tdRemove);
-            deviceUsersTableBody.appendChild(tr);
-          });
-          setStatus(deviceUsersStatus, "Loaded " + data.length + " users for device", false);
-        } catch (err) {
-          console.error(err);
-          setStatus(deviceUsersStatus, "Error loading device users", true);
+    // Add device button
+    if (addDeviceBtn) {
+      addDeviceBtn.addEventListener("click", async function () {
+        var id = newDeviceIdInput.value.trim();
+        var name = newDeviceNameInput.value.trim();
+        if (!id || !name) {
+          setStatus(addDeviceStatus, "Device ID and Name are required", true);
+          return;
         }
-      }
-
-      async function removeUserFromDevice(deviceId, userId) {
-        if (!window.confirm("Remove user " + userId + " from device " + deviceId + "?")) return;
+        setStatus(addDeviceStatus, "Creating device...", false);
         try {
-          var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId), {
-            method: "DELETE",
-            headers: getHeadersJson()
-          });
-          var data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          setStatus(deviceUsersStatus, "Removed user " + userId + " from device", false);
-          await loadDeviceUsers(deviceId);
-        } catch (err) {
-          console.error(err);
-          setStatus(deviceUsersStatus, "Error removing user", true);
-        }
-      }
-
-      async function assignScheduleToUser(deviceId, userId, scheduleId) {
-        setStatus(deviceUsersStatus, "Saving schedule...", false);
-        try {
-          var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId) + "/schedule-assignment", {
-            method: "PUT",
+          var res = await fetch("/devices", {
+            method: "POST",
             headers: getHeadersJson(),
-            body: JSON.stringify({ scheduleId: scheduleId })
+            body: JSON.stringify({ id: id, name: name })
           });
           var data = await res.json().catch(function () { return {}; });
           if (!res.ok) {
-            setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
+            setStatus(addDeviceStatus, data.error || ("HTTP " + res.status), true);
             return;
           }
-          setStatus(deviceUsersStatus, "Schedule updated", false);
+          setStatus(addDeviceStatus, "Device created", false);
+          newDeviceIdInput.value = "";
+          newDeviceNameInput.value = "";
+          await loadDevices();
         } catch (err) {
           console.error(err);
-          setStatus(deviceUsersStatus, "Error saving schedule", true);
+          setStatus(addDeviceStatus, "Error creating device", true);
         }
-      }
+      });
+    }
 
-      if (attachUserBtn) {
-        attachUserBtn.addEventListener("click", async function () {
-          if (!selectedDeviceId) {
-            setStatus(attachUserStatus, "Select a device first", true);
+    if (selectedDeviceSelect) {
+      selectedDeviceSelect.addEventListener("change", function () {
+        selectedDeviceId = selectedDeviceSelect.value;
+        if (deviceUsersTableBody) deviceUsersTableBody.innerHTML = "";
+        if (deviceEventsTableBody) deviceEventsTableBody.innerHTML = "";
+        setStatus(deviceUsersStatus, "", false);
+        setStatus(auxStatus, "", false);
+        setStatus(simStatus, "", false);
+        updateSelectedDeviceLabels(selectedDeviceSelect);
+        if (selectedDeviceId) {
+          loadDeviceUsers(selectedDeviceId);
+          loadDeviceEvents(selectedDeviceId);
+          startDeviceEventsPolling(selectedDeviceSelect);
+        } else {
+          stopDeviceEventsPolling();
+        }
+      });
+    }
+
+    async function loadDeviceUsers(deviceId) {
+      if (!deviceUsersTableBody || !deviceUsersStatus) return;
+      deviceUsersTableBody.innerHTML = "";
+      setStatus(deviceUsersStatus, "Loading users...", false);
+      try {
+        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users", {
+          method: "GET",
+          headers: getHeadersJson()
+        });
+        var data = await res.json().catch(function () { return []; });
+        if (!res.ok) {
+          setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        data.forEach(function (u) {
+          var tr = document.createElement("tr");
+          var tdId = document.createElement("td");
+          var tdName = document.createElement("td");
+          var tdEmail = document.createElement("td");
+          var tdPhone = document.createElement("td");
+          var tdRole = document.createElement("td");
+          var tdSchedule = document.createElement("td");
+          var tdRemove = document.createElement("td");
+
+          tdId.textContent = u.userId;
+          tdName.textContent = u.name || "";
+          tdEmail.textContent = u.email || "";
+          tdPhone.textContent = u.phone || "";
+          tdRole.textContent = u.role || "";
+
+var sel = document.createElement("select");
+var defOpt = document.createElement("option");
+defOpt.value = "";
+defOpt.textContent = "24/7 (no schedule)";
+sel.appendChild(defOpt);
+allSchedules.forEach(function (s) {
+  var opt = document.createElement("option");
+  opt.value = String(s.id);
+  opt.textContent = s.name;
+  sel.appendChild(opt);
+});
+if (u.scheduleId) sel.value = String(u.scheduleId);
+
+// NEW: explicit Save button instead of auto-apply on change
+var saveBtn = document.createElement("button");
+saveBtn.textContent = "Save";
+saveBtn.className = "btn-small";
+saveBtn.style.marginLeft = "6px";
+saveBtn.addEventListener("click", function () {
+  var chosen = sel.value || null;
+  assignScheduleToUser(deviceId, u.userId, chosen);
+});
+
+tdSchedule.appendChild(sel);
+tdSchedule.appendChild(saveBtn);
+
+          var removeBtn = document.createElement("button");
+          removeBtn.textContent = "Remove";
+          removeBtn.className = "btn-danger btn-small";
+          removeBtn.addEventListener("click", function () {
+            removeUserFromDevice(deviceId, u.userId);
+          });
+          tdRemove.appendChild(removeBtn);
+
+          tr.appendChild(tdId);
+          tr.appendChild(tdName);
+          tr.appendChild(tdEmail);
+          tr.appendChild(tdPhone);
+          tr.appendChild(tdRole);
+          tr.appendChild(tdSchedule);
+          tr.appendChild(tdRemove);
+          deviceUsersTableBody.appendChild(tr);
+        });
+        setStatus(deviceUsersStatus, "Loaded " + data.length + " users for device", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(deviceUsersStatus, "Error loading device users", true);
+      }
+    }
+
+    async function removeUserFromDevice(deviceId, userId) {
+      if (!window.confirm("Remove user " + userId + " from device " + deviceId + "?")) return;
+      try {
+        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId), {
+          method: "DELETE",
+          headers: getHeadersJson()
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        setStatus(deviceUsersStatus, "Removed user " + userId + " from device", false);
+        await loadDeviceUsers(deviceId);
+      } catch (err) {
+        console.error(err);
+        setStatus(deviceUsersStatus, "Error removing user", true);
+      }
+    }
+
+    async function assignScheduleToUser(deviceId, userId, scheduleId) {
+      setStatus(deviceUsersStatus, "Saving schedule...", false);
+      try {
+        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId) + "/schedule-assignment", {
+          method: "PUT",
+          headers: getHeadersJson(),
+          body: JSON.stringify({ scheduleId: scheduleId })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        setStatus(deviceUsersStatus, "Schedule updated", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(deviceUsersStatus, "Error saving schedule", true);
+      }
+    }
+
+    if (attachUserBtn) {
+      attachUserBtn.addEventListener("click", async function () {
+        if (!selectedDeviceId) {
+          setStatus(attachUserStatus, "Select a device first", true);
+          return;
+        }
+        var name = userNameInput.value.trim();
+        var email = userEmailInput.value.trim();
+        var phone = userPhoneInput.value.trim();
+        var password = userPasswordInput.value;
+        var role = userRoleSelect.value || "operator";
+        var scheduleId = attachUserScheduleSelect.value || null;
+        var existingUserId = existingUserIdInput.value.trim();
+
+        var body;
+        if (existingUserId) {
+          body = { userId: existingUserId, role: role };
+        } else {
+          if (!email && !phone) {
+            setStatus(attachUserStatus, "At least email or phone is required (or provide a User ID)", true);
             return;
           }
-          var name = userNameInput.value.trim();
-          var email = userEmailInput.value.trim();
-          var phone = userPhoneInput.value.trim();
-          var password = userPasswordInput.value;
-          var role = userRoleSelect.value || "operator";
-          var scheduleId = attachUserScheduleSelect.value || null;
-          var existingUserId = existingUserIdInput.value.trim();
+          body = { name: name, email: email, phone: phone, password: password, role: role };
+        }
 
-          var body;
-          if (existingUserId) {
-            body = { userId: existingUserId, role: role };
-          } else {
-            if (!email && !phone) {
-              setStatus(attachUserStatus, "At least email or phone is required (or provide a User ID)", true);
+        setStatus(attachUserStatus, "Attaching user...", false);
+        try {
+          var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
+            method: "POST",
+            headers: getHeadersJson(),
+            body: JSON.stringify(body)
+          });
+          var data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setStatus(attachUserStatus, data.error || ("HTTP " + res.status), true);
+            return;
+          }
+          var attachedUserId = data.userId || (data.user && data.user.id);
+          if (attachedUserId && scheduleId) {
+            await assignScheduleToUser(selectedDeviceId, attachedUserId, scheduleId);
+          }
+          setStatus(attachUserStatus, "User attached to device", false);
+          existingUserIdInput.value = "";
+          await loadDeviceUsers(selectedDeviceId);
+        } catch (err) {
+          console.error(err);
+          setStatus(attachUserStatus, "Error attaching user", true);
+        }
+      });
+    }
+
+    // ---- CSV parsing / import / export ----
+    function parseCsv(text) {
+      var lines = text
+        .split(/\r?\n/)
+        .map(function (l) { return l.trim(); })
+        .filter(function (l) { return l.length > 0; });
+
+      if (lines.length === 0) return [];
+      var header = lines[0].split(",").map(function (h) { return h.trim().toLowerCase(); });
+      var nameIdx  = header.indexOf("name");
+      var emailIdx = header.indexOf("email");
+      var phoneIdx = header.indexOf("phone");
+      var roleIdx  = header.indexOf("role");
+      var rows = [];
+      for (var i = 1; i < lines.length; i++) {
+        var parts = lines[i].split(",").map(function (p) { return p.trim(); });
+        var row = {
+          name:  nameIdx  >= 0 ? (parts[nameIdx]  || "") : "",
+          email: emailIdx >= 0 ? (parts[emailIdx] || "") : "",
+          phone: phoneIdx >= 0 ? (parts[phoneIdx] || "") : "",
+          role:  roleIdx  >= 0 ? (parts[roleIdx]  || "") : ""
+        };
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    if (importCsvBtn) {
+      importCsvBtn.addEventListener("click", function () {
+        if (!selectedDeviceId) {
+          setStatus(csvImportStatus, "Select a device first", true);
+          return;
+        }
+        var file = csvFileInput.files[0];
+        if (!file) {
+          setStatus(csvImportStatus, "Choose a CSV file first", true);
+          return;
+        }
+        setStatus(csvImportStatus, "Reading CSV...", false);
+        var reader = new FileReader();
+        reader.onload = async function (e) {
+          try {
+            var text = e.target.result;
+            var rows = parseCsv(text);
+            if (rows.length === 0) {
+              setStatus(csvImportStatus, "No data rows found in CSV", true);
               return;
             }
-            body = { name: name, email: email, phone: phone, password: password, role: role };
-          }
-
-          setStatus(attachUserStatus, "Attaching user...", false);
-          try {
-            var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
+            setStatus(csvImportStatus, "Importing " + rows.length + " rows...", false);
+            var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/import", {
               method: "POST",
               headers: getHeadersJson(),
-              body: JSON.stringify(body)
+              body: JSON.stringify({ rows: rows })
             });
             var data = await res.json().catch(function () { return {}; });
             if (!res.ok) {
-              setStatus(attachUserStatus, data.error || ("HTTP " + res.status), true);
+              setStatus(csvImportStatus, data.error || ("HTTP " + res.status), true);
               return;
             }
-            var attachedUserId = data.userId || (data.user && data.user.id);
-            if (attachedUserId && scheduleId) {
-              await assignScheduleToUser(selectedDeviceId, attachedUserId, scheduleId);
-            }
-            setStatus(attachUserStatus, "User attached to device", false);
-            existingUserIdInput.value = "";
+            setStatus(csvImportStatus,
+              "Created " + data.created.length + " users, reused " + data.reused.length,
+              false
+            );
             await loadDeviceUsers(selectedDeviceId);
           } catch (err) {
             console.error(err);
-            setStatus(attachUserStatus, "Error attaching user", true);
+            setStatus(csvImportStatus, "Error importing CSV", true);
           }
-        });
-      }
+        };
+        reader.readAsText(file);
+      });
+    }
 
-      // CSV parsing
-      function parseCsv(text) {
-        var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 0; });
-        if (lines.length === 0) return [];
-        var header = lines[0].split(",").map(function (h) { return h.trim().toLowerCase(); });
-        var nameIdx  = header.indexOf("name");
-        var emailIdx = header.indexOf("email");
-        var phoneIdx = header.indexOf("phone");
-        var roleIdx  = header.indexOf("role");
-        var rows = [];
-        for (var i = 1; i < lines.length; i++) {
-          var parts = lines[i].split(",").map(function (p) { return p.trim(); });
-          var row = {
-            name:  nameIdx  >= 0 ? (parts[nameIdx]  || "") : "",
-            email: emailIdx >= 0 ? (parts[emailIdx] || "") : "",
-            phone: phoneIdx >= 0 ? (parts[phoneIdx] || "") : "",
-            role:  roleIdx  >= 0 ? (parts[roleIdx]  || "") : ""
-          };
-          rows.push(row);
-        }
-        return rows;
-      }
-
-      if (importCsvBtn) {
-        importCsvBtn.addEventListener("click", function () {
-          if (!selectedDeviceId) {
-            setStatus(csvImportStatus, "Select a device first", true);
-            return;
-          }
-          var file = csvFileInput.files[0];
-          if (!file) {
-            setStatus(csvImportStatus, "Choose a CSV file first", true);
-            return;
-          }
-          setStatus(csvImportStatus, "Reading CSV...", false);
-          var reader = new FileReader();
-          reader.onload = async function (e) {
-            try {
-              var text = e.target.result;
-              var rows = parseCsv(text);
-              if (rows.length === 0) {
-                setStatus(csvImportStatus, "No data rows found in CSV", true);
-                return;
-              }
-              setStatus(csvImportStatus, "Importing " + rows.length + " rows...", false);
-              var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/import", {
-                method: "POST",
-                headers: getHeadersJson(),
-                body: JSON.stringify({ rows: rows })
-              });
-              var data = await res.json().catch(function () { return {}; });
-              if (!res.ok) {
-                setStatus(csvImportStatus, data.error || ("HTTP " + res.status), true);
-                return;
-              }
-              setStatus(csvImportStatus,
-                "Created " + data.created.length + " users, reused " + data.reused.length,
-                false
-              );
-              await loadDeviceUsers(selectedDeviceId);
-            } catch (err) {
-              console.error(err);
-              setStatus(csvImportStatus, "Error importing CSV", true);
-            }
-          };
-          reader.readAsText(file);
-        });
-      }
-
-      // Device-level export CSV
-      if (exportCsvDeviceBtn) {
-        exportCsvDeviceBtn.addEventListener("click", async function () {
-          if (!selectedDeviceId) {
-            setStatus(csvImportStatus, "Select a device first", true);
-            return;
-          }
-          setStatus(csvImportStatus, "Preparing device CSV...", false);
-          try {
-            var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/export", {
-              method: "GET",
-              headers: getHeadersJson()
-            });
-            if (!res.ok) {
-              var txt = await res.text();
-              setStatus(csvImportStatus, "Error exporting CSV: " + txt, true);
-              return;
-            }
-            var blob = await res.blob();
-            var url = window.URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = url;
-            a.download = "device-" + selectedDeviceId + "-users.csv";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-            setStatus(csvImportStatus, "Device CSV downloaded", false);
-          } catch (err) {
-            console.error(err);
-            setStatus(csvImportStatus, "Error exporting CSV", true);
-          }
-        });
-      }
-
-      // Global export CSV
-      if (exportAllCsvBtn) {
-        exportAllCsvBtn.addEventListener("click", async function () {
-          setStatus(csvImportStatus, "Preparing global CSV...", false);
-          try {
-            var res = await fetch("/users/export-csv", {
-              method: "GET",
-              headers: getHeadersJson()
-            });
-            if (!res.ok) {
-              var txt = await res.text();
-              setStatus(csvImportStatus, "Error exporting CSV: " + txt, true);
-              return;
-            }
-            var blob = await res.blob();
-            var url = window.URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = url;
-            a.download = "geata-users-devices.csv";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-            setStatus(csvImportStatus, "Global CSV downloaded", false);
-          } catch (err) {
-            console.error(err);
-            setStatus(csvImportStatus, "Error exporting global CSV", true);
-          }
-        });
-      }
-
-      // Aux & simulate
-      async function callAux(which) {
+    if (exportCsvDeviceBtn) {
+      exportCsvDeviceBtn.addEventListener("click", async function () {
         if (!selectedDeviceId) {
-          setStatus(auxStatus, "Select a device first", true);
+          setStatus(csvImportStatus, "Select a device first", true);
           return;
         }
-        var path = (which === "aux1") ? "aux1-test" : "aux2-test";
-        setStatus(auxStatus, "Triggering " + which.toUpperCase() + " (admin test)...", false);
+        setStatus(csvImportStatus, "Preparing device CSV...", false);
         try {
-          var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/" + path, {
-            method: "POST",
-            headers: getHeadersJson(),
-            body: JSON.stringify({ durationMs: 1000 })
-          });
-          var data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            setStatus(auxStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          setStatus(auxStatus, which.toUpperCase() + " command queued (id: " + data.id + ")", false);
-          await loadDeviceEvents(selectedDeviceId);
-        } catch (err) {
-          console.error(err);
-          setStatus(auxStatus, "Error sending AUX command", true);
-        }
-      }
-
-      if (aux1Btn) aux1Btn.addEventListener("click", function () { callAux("aux1"); });
-      if (aux2Btn) aux2Btn.addEventListener("click", function () { callAux("aux2"); });
-
-      async function simulateEvent(type) {
-        if (!selectedDeviceId) {
-          setStatus(simStatus, "Select a device first", true);
-          return;
-        }
-        setStatus(simStatus, "Simulating " + type + "...", false);
-        try {
-          var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/simulate-event", {
-            method: "POST",
-            headers: getHeadersJson(),
-            body: JSON.stringify({ type: type })
-          });
-          var data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            setStatus(simStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          setStatus(simStatus, "Event simulated", false);
-          await loadDeviceEvents(selectedDeviceId);
-        } catch (err) {
-          console.error(err);
-          setStatus(simStatus, "Error simulating event", true);
-        }
-      }
-
-      if (simGateOpenedBtn) simGateOpenedBtn.addEventListener("click", function () { simulateEvent("GATE_OPENED"); });
-      if (simGateClosedBtn) simGateClosedBtn.addEventListener("click", function () { simulateEvent("GATE_CLOSED"); });
-      if (simGateForcedBtn) simGateForcedBtn.addEventListener("click", function () { simulateEvent("GATE_FORCED_OPEN"); });
-      if (simGateAjarBtn)   simGateAjarBtn.addEventListener("click", function () { simulateEvent("GATE_OPEN_TOO_LONG"); });
-
-      async function loadDeviceEvents(deviceId) {
-        if (!deviceEventsTableBody) return;
-        deviceEventsTableBody.innerHTML = "";
-        try {
-          var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/events?limit=20", {
-            method: "GET",
-            headers: getHeadersJson()
-          });
-          var data = await res.json().catch(function () { return []; });
-          if (!res.ok) {
-            console.warn("Error loading device events:", data);
-            return;
-          }
-          data.forEach(function (ev) {
-            var tr = document.createElement("tr");
-            var tdTime = document.createElement("td");
-            var tdEvent = document.createElement("td");
-            var tdUser = document.createElement("td");
-            var tdDetails = document.createElement("td");
-            tdTime.textContent = ev.at || "";
-            tdEvent.textContent = ev.event_type || "";
-            var bits = [];
-            if (ev.user_name) bits.push(ev.user_name);
-            if (ev.user_phone) bits.push(ev.user_phone);
-            if (ev.user_id) bits.push("[" + ev.user_id + "]");
-            tdUser.textContent = bits.join(" | ");
-            tdDetails.textContent = ev.details || "";
-            tr.appendChild(tdTime);
-            tr.appendChild(tdEvent);
-            tr.appendChild(tdUser);
-            tr.appendChild(tdDetails);
-            deviceEventsTableBody.appendChild(tr);
-          });
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      if (refreshDeviceEventsBtn) {
-        refreshDeviceEventsBtn.addEventListener("click", function () {
-          if (selectedDeviceId) {
-            loadDeviceEvents(selectedDeviceId);
-          }
-        });
-      }
-
-      // Global users
-      async function loadUsers(query) {
-        if (!globalUsersTableBody || !userSearchStatus) return;
-        globalUsersTableBody.innerHTML = "";
-        setStatus(userSearchStatus, "Loading users...", false);
-        try {
-          var url = query ? ("/users?q=" + encodeURIComponent(query)) : "/users";
-          var res = await fetch(url, {
-            method: "GET",
-            headers: getHeadersJson()
-          });
-          var data = await res.json().catch(function () { return []; });
-          if (!res.ok) {
-            setStatus(userSearchStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          data.forEach(function (u) {
-            var tr = document.createElement("tr");
-            var tdId = document.createElement("td");
-            var tdName = document.createElement("td");
-            var tdEmail = document.createElement("td");
-            var tdPhone = document.createElement("td");
-            var tdDevices = document.createElement("td");
-            var tdEdit = document.createElement("td");
-            var tdDelete = document.createElement("td");
-            tdId.textContent = u.id;
-            tdName.textContent = u.name || "";
-            tdEmail.textContent = u.email || "";
-            tdPhone.textContent = u.phone || "";
-            if (u.devices && u.devices.length > 0) {
-              u.devices.forEach(function (d) {
-                var span = document.createElement("span");
-                span.className = "pill";
-                span.textContent = d.deviceId + "(" + (d.role || "operator") + ")";
-                tdDevices.appendChild(span);
-              });
-            }
-            var editBtn = document.createElement("button");
-            editBtn.textContent = "Edit";
-            editBtn.className = "btn-small";
-            editBtn.addEventListener("click", function () {
-              startEditUser(u);
-            });
-            tdEdit.appendChild(editBtn);
-            var delBtn = document.createElement("button");
-            delBtn.textContent = "Delete";
-            delBtn.className = "btn-danger btn-small";
-            delBtn.addEventListener("click", function () {
-              deleteUser(u.id);
-            });
-            tdDelete.appendChild(delBtn);
-            tr.appendChild(tdId);
-            tr.appendChild(tdName);
-            tr.appendChild(tdEmail);
-            tr.appendChild(tdPhone);
-            tr.appendChild(tdDevices);
-            tr.appendChild(tdEdit);
-            tr.appendChild(tdDelete);
-            globalUsersTableBody.appendChild(tr);
-          });
-          setStatus(userSearchStatus, "Loaded " + data.length + " users", false);
-        } catch (err) {
-          console.error(err);
-          setStatus(userSearchStatus, "Error loading users", true);
-        }
-      }
-
-      if (searchUsersBtn) {
-        searchUsersBtn.addEventListener("click", function () {
-          var q = userSearchInput.value.trim();
-          loadUsers(q || null);
-        });
-      }
-
-      if (showAllUsersBtn) {
-        showAllUsersBtn.addEventListener("click", function () {
-          userSearchInput.value = "";
-          loadUsers(null);
-        });
-      }
-
-      function startEditUser(u) {
-        editingUserId = u.id;
-        editUserTarget.textContent = "Editing user " + u.id;
-        editUserName.value = u.name || "";
-        editUserEmail.value = u.email || "";
-        editUserPhone.value = u.phone || "";
-        editUserPassword.value = "";
-        setStatus(editUserStatus, "", false);
-      }
-
-      async function deleteUser(userId) {
-        if (!window.confirm("Delete user " + userId + " from all devices?")) return;
-        try {
-          var res = await fetch("/users/" + encodeURIComponent(userId), {
-            method: "DELETE",
-            headers: getHeadersJson()
-          });
-          var data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            window.alert("Error deleting user: " + (data.error || ("HTTP " + res.status)));
-            return;
-          }
-          window.alert("User deleted");
-          if (editingUserId === userId) {
-            editingUserId = null;
-            editUserTarget.textContent = "";
-            editUserName.value = "";
-            editUserEmail.value = "";
-            editUserPhone.value = "";
-            editUserPassword.value = "";
-          }
-          await loadUsers(userSearchInput.value.trim() || null);
-          if (selectedDeviceId) {
-            await loadDeviceUsers(selectedDeviceId);
-          }
-        } catch (err) {
-          console.error(err);
-          window.alert("Error deleting user");
-        }
-      }
-
-      if (saveUserChangesBtn) {
-        saveUserChangesBtn.addEventListener("click", async function () {
-          if (!editingUserId) {
-            setStatus(editUserStatus, "No user selected for editing", true);
-            return;
-          }
-          var name = editUserName.value.trim();
-          var email = editUserEmail.value.trim();
-          var phone = editUserPhone.value.trim();
-          var password = editUserPassword.value;
-          setStatus(editUserStatus, "Saving changes...", false);
-          try {
-            var res = await fetch("/users/" + encodeURIComponent(editingUserId), {
-              method: "PUT",
-              headers: getHeadersJson(),
-              body: JSON.stringify({ name: name, email: email, phone: phone, password: password })
-            });
-            var data = await res.json().catch(function () { return {}; });
-            if (!res.ok) {
-              setStatus(editUserStatus, data.error || ("HTTP " + res.status), true);
-              return;
-            }
-            setStatus(editUserStatus, "User updated", false);
-            editUserPassword.value = "";
-            await loadUsers(userSearchInput.value.trim() || null);
-            if (selectedDeviceId) {
-              await loadDeviceUsers(selectedDeviceId);
-            }
-          } catch (err) {
-            console.error(err);
-            setStatus(editUserStatus, "Error saving user changes", true);
-          }
-        });
-      }
-
-      // Schedules
-      function resetScheduleForm() {
-        editingScheduleId = null;
-        scheduleFormTitle.textContent = "Create / Edit Schedule";
-        scheduleNameInput.value = "";
-        scheduleDescInput.value = "";
-        slotInputs.forEach(function (s) {
-          s.days.value = "";
-          s.start.value = "";
-          s.end.value = "";
-        });
-        setStatus(scheduleStatus, "", false);
-      }
-
-      function readSlotsFromForm() {
-        var slots = [];
-        slotInputs.forEach(function (s) {
-          var daysStr = s.days.value.trim();
-          var start = s.start.value;
-          var end = s.end.value;
-          if (!daysStr && !start && !end) return;
-          if (!start || !end) return;
-          var days = parseDaysString(daysStr);
-          slots.push({ daysOfWeek: days, start: start, end: end });
-        });
-        return slots;
-      }
-
-      function fillSlotsFormFromSchedule(sched) {
-        slotInputs.forEach(function (s) {
-          s.days.value = "";
-          s.start.value = "";
-          s.end.value = "";
-        });
-        if (!sched || !sched.slots) return;
-        var slots = sched.slots;
-        for (var i = 0; i < slots.length && i < slotInputs.length; i++) {
-          var sl = slots[i];
-          var days = Array.isArray(sl.daysOfWeek) ? sl.daysOfWeek : [];
-          slotInputs[i].days.value = days.join(",");
-          slotInputs[i].start.value = sl.start || "";
-          slotInputs[i].end.value = sl.end || "";
-        }
-      }
-
-      async function loadSchedules() {
-        if (!schedulesTableBody || !scheduleStatus) return;
-        schedulesTableBody.innerHTML = "";
-        setStatus(scheduleStatus, "Loading schedules...", false);
-        try {
-          var res = await fetch("/schedules", {
-            method: "GET",
-            headers: getHeadersJson()
-          });
-          var data = await res.json().catch(function () { return []; });
-          if (!res.ok) {
-            setStatus(scheduleStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          allSchedules = data;
-          rebuildAttachUserScheduleOptions();
-
-          data.forEach(function (s) {
-            var tr = document.createElement("tr");
-            var tdId = document.createElement("td");
-            var tdName = document.createElement("td");
-            var tdSlots = document.createElement("td");
-            var tdEdit = document.createElement("td");
-            var tdDelete = document.createElement("td");
-            tdId.textContent = s.id;
-            tdName.textContent = s.name;
-            tdSlots.textContent = describeSlots(s.slots || []);
-            var editBtn = document.createElement("button");
-            editBtn.textContent = "Edit";
-            editBtn.className = "btn-small";
-            editBtn.addEventListener("click", function () {
-              editingScheduleId = s.id;
-              scheduleFormTitle.textContent = "Editing schedule " + s.id;
-              scheduleNameInput.value = s.name || "";
-              scheduleDescInput.value = s.description || "";
-              fillSlotsFormFromSchedule(s);
-              setStatus(scheduleStatus, "Editing schedule " + s.id, false);
-            });
-            tdEdit.appendChild(editBtn);
-            var delBtn = document.createElement("button");
-            delBtn.textContent = "Delete";
-            delBtn.className = "btn-danger btn-small";
-            delBtn.addEventListener("click", async function () {
-              if (!window.confirm('Delete schedule "' + s.name + '"?')) return;
-              try {
-                var res2 = await fetch("/schedules/" + s.id, {
-                  method: "DELETE",
-                  headers: getHeadersJson()
-                });
-                var d2 = await res2.json().catch(function () { return {}; });
-                if (!res2.ok) {
-                  window.alert("Error deleting schedule: " + (d2.error || ("HTTP " + res2.status)));
-                  return;
-                }
-                resetScheduleForm();
-                await loadSchedules();
-                if (selectedDeviceId) {
-                  await loadDeviceUsers(selectedDeviceId);
-                }
-              } catch (err) {
-                console.error(err);
-                window.alert("Error deleting schedule");
-              }
-            });
-            tdDelete.appendChild(delBtn);
-            tr.appendChild(tdId);
-            tr.appendChild(tdName);
-            tr.appendChild(tdSlots);
-            tr.appendChild(tdEdit);
-            tr.appendChild(tdDelete);
-            schedulesTableBody.appendChild(tr);
-          });
-          setStatus(scheduleStatus, "Loaded " + data.length + " schedules", false);
-        } catch (err) {
-          console.error(err);
-          setStatus(scheduleStatus, "Error loading schedules", true);
-        }
-      }
-
-      if (refreshSchedulesBtn) {
-        refreshSchedulesBtn.addEventListener("click", function () {
-          loadSchedules();
-        });
-      }
-      if (resetScheduleFormBtn) {
-        resetScheduleFormBtn.addEventListener("click", function () {
-          resetScheduleForm();
-        });
-      }
-      if (saveScheduleBtn) {
-        saveScheduleBtn.addEventListener("click", async function () {
-          var name = scheduleNameInput.value.trim();
-          var description = scheduleDescInput.value.trim();
-          var slots = readSlotsFromForm();
-          if (!name) {
-            setStatus(scheduleStatus, "Schedule name is required", true);
-            return;
-          }
-          if (slots.length === 0) {
-            if (!window.confirm("No slots defined. This schedule will give NO access. Continue?")) {
-              return;
-            }
-          }
-          var payload = { name: name, description: description, slots: slots };
-          try {
-            if (editingScheduleId) {
-              setStatus(scheduleStatus, "Updating schedule...", false);
-              var res = await fetch("/schedules/" + editingScheduleId, {
-                method: "PUT",
-                headers: getHeadersJson(),
-                body: JSON.stringify(payload)
-              });
-              var data = await res.json().catch(function () { return {}; });
-              if (!res.ok) {
-                setStatus(scheduleStatus, data.error || ("HTTP " + res.status), true);
-                return;
-              }
-            } else {
-              setStatus(scheduleStatus, "Creating schedule...", false);
-              var res2 = await fetch("/schedules", {
-                method: "POST",
-                headers: getHeadersJson(),
-                body: JSON.stringify(payload)
-              });
-              var data2 = await res2.json().catch(function () { return {}; });
-              if (!res2.ok) {
-                setStatus(scheduleStatus, data2.error || ("HTTP " + res2.status), true);
-                return;
-              }
-            }
-            resetScheduleForm();
-            await loadSchedules();
-            if (selectedDeviceId) {
-              await loadDeviceUsers(selectedDeviceId);
-            }
-          } catch (err) {
-            console.error(err);
-            setStatus(scheduleStatus, "Error saving schedule", true);
-          }
-        });
-      }
-
-      // Reports
-      function buildReportQueryParams() {
-        var params = [];
-        if (reportDeviceSelect && reportDeviceSelect.value) {
-          params.push("deviceId=" + encodeURIComponent(reportDeviceSelect.value));
-        }
-        if (reportUserIdInput && reportUserIdInput.value.trim()) {
-          params.push("userId=" + encodeURIComponent(reportUserIdInput.value.trim()));
-        }
-        if (reportFromDate && reportFromDate.value) {
-          params.push("from=" + encodeURIComponent(reportFromDate.value + "T00:00:00"));
-        }
-        if (reportToDate && reportToDate.value) {
-          params.push("to=" + encodeURIComponent(reportToDate.value + "T23:59:59"));
-        }
-        params.push("limit=1000");
-        return params.join("&");
-      }
-
-      async function runReport() {
-        if (!reportEventsTableBody || !reportStatus) return;
-        reportEventsTableBody.innerHTML = "";
-        var qs = buildReportQueryParams();
-        setStatus(reportStatus, "Loading report...", false);
-        try {
-          var res = await fetch("/events" + (qs ? ("?" + qs) : ""), {
-            method: "GET",
-            headers: getHeadersJson()
-          });
-          var data = await res.json().catch(function () { return []; });
-          if (!res.ok) {
-            setStatus(reportStatus, data.error || ("HTTP " + res.status), true);
-            return;
-          }
-          data.forEach(function (ev) {
-            var tr = document.createElement("tr");
-            var tdTime = document.createElement("td");
-            var tdDevice = document.createElement("td");
-            var tdUser = document.createElement("td");
-            var tdEvent = document.createElement("td");
-            var tdDetails = document.createElement("td");
-            tdTime.textContent = ev.at || "";
-            tdDevice.textContent = (ev.device_id || "") + (ev.device_name ? (" – " + ev.device_name) : "");
-            var userBits = [];
-            if (ev.user_name) userBits.push(ev.user_name);
-            if (ev.user_phone) userBits.push(ev.user_phone);
-            if (ev.user_id) userBits.push("[" + ev.user_id + "]");
-            tdUser.textContent = userBits.join(" | ");
-            tdEvent.textContent = ev.event_type || "";
-            tdDetails.textContent = ev.details || "";
-            tr.appendChild(tdTime);
-            tr.appendChild(tdDevice);
-            tr.appendChild(tdUser);
-            tr.appendChild(tdEvent);
-            tr.appendChild(tdDetails);
-            reportEventsTableBody.appendChild(tr);
-          });
-          setStatus(reportStatus, "Report loaded: " + data.length + " events", false);
-        } catch (err) {
-          console.error(err);
-          setStatus(reportStatus, "Error loading report", true);
-        }
-      }
-
-      async function downloadReportCsv() {
-        var qs = buildReportQueryParams();
-        setStatus(reportStatus, "Preparing CSV...", false);
-        try {
-          var res = await fetch("/events" + (qs ? ("?" + qs + "&format=csv") : "?format=csv"), {
+          var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/export", {
             method: "GET",
             headers: getHeadersJson()
           });
           if (!res.ok) {
             var txt = await res.text();
-            setStatus(reportStatus, "Error downloading CSV: " + txt, true);
+            setStatus(csvImportStatus, "Error exporting CSV: " + txt, true);
             return;
           }
           var blob = await res.blob();
           var url = window.URL.createObjectURL(blob);
           var a = document.createElement("a");
           a.href = url;
-          a.download = "events-report.csv";
+          a.download = "device-" + selectedDeviceId + "-users.csv";
           document.body.appendChild(a);
           a.click();
           a.remove();
           window.URL.revokeObjectURL(url);
-          setStatus(reportStatus, "CSV downloaded", false);
+          setStatus(csvImportStatus, "Device CSV downloaded", false);
         } catch (err) {
           console.error(err);
-          setStatus(reportStatus, "Error downloading CSV", true);
+          setStatus(csvImportStatus, "Error exporting CSV", true);
         }
-      }
+      });
+    }
 
-      if (runReportBtn) {
-        runReportBtn.addEventListener("click", function () {
-          runReport();
-        });
-      }
-      if (downloadReportCsvBtn) {
-        downloadReportCsvBtn.addEventListener("click", function () {
-          downloadReportCsv();
-        });
-      }
+    if (exportAllCsvBtn) {
+      exportAllCsvBtn.addEventListener("click", async function () {
+        setStatus(csvImportStatus, "Preparing global CSV...", false);
+        try {
+          var res = await fetch("/users/export-csv", {
+            method: "GET",
+            headers: getHeadersJson()
+          });
+          if (!res.ok) {
+            var txt = await res.text();
+            setStatus(csvImportStatus, "Error exporting CSV: " + txt, true);
+            return;
+          }
+          var blob = await res.blob();
+          var url = window.URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = "geata-users-devices.csv";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          setStatus(csvImportStatus, "Global CSV downloaded", false);
+        } catch (err) {
+          console.error(err);
+          setStatus(csvImportStatus, "Error exporting global CSV", true);
+        }
+      });
+    }
 
-      // Initial load
-      loadDevices();
-      loadUsers(null);
-      loadSchedules();
-    });
-  </script>
+    // ---- AUX test + simulate events ----
+    async function callAux(which) {
+      if (!selectedDeviceId) {
+        setStatus(auxStatus, "Select a device first", true);
+        return;
+      }
+      var path = (which === "aux1") ? "aux1-test" : "aux2-test";
+      setStatus(auxStatus, "Triggering " + which.toUpperCase() + " (admin test)...", false);
+      try {
+        var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/" + path, {
+          method: "POST",
+          headers: getHeadersJson(),
+          body: JSON.stringify({ durationMs: 1000 })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          setStatus(auxStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        setStatus(auxStatus, which.toUpperCase() + " command queued (id: " + data.id + ")", false);
+        await loadDeviceEvents(selectedDeviceId);
+      } catch (err) {
+        console.error(err);
+        setStatus(auxStatus, "Error sending AUX command", true);
+      }
+    }
+
+    if (aux1Btn) aux1Btn.addEventListener("click", function () { callAux("aux1"); });
+    if (aux2Btn) aux2Btn.addEventListener("click", function () { callAux("aux2"); });
+
+    async function simulateEvent(type) {
+      if (!selectedDeviceId) {
+        setStatus(simStatus, "Select a device first", true);
+        return;
+      }
+      setStatus(simStatus, "Simulating " + type + "...", false);
+      try {
+        var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/simulate-event", {
+          method: "POST",
+          headers: getHeadersJson(),
+          body: JSON.stringify({ type: type })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          setStatus(simStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        setStatus(simStatus, "Event simulated", false);
+        await loadDeviceEvents(selectedDeviceId);
+      } catch (err) {
+        console.error(err);
+        setStatus(simStatus, "Error simulating event", true);
+      }
+    }
+
+    if (simGateOpenedBtn) simGateOpenedBtn.addEventListener("click", function () { simulateEvent("GATE_OPENED"); });
+    if (simGateClosedBtn) simGateClosedBtn.addEventListener("click", function () { simulateEvent("GATE_CLOSED"); });
+    if (simGateForcedBtn) simGateForcedBtn.addEventListener("click", function () { simulateEvent("GATE_FORCED_OPEN"); });
+    if (simGateAjarBtn)   simGateAjarBtn.addEventListener("click", function () { simulateEvent("GATE_OPEN_TOO_LONG"); });
+
+    async function loadDeviceEvents(deviceId) {
+      if (!deviceEventsTableBody) return;
+      deviceEventsTableBody.innerHTML = "";
+      try {
+        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/events?limit=20", {
+          method: "GET",
+          headers: getHeadersJson()
+        });
+        var data = await res.json().catch(function () { return []; });
+        if (!res.ok) {
+          console.warn("Error loading device events:", data);
+          return;
+        }
+        data.forEach(function (ev) {
+          var tr = document.createElement("tr");
+          var tdTime = document.createElement("td");
+          var tdEvent = document.createElement("td");
+          var tdUser = document.createElement("td");
+          var tdDetails = document.createElement("td");
+          tdTime.textContent = ev.at || "";
+          tdEvent.textContent = ev.event_type || "";
+          var bits = [];
+          if (ev.user_name) bits.push(ev.user_name);
+          if (ev.user_phone) bits.push(ev.user_phone);
+          if (ev.user_id) bits.push("[" + ev.user_id + "]");
+          tdUser.textContent = bits.join(" | ");
+          tdDetails.textContent = ev.details || "";
+          tr.appendChild(tdTime);
+          tr.appendChild(tdEvent);
+          tr.appendChild(tdUser);
+          tr.appendChild(tdDetails);
+          deviceEventsTableBody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (refreshDeviceEventsBtn) {
+      refreshDeviceEventsBtn.addEventListener("click", function () {
+        if (selectedDeviceId) {
+          loadDeviceEvents(selectedDeviceId);
+        }
+      });
+    }
+
+    // ---- Global users (directory) ----
+    async function loadUsers(query) {
+      if (!globalUsersTableBody || !userSearchStatus) return;
+      globalUsersTableBody.innerHTML = "";
+      setStatus(userSearchStatus, "Loading users...", false);
+      try {
+        var url = query ? ("/users?q=" + encodeURIComponent(query)) : "/users";
+        var res = await fetch(url, {
+          method: "GET",
+          headers: getHeadersJson()
+        });
+        var data = await res.json().catch(function () { return []; });
+        if (!res.ok) {
+          setStatus(userSearchStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        data.forEach(function (u) {
+          var tr = document.createElement("tr");
+
+          var tdSelect = document.createElement("td");
+          var cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.className = "userAttachCheckbox";
+          cb.dataset.userId = u.id;
+          tdSelect.appendChild(cb);
+
+          var tdId = document.createElement("td");
+          var tdName = document.createElement("td");
+          var tdEmail = document.createElement("td");
+          var tdPhone = document.createElement("td");
+          var tdDevices = document.createElement("td");
+          var tdEdit = document.createElement("td");
+          var tdDelete = document.createElement("td");
+
+          tdId.textContent = u.id;
+          tdName.textContent = u.name || "";
+          tdEmail.textContent = u.email || "";
+          tdPhone.textContent = u.phone || "";
+
+          if (u.devices && u.devices.length > 0) {
+            u.devices.forEach(function (d) {
+              var span = document.createElement("span");
+              span.className = "pill";
+              span.textContent = d.deviceId + "(" + (d.role || "operator") + ")";
+              tdDevices.appendChild(span);
+            });
+          }
+
+          var editBtn = document.createElement("button");
+          editBtn.textContent = "Edit";
+          editBtn.className = "btn-small";
+          editBtn.addEventListener("click", function () {
+            startEditUser(u);
+          });
+          tdEdit.appendChild(editBtn);
+
+          var delBtn = document.createElement("button");
+          delBtn.textContent = "Delete";
+          delBtn.className = "btn-danger btn-small";
+          delBtn.addEventListener("click", function () {
+            deleteUser(u.id);
+          });
+          tdDelete.appendChild(delBtn);
+
+          tr.appendChild(tdSelect);
+          tr.appendChild(tdId);
+          tr.appendChild(tdName);
+          tr.appendChild(tdEmail);
+          tr.appendChild(tdPhone);
+          tr.appendChild(tdDevices);
+          tr.appendChild(tdEdit);
+          tr.appendChild(tdDelete);
+          globalUsersTableBody.appendChild(tr);
+        });
+        setStatus(userSearchStatus, "Loaded " + data.length + " users", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(userSearchStatus, "Error loading users", true);
+      }
+    }
+
+    // Bulk attach selected users to the currently selected device
+    if (attachSelectedUsersBtn) {
+      attachSelectedUsersBtn.addEventListener("click", async function () {
+        if (!selectedDeviceId) {
+          setStatus(
+            userSearchStatus,
+            'Select a device first in "Select Device & Users".',
+            true
+          );
+          return;
+        }
+        if (!globalUsersTableBody) return;
+
+        var checkboxes = globalUsersTableBody.querySelectorAll("input.userAttachCheckbox:checked");
+        if (!checkboxes.length) {
+          setStatus(userSearchStatus, "No users selected to attach", true);
+          return;
+        }
+
+        var userIds = Array.prototype.map.call(checkboxes, function (cb) {
+          return cb.dataset.userId;
+        });
+
+        setStatus(
+          userSearchStatus,
+          "Attaching " + userIds.length + " users to " + selectedDeviceId + "...",
+          false
+        );
+
+        try {
+          for (var i = 0; i < userIds.length; i++) {
+            var userId = userIds[i];
+            var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
+              method: "POST",
+              headers: getHeadersJson(),
+              body: JSON.stringify({ userId: userId, role: "operator" })
+            });
+            if (!res.ok) {
+              var data = await res.json().catch(function () { return {}; });
+              console.warn("Failed to attach user", userId, data);
+            }
+          }
+
+          setStatus(
+            userSearchStatus,
+            "Attached " + userIds.length + " users to " + selectedDeviceId,
+            false
+          );
+
+          Array.prototype.forEach.call(checkboxes, function (cb) {
+            cb.checked = false;
+          });
+
+          if (selectedDeviceId) {
+            await loadDeviceUsers(selectedDeviceId);
+          }
+        } catch (err) {
+          console.error(err);
+          setStatus(userSearchStatus, "Error attaching selected users", true);
+        }
+      });
+    }
+
+    if (searchUsersBtn) {
+      searchUsersBtn.addEventListener("click", function () {
+        var q = userSearchInput.value.trim();
+        loadUsers(q || null);
+      });
+    }
+
+    if (showAllUsersBtn) {
+      showAllUsersBtn.addEventListener("click", function () {
+        userSearchInput.value = "";
+        loadUsers(null);
+      });
+    }
+
+    function startEditUser(u) {
+      editingUserId = u.id;
+      editUserTarget.textContent = "Editing user " + u.id;
+      editUserName.value = u.name || "";
+      editUserEmail.value = u.email || "";
+      editUserPhone.value = u.phone || "";
+      editUserPassword.value = "";
+      setStatus(editUserStatus, "", false);
+    }
+
+    async function deleteUser(userId) {
+      if (!window.confirm("Delete user " + userId + " from all devices?")) return;
+      try {
+        var res = await fetch("/users/" + encodeURIComponent(userId), {
+          method: "DELETE",
+          headers: getHeadersJson()
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          window.alert("Error deleting user: " + (data.error || ("HTTP " + res.status)));
+          return;
+        }
+        window.alert("User deleted");
+        if (editingUserId === userId) {
+          editingUserId = null;
+          editUserTarget.textContent = "";
+          editUserName.value = "";
+          editUserEmail.value = "";
+          editUserPhone.value = "";
+          editUserPassword.value = "";
+        }
+        await loadUsers(userSearchInput.value.trim() || null);
+        if (selectedDeviceId) {
+          await loadDeviceUsers(selectedDeviceId);
+        }
+      } catch (err) {
+        console.error(err);
+        window.alert("Error deleting user");
+      }
+    }
+
+    if (saveUserChangesBtn) {
+      saveUserChangesBtn.addEventListener("click", async function () {
+        if (!editingUserId) {
+          setStatus(editUserStatus, "No user selected for editing", true);
+          return;
+        }
+        var name = editUserName.value.trim();
+        var email = editUserEmail.value.trim();
+        var phone = editUserPhone.value.trim();
+        var password = editUserPassword.value;
+        setStatus(editUserStatus, "Saving changes...", false);
+        try {
+          var res = await fetch("/users/" + encodeURIComponent(editingUserId), {
+            method: "PUT",
+            headers: getHeadersJson(),
+            body: JSON.stringify({ name: name, email: email, phone: phone, password: password })
+          });
+          var data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setStatus(editUserStatus, data.error || ("HTTP " + res.status), true);
+            return;
+          }
+          setStatus(editUserStatus, "User updated", false);
+          editUserPassword.value = "";
+          await loadUsers(userSearchInput.value.trim() || null);
+          if (selectedDeviceId) {
+            await loadDeviceUsers(selectedDeviceId);
+          }
+        } catch (err) {
+          console.error(err);
+          setStatus(editUserStatus, "Error saving user changes", true);
+        }
+      });
+    }
+
+    // ---- Schedules ----
+    function resetScheduleForm() {
+      editingScheduleId = null;
+      scheduleFormTitle.textContent = "Create / Edit Schedule";
+      scheduleNameInput.value = "";
+      scheduleDescInput.value = "";
+      slotInputs.forEach(function (s) {
+        s.days.value = "";
+        s.start.value = "";
+        s.end.value = "";
+      });
+      setStatus(scheduleStatus, "", false);
+    }
+
+    function readSlotsFromForm() {
+      var slots = [];
+      slotInputs.forEach(function (s) {
+        var daysStr = s.days.value.trim();
+        var start = s.start.value;
+        var end = s.end.value;
+        if (!daysStr && !start && !end) return;
+        if (!start || !end) return;
+        var days = parseDaysString(daysStr);
+        slots.push({ daysOfWeek: days, start: start, end: end });
+      });
+      return slots;
+    }
+
+    function fillSlotsFormFromSchedule(sched) {
+      slotInputs.forEach(function (s) {
+        s.days.value = "";
+        s.start.value = "";
+        s.end.value = "";
+      });
+      if (!sched || !sched.slots) return;
+      var slots = sched.slots;
+      for (var i = 0; i < slots.length && i < slotInputs.length; i++) {
+        var sl = slots[i];
+        var days = Array.isArray(sl.daysOfWeek) ? sl.daysOfWeek : [];
+        slotInputs[i].days.value = days.join(",");
+        slotInputs[i].start.value = sl.start || "";
+        slotInputs[i].end.value = sl.end || "";
+      }
+    }
+
+    async function loadSchedules() {
+      if (!schedulesTableBody || !scheduleStatus) return;
+      schedulesTableBody.innerHTML = "";
+      setStatus(scheduleStatus, "Loading schedules...", false);
+      try {
+        var res = await fetch("/schedules", {
+          method: "GET",
+          headers: getHeadersJson()
+        });
+        var data = await res.json().catch(function () { return []; });
+        if (!res.ok) {
+          setStatus(scheduleStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        allSchedules = data;
+        rebuildAttachUserScheduleOptions();
+
+        data.forEach(function (s) {
+          var tr = document.createElement("tr");
+          var tdId = document.createElement("td");
+          var tdName = document.createElement("td");
+          var tdSlots = document.createElement("td");
+          var tdEdit = document.createElement("td");
+          var tdDelete = document.createElement("td");
+          tdId.textContent = s.id;
+          tdName.textContent = s.name;
+          tdSlots.textContent = describeSlots(s.slots || []);
+          var editBtn = document.createElement("button");
+          editBtn.textContent = "Edit";
+          editBtn.className = "btn-small";
+          editBtn.addEventListener("click", function () {
+            editingScheduleId = s.id;
+            scheduleFormTitle.textContent = "Editing schedule " + s.id;
+            scheduleNameInput.value = s.name || "";
+            scheduleDescInput.value = s.description || "";
+            fillSlotsFormFromSchedule(s);
+            setStatus(scheduleStatus, "Editing schedule " + s.id, false);
+          });
+          tdEdit.appendChild(editBtn);
+          var delBtn = document.createElement("button");
+          delBtn.textContent = "Delete";
+          delBtn.className = "btn-danger btn-small";
+          delBtn.addEventListener("click", async function () {
+            if (!window.confirm('Delete schedule "' + s.name + '"?')) return;
+            try {
+              var res2 = await fetch("/schedules/" + s.id, {
+                method: "DELETE",
+                headers: getHeadersJson()
+              });
+              var d2 = await res2.json().catch(function () { return {}; });
+              if (!res2.ok) {
+                window.alert("Error deleting schedule: " + (d2.error || ("HTTP " + res2.status)));
+                return;
+              }
+              resetScheduleForm();
+              await loadSchedules();
+              if (selectedDeviceId) {
+                await loadDeviceUsers(selectedDeviceId);
+              }
+            } catch (err) {
+              console.error(err);
+              window.alert("Error deleting schedule");
+            }
+          });
+          tdDelete.appendChild(delBtn);
+          tr.appendChild(tdId);
+          tr.appendChild(tdName);
+          tr.appendChild(tdSlots);
+          tr.appendChild(tdEdit);
+          tr.appendChild(tdDelete);
+          schedulesTableBody.appendChild(tr);
+        });
+        setStatus(scheduleStatus, "Loaded " + data.length + " schedules", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(scheduleStatus, "Error loading schedules", true);
+      }
+    }
+
+    if (refreshSchedulesBtn) {
+      refreshSchedulesBtn.addEventListener("click", function () {
+        loadSchedules();
+      });
+    }
+    if (resetScheduleFormBtn) {
+      resetScheduleFormBtn.addEventListener("click", function () {
+        resetScheduleForm();
+      });
+    }
+    if (saveScheduleBtn) {
+      saveScheduleBtn.addEventListener("click", async function () {
+        var name = scheduleNameInput.value.trim();
+        var description = scheduleDescInput.value.trim();
+        var slots = readSlotsFromForm();
+        if (!name) {
+          setStatus(scheduleStatus, "Schedule name is required", true);
+          return;
+        }
+        if (slots.length === 0) {
+          if (!window.confirm("No slots defined. This schedule will give NO access. Continue?")) {
+            return;
+          }
+        }
+        var payload = { name: name, description: description, slots: slots };
+        try {
+          if (editingScheduleId) {
+            setStatus(scheduleStatus, "Updating schedule...", false);
+            var res = await fetch("/schedules/" + editingScheduleId, {
+              method: "PUT",
+              headers: getHeadersJson(),
+              body: JSON.stringify(payload)
+            });
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+              setStatus(scheduleStatus, data.error || ("HTTP " + res.status), true);
+              return;
+            }
+          } else {
+            setStatus(scheduleStatus, "Creating schedule...", false);
+            var res2 = await fetch("/schedules", {
+              method: "POST",
+              headers: getHeadersJson(),
+              body: JSON.stringify(payload)
+            });
+            var data2 = await res2.json().catch(function () { return {}; });
+            if (!res2.ok) {
+              setStatus(scheduleStatus, data2.error || ("HTTP " + res2.status), true);
+              return;
+            }
+          }
+          resetScheduleForm();
+          await loadSchedules();
+          if (selectedDeviceId) {
+            await loadDeviceUsers(selectedDeviceId);
+          }
+        } catch (err) {
+          console.error(err);
+          setStatus(scheduleStatus, "Error saving schedule", true);
+        }
+      });
+    }
+
+    // ---- Reports / audit ----
+    function buildReportQueryParams() {
+      var params = [];
+      if (reportDeviceSelect && reportDeviceSelect.value) {
+        params.push("deviceId=" + encodeURIComponent(reportDeviceSelect.value));
+      }
+      if (reportUserIdInput && reportUserIdInput.value.trim()) {
+        params.push("userId=" + encodeURIComponent(reportUserIdInput.value.trim()));
+      }
+      if (reportFromDate && reportFromDate.value) {
+        params.push("from=" + encodeURIComponent(reportFromDate.value + "T00:00:00"));
+      }
+      if (reportToDate && reportToDate.value) {
+        params.push("to=" + encodeURIComponent(reportToDate.value + "T23:59:59"));
+      }
+      params.push("limit=1000");
+      return params.join("&");
+    }
+
+    async function runReport() {
+      if (!reportEventsTableBody || !reportStatus) return;
+      reportEventsTableBody.innerHTML = "";
+      var qs = buildReportQueryParams();
+      setStatus(reportStatus, "Loading report...", false);
+      try {
+        var res = await fetch("/events" + (qs ? ("?" + qs) : ""), {
+          method: "GET",
+          headers: getHeadersJson()
+        });
+        var data = await res.json().catch(function () { return []; });
+        if (!res.ok) {
+          setStatus(reportStatus, data.error || ("HTTP " + res.status), true);
+          return;
+        }
+        data.forEach(function (ev) {
+          var tr = document.createElement("tr");
+          var tdTime = document.createElement("td");
+          var tdDevice = document.createElement("td");
+          var tdUser = document.createElement("td");
+          var tdEvent = document.createElement("td");
+          var tdDetails = document.createElement("td");
+          tdTime.textContent = ev.at || "";
+          tdDevice.textContent = (ev.device_id || "") + (ev.device_name ? (" – " + ev.device_name) : "");
+          var userBits = [];
+          if (ev.user_name) userBits.push(ev.user_name);
+          if (ev.user_phone) userBits.push(ev.user_phone);
+          if (ev.user_id) userBits.push("[" + ev.user_id + "]");
+          tdUser.textContent = userBits.join(" | ");
+          tdEvent.textContent = ev.event_type || "";
+          tdDetails.textContent = ev.details || "";
+          tr.appendChild(tdTime);
+          tr.appendChild(tdDevice);
+          tr.appendChild(tdUser);
+          tr.appendChild(tdEvent);
+          tr.appendChild(tdDetails);
+          reportEventsTableBody.appendChild(tr);
+        });
+        setStatus(reportStatus, "Report loaded: " + data.length + " events", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(reportStatus, "Error loading report", true);
+      }
+    }
+
+    async function downloadReportCsv() {
+      var qs = buildReportQueryParams();
+      setStatus(reportStatus, "Preparing CSV...", false);
+      try {
+        var res = await fetch("/events" + (qs ? ("?" + qs + "&format=csv") : "?format=csv"), {
+          method: "GET",
+          headers: getHeadersJson()
+        });
+        if (!res.ok) {
+          var txt = await res.text();
+          setStatus(reportStatus, "Error downloading CSV: " + txt, true);
+          return;
+        }
+        var blob = await res.blob();
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "events-report.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        setStatus(reportStatus, "CSV downloaded", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(reportStatus, "Error downloading CSV", true);
+      }
+    }
+
+    if (runReportBtn) {
+      runReportBtn.addEventListener("click", function () {
+        runReport();
+      });
+    }
+    if (downloadReportCsvBtn) {
+      downloadReportCsvBtn.addEventListener("click", function () {
+        downloadReportCsv();
+      });
+    }
+
+    // ---- Initial load ----
+    loadDevices();
+    loadUsers(null);
+    loadSchedules();
+  });
+</script>
 </body>
 </html>

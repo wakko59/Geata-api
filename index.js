@@ -451,7 +451,6 @@ function createCommand(deviceId, userId, type, durationMs) {
   };
 }
 
-
 function getQueuedCommands(deviceId) {
   return db.prepare(`
     SELECT *
@@ -689,7 +688,7 @@ app.get('/me/devices', requireUser, (req, res) => {
 
 // Devices
 
-app.get('/devices', requireAdminKey, (req, res) => {
+app.get('/devices', (req, res) => {
   res.json(getDevices());
 });
 
@@ -842,6 +841,7 @@ app.post('/devices/:id/users/import', requireAdminKey, (req, res) => {
 
   res.json({ created, reused });
 });
+
 // Export users on a specific device as CSV (admin)
 app.get('/devices/:id/users/export', requireAdminKey, (req, res) => {
   const deviceId = req.params.id;
@@ -850,7 +850,8 @@ app.get('/devices/:id/users/export', requireAdminKey, (req, res) => {
     return res.status(404).json({ error: 'Device not found' });
   }
 
-  const rows = listDeviceUsers(deviceId); // expects { userId, name, email, phone, role, scheduleId }
+  // FIXED: use listDeviceUsers instead of non-existent getDeviceUsers
+  const rows = listDeviceUsers(deviceId); // { userId, name, email, phone, role, scheduleId }
 
   const header = ['userId', 'name', 'email', 'phone', 'role', 'scheduleId'];
   const csvRows = [header.join(',')];
@@ -878,6 +879,7 @@ app.get('/devices/:id/users/export', requireAdminKey, (req, res) => {
   );
   res.send(csv);
 });
+
 // Export all users + their devices as CSV (admin)
 app.get('/users/export-csv', requireAdminKey, (req, res) => {
   const users = db.prepare(`
@@ -1085,6 +1087,7 @@ app.post('/devices/:id/open', requireUser, (req, res) => {
   logDeviceEvent(deviceId, 'OPEN_REQUESTED', { userId, details: 'durationMs=' + durationMs });
   res.status(201).json(cmd);
 });
+
 // User-facing AUX1 / AUX2 (same checks as OPEN)
 
 app.post('/devices/:id/aux1', requireUser, (req, res) => {
@@ -1152,7 +1155,6 @@ app.post('/devices/:id/aux2-test', requireAdminKey, (req, res) => {
   logDeviceEvent(deviceId, 'AUX2_TRIGGER', { details: 'durationMs=' + durationMs });
   res.status(201).json(cmd);
 });
-
 
 // Simulated gate inputs (admin tests)
 

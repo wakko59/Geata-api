@@ -1,4 +1,2 @@
-node_modules/
-npm-debug.log
-myapi.db
-.env
+node_modules/ 
+myapi.db 
