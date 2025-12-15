@@ -22,9 +22,9 @@ if (!DATABASE_URL) {
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  // Supabase-hosted Postgres usually needs SSL from hosted environments (Render etc.)
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false
 });
+
 
 function asyncHandler(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -115,11 +115,6 @@ async function initDb() {
     );
   }
 }
-
-initDb().catch(err => {
-  console.error('*** initDb FAILED ***', err);
-  process.exit(1);
-});
 
 // ---- Helpers ----
 
@@ -1240,10 +1235,28 @@ app.use((err, req, res, next) => {
 });
 
 // ---- Start server ----
-app.listen(PORT, () => {
-  console.log(`Geata API listening on port ${PORT}`);
-  console.log(`Admin API key is: ${ADMIN_API_KEY}`);
-});
+async function start() {
+  // Ensure DB is ready before accepting traffic
+  await initDb();
+  app.listen(PORT, () => {
+    console.log(`Geata API listening on port ${PORT}`);
+    // IMPORTANT: don't print the key in production logs
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Admin API key is: ${ADMIN_API_KEY}`);
+    }
+  });
+}
+
+if (require.main === module) {
+  start().catch(err => {
+    console.error('*** initDb FAILED ***', err);
+    process.exit(1);
+  });
+}
+
+// Export for tests
+module.exports = { app, initDb, pool };
+
 
 // graceful shutdown
 process.on('SIGTERM', async () => {

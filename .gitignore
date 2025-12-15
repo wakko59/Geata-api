@@ -1,2 +1,10 @@
-node_modules/ 
-myapi.db 
+# secrets
+.env
+.env.*
+
+# dependencies
+node_modules/
+
+# local sqlite db (old)
+myapi.db
+*.db
