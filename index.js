@@ -933,7 +933,7 @@ app.get("/devices/:deviceId/settings", requireAdminKey, async (req, res) => {
   }
 });
 
-app.put("/devices/:deviceId/settings", requireAdminKey async (req, res) => {
+app.put("/devices/:deviceId/settings", requireAdminKey, async (req, res) => {
   const deviceId = req.params.deviceId;
   const settings = req.body || {};
 
