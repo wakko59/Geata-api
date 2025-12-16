@@ -69,7 +69,7 @@ const mailer =
 
 const EMAIL_PROVIDER = String(process.env.EMAIL_PROVIDER || "smtp").toLowerCase();
 //const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
-const SENDGRID_FROM = process.env.SENDGRID_FROM || process.env.SMTP_FROM || "";
+//const SENDGRID_FROM = process.env.SENDGRID_FROM || process.env.SMTP_FROM || "";
 
 function emailEnabled() {
   if (EMAIL_PROVIDER === "sendgrid") return !!SENDGRID_API_KEY && !!SENDGRID_FROM;
