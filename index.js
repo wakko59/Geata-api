@@ -888,6 +888,56 @@ app.get("/me/devices", requireUser, asyncHandler(async (req, res) => {
 app.get("/devices", requireAdminKey, asyncHandler(async (req, res) => {
   res.json(await getDevices());
 }));
+// ======================================================
+// User-accessible device settings (non-secret)
+// GET /devices/:id/user-settings
+// ======================================================
+app.get("/devices/:id/user-settings", requireUser, asyncHandler(async (req, res) => {
+  const deviceId = req.params.id;
+  const userId = req.user.id;
+
+  const device = await getDeviceById(deviceId);
+  if (!device) return res.status(404).json({ error: "Device not found" });
+
+  if (!(await isUserOnDevice(deviceId, userId))) {
+    return res.status(403).json({ error: "Not allowed on this device" });
+  }
+
+  const r = await q("select settings from public.device_settings where device_id = $1", [deviceId]);
+  if (!r.rows.length) return res.json({});
+  res.json(r.rows[0].settings || {});
+}));
+
+// ======================================================
+// User-accessible device events feed (for status messages)
+// GET /devices/:id/user-events?limit=30
+// ======================================================
+app.get("/devices/:id/user-events", requireUser, asyncHandler(async (req, res) => {
+  const deviceId = req.params.id;
+  const userId = req.user.id;
+  const limit = req.query.limit ? Math.min(Number(req.query.limit) || 30, 100) : 30;
+
+  const device = await getDeviceById(deviceId);
+  if (!device) return res.status(404).json({ error: "Device not found" });
+
+  if (!(await isUserOnDevice(deviceId, userId))) {
+    return res.status(403).json({ error: "Not allowed on this device" });
+  }
+
+  const r = await q(
+    `
+    select id, device_id, user_id, event_type, at, details
+    from public.device_events
+    where device_id = $1
+    order by at desc
+    limit $2
+    `,
+    [deviceId, limit]
+  );
+
+  res.json(r.rows);
+}));
+
 
 app.post("/devices", requireAdminKey, asyncHandler(async (req, res) => {
   const { id, name } = req.body || {};
