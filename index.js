@@ -107,6 +107,7 @@ console.log("SMTP env present:", {
 });
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
+const SENDGRID_FROM = process.env.SENDGRID_FROM || process.env.SMTP_FROM || "";
 const USE_SENDGRID = !!SENDGRID_API_KEY;
 
 function parseFrom(from) {
@@ -122,7 +123,7 @@ async function sendEmail(to, subject, text) {
   // ✅ Render Free-safe path: HTTPS API
   if (USE_SENDGRID) {
     try {
-      const from = parseFrom(SMTP_FROM);
+      const from = parseFrom(SENDGRID_FROM);
       const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
         headers: {
@@ -615,9 +616,10 @@ async function logDeviceEvent(deviceId, eventType, opts) {
   );
 
   // Fire-and-forget notifications so API stays responsive.
-  setImmediate(() => {
-    notifyEventByEmail({ deviceId, eventType, at, userId, details }).catch(() => {});
-  });
+ setImmediate(() => {
+  notifyEventByEmail({ deviceId, eventType, at, userId, details })
+    .catch(err => console.warn("notifyEventByEmail failed:", err?.message || err));
+});
 }
 
 function buildEmailSubject(ev) {
@@ -646,9 +648,12 @@ const ALWAYS_NOTIFY_USER_EVENTS = new Set([
   "AUX2_DENIED_NOT_ASSIGNED",
   "AUX2_DENIED_SCHEDULE"
 ]);
-
+function emailEnabled() {
+  if (USE_SENDGRID) return !!SENDGRID_API_KEY && !!SENDGRID_FROM;
+  return !!mailer;
+}
 async function notifyEventByEmail(ev) {
-  if (!mailer) return;
+  if (!emailEnabled()) return;
 
   const recipients = new Set();
 
