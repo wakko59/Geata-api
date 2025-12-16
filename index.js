@@ -912,7 +912,7 @@ app.get("/devices/:id/users", requireAdminKey, asyncHandler(async (req, res) => 
 // Used by admin.html: GET/PUT /devices/:deviceId/settings
 // ======================================================
 
-app.get("/devices/:deviceId/settings", requireAdmin, async (req, res) => {
+app.get("/devices/:deviceId/settings", requireAdminKey, async (req, res) => {
   const deviceId = req.params.deviceId;
 
   try {
@@ -933,7 +933,7 @@ app.get("/devices/:deviceId/settings", requireAdmin, async (req, res) => {
   }
 });
 
-app.put("/devices/:deviceId/settings", requireAdmin, async (req, res) => {
+app.put("/devices/:deviceId/settings", requireAdminKey async (req, res) => {
   const deviceId = req.params.deviceId;
   const settings = req.body || {};
 
@@ -962,7 +962,7 @@ app.put("/devices/:deviceId/settings", requireAdmin, async (req, res) => {
 // Used by admin.html: POST /admin/purge-events
 // ======================================================
 
-app.post("/admin/purge-events", requireAdmin, async (req, res) => {
+app.post("/admin/purge-events", requireAdminKey, async (req, res) => {
   const olderThanDays = Number(req.body?.olderThanDays);
 
   if (!Number.isFinite(olderThanDays) || olderThanDays < 1) {
