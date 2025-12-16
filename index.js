@@ -67,20 +67,37 @@ const mailer =
       })
     : null;
 
+const EMAIL_PROVIDER = String(process.env.EMAIL_PROVIDER || "smtp").toLowerCase();
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
+const SENDGRID_FROM = process.env.SENDGRID_FROM || process.env.SMTP_FROM || "";
+
+function emailEnabled() {
+  if (EMAIL_PROVIDER === "sendgrid") return !!SENDGRID_API_KEY && !!SENDGRID_FROM;
+  return !!mailer; // smtp/nodemailer
+}
+
 async function verifyMailer() {
+  if (EMAIL_PROVIDER === "sendgrid") {
+    console.log("Email enabled: SendGrid", {
+      fromSet: !!SENDGRID_FROM,
+      apiKeySet: !!SENDGRID_API_KEY
+    });
+    return;
+  }
+
   if (!mailer) {
     console.log("Email disabled: SMTP_* env vars not set");
     return;
   }
+
   try {
     await mailer.verify();
-    console.log(
-      `Email enabled: SMTP OK as ${SMTP_USER} via ${SMTP_HOST}:${SMTP_PORT} secure=${SMTP_SECURE}`
-    );
+    console.log(`Email enabled: SMTP OK as ${SMTP_USER} via ${SMTP_HOST}:${SMTP_PORT} secure=${SMTP_SECURE}`);
   } catch (err) {
     console.log("Email configured but verify FAILED:", err?.message || err);
   }
 }
+
 console.log("SMTP env present:", {
   host: !!SMTP_HOST,
   port: SMTP_PORT,
