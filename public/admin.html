@@ -6,39 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
-      /* pale blue background for the whole page */
       --bg-main: #cfdfee;
-
-      /* dark blue panels/cards */
       --bg-card: #0b2535;
-
-      /* slightly lighter dark blue for inner table backgrounds */
       --bg-card-soft: #123653;
-
-      /* primary button colour */
       --accent: #1c5e86;
       --accent-dark: #1c5e86;
       --accent-soft: rgba(28, 94, 134, 0.2);
-
-      /* keep red as-is */
       --danger: #d9534f;
-
-      /* light text on dark cards */
       --text-main: #f5f7fa;
       --text-dark: #f5f7fa;
-
-      /* we’ll override subtitles explicitly below, so this can stay neutral */
       --text-muted: #7b8a9b;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
       padding: 0;
-      /* fixed invalid colour here (#1e3f5d instead of #1e3f2fd) */
       background: radial-gradient(circle at top, #1e3f5d 0, var(--bg-main) 45%, #b3cde5 100%);
       color: var(--text-main);
     }
@@ -71,6 +55,8 @@
       align-items: baseline;
       justify-content: space-between;
       margin-bottom: 8px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     .card-title {
       margin: 0;
@@ -100,7 +86,7 @@
       font-weight: 500;
       color: #e3f2fd;
     }
-    input, select {
+    input, select, textarea {
       padding: 7px 9px;
       margin-bottom: 8px;
       border-radius: 8px;
@@ -108,7 +94,8 @@
       font-size: 13px;
       width: 100%;
     }
-    input:focus, select:focus {
+    textarea { min-height: 70px; resize: vertical; }
+    input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--accent-dark);
       box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.35);
@@ -128,35 +115,21 @@
       align-items: center;
       gap: 4px;
     }
-    button.btn-secondary {
-      background: #345a77;
-    }
-    button.btn-danger {
-      background: var(--danger);
-    }
-    button[disabled] {
-      opacity: 0.5;
-      cursor: default;
-    }
-    .btn-small {
-      font-size: 12px;
-      padding: 5px 9px;
-    }
+    button.btn-secondary { background: #345a77; }
+    button.btn-danger { background: var(--danger); }
+    button[disabled] { opacity: 0.5; cursor: default; }
+
+    .btn-small { font-size: 12px; padding: 5px 9px; }
+
     .status {
       font-size: 12px;
       min-height: 16px;
       margin-top: 4px;
     }
-    .status.error {
-      color: #b00020;
-    }
-    .status.ok {
-      color: #ffb300;
-    }
-    .small {
-      font-size: 12px;
-      color: #2e7d32;
-    }
+    .status.error { color: #b00020; }
+    .status.ok { color: #ffb300; }
+    .small { font-size: 12px; color: #2e7d32; }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -173,32 +146,27 @@
       text-align: left;
       vertical-align: top;
     }
-    th {
-      background: #17405f;
-      font-weight: 600;
-    }
+    th { background: #17405f; font-weight: 600; }
+
     .pill {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: var(--accent-soft);   /* soft petrol blue */
-  font-size: 11px;
-  margin-right: 4px;
-  margin-bottom: 2px;
-  color: var(--text-main);          /* light text */
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      font-size: 11px;
+      margin-right: 4px;
+      margin-bottom: 2px;
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
 
     .two-column {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
-    @media (max-width: 900px) {
-      .two-column {
-        grid-template-columns: 1fr;
-      }
-    }
+    @media (max-width: 900px) { .two-column { grid-template-columns: 1fr; } }
+
     .device-label-big {
       font-size: 14px;
       font-weight: 600;
@@ -214,21 +182,55 @@
       margin: 10px 0 12px;
       background: linear-gradient(to right, rgba(0,0,0,0.05), rgba(0,0,0,0));
     }
+
     .import-export-row {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
       align-items: flex-end;
     }
-    .import-export-row > div {
-      flex: 1 1 260px;
+    .import-export-row > div { flex: 1 1 260px; }
+
+    .toggle-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 6px 0 8px;
     }
+    .toggle-row input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      transform: translateY(1px);
+    }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 10px;
+      margin: 6px 0 8px;
+    }
+    @media (max-width: 900px) { .check-grid { grid-template-columns: 1fr; } }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .check-item input[type="checkbox"] { width: auto; margin: 0; }
+    .check-item label { margin: 0; font-weight: 500; }
+
+    code { color: #E3F2FD; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Geata Admin Panel</h1>
-    <p class="subtitle">Configure gates, users, schedules and audit logs. All actions require a valid admin API key.</p>
+    <p class="subtitle">Configure gates, users, schedules, notifications, and audit logs. Admin endpoints require a valid admin API key.</p>
 
     <!-- Admin Authentication -->
     <div class="card">
@@ -325,6 +327,162 @@
         </thead>
         <tbody></tbody>
       </table>
+    </div>
+
+    <!-- NEW: Email Notifications -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="pill-title">Alerts</div>
+          <h2 class="card-title">Email Notifications</h2>
+          <p class="card-subtitle">Choose who gets emailed for events on the selected gate.</p>
+        </div>
+        <div>
+          <button id="refreshNotificationsBtn" class="btn-secondary btn-small">Refresh</button>
+        </div>
+      </div>
+
+      <div class="device-label-big">
+        Select Device:
+        <span id="selectedDeviceTextNotify" class="device-label-value">None selected</span>
+      </div>
+
+      <label for="notifyUserSelect">User</label>
+      <select id="notifyUserSelect">
+        <option value="">-- Select a user on this device --</option>
+      </select>
+
+      <p class="small">
+        Tip: choose <code>*</code> to receive all events for this device.
+      </p>
+
+      <div id="notifyEventsWrap" class="check-grid"></div>
+
+      <button id="saveNotificationsBtn">Save Notifications</button>
+      <div id="notifyStatus" class="status"></div>
+
+      <div class="section-divider"></div>
+      <h3 style="margin-top: 4px; font-size: 15px;">Current subscriptions (enabled)</h3>
+
+      <table id="notifyTable">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Event Types</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- NEW: Device I/O + Alarm Settings -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="pill-title">I/O + Alarms</div>
+          <h2 class="card-title">Device Settings</h2>
+          <p class="card-subtitle">Per gate configuration for Aux1 mode, forced/ajar/tamper thresholds and recipients.</p>
+        </div>
+        <div>
+          <button id="loadDeviceSettingsBtn" class="btn-secondary btn-small">Load</button>
+        </div>
+      </div>
+
+      <div class="device-label-big">
+        Select Device:
+        <span id="selectedDeviceTextSettings" class="device-label-value">None selected</span>
+      </div>
+
+      <div class="two-column">
+        <div>
+          <label for="aux1ModeSelect">Aux 1 Mode</label>
+          <select id="aux1ModeSelect">
+            <option value="relay">Option 1: Relay On/Off (RLA ON/OFF)</option>
+            <option value="contact">Option 2: Opened/Closed (Input 2 door monitor)</option>
+          </select>
+          <p class="small">
+            Relay mode: app shows RLA ON persistent, OFF for 3s after off. <br/>
+            Contact mode: app shows Opened/Closed from Input 2 (3s).
+          </p>
+        </div>
+        <div>
+          <label for="supervisorEmailInput">Supervisor Email</label>
+          <input id="supervisorEmailInput" type="email" placeholder="supervisor@example.com" />
+          <label for="engineerEmailInput">Engineer Email</label>
+          <input id="engineerEmailInput" type="email" placeholder="engineer@example.com" />
+          <p class="small">
+            These are used by backend rules for forced/ajar/tamper/engineer-mode notifications.
+          </p>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <h3 style="margin-top: 4px; font-size: 15px;">Forced + Ajar thresholds</h3>
+      <div class="two-column">
+        <div>
+          <label for="gateAjarWarnInput">Gate Ajar Warn After (HH:MM)</label>
+          <input id="gateAjarWarnInput" type="text" placeholder="e.g. 00:02 (2 minutes)" />
+          <label for="gateAjarEmailInput">Gate Ajar Email After (HH:MM)</label>
+          <input id="gateAjarEmailInput" type="text" placeholder="e.g. 00:05 (5 minutes)" />
+          <p class="small">
+            Backend should warn in app, then email user + supervisor if still open past Email After.
+          </p>
+        </div>
+
+        <div>
+          <label for="engineerModeMaxInput">Engineer Mode Max Duration (HH:MM)</label>
+          <input id="engineerModeMaxInput" type="text" placeholder="e.g. 00:30 (30 minutes)" />
+          <div class="toggle-row">
+            <input id="emailOnEngineerModeEnable" type="checkbox" />
+            <label for="emailOnEngineerModeEnable">Email supervisor + engineer when Engineer Mode activated</label>
+          </div>
+          <div class="toggle-row">
+            <input id="emailOnEngineerModeTimeoutEnable" type="checkbox" />
+            <label for="emailOnEngineerModeTimeoutEnable">Email again if Engineer Mode exceeds max duration</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <h3 style="margin-top: 4px; font-size: 15px;">Tamper behavior (Input 3)</h3>
+      <div class="toggle-row">
+        <input id="tamperEmailSupervisorEnable" type="checkbox" />
+        <label for="tamperEmailSupervisorEnable">Email supervisor on tamper</label>
+      </div>
+      <div class="toggle-row">
+        <input id="tamperEmailEngineerEnable" type="checkbox" />
+        <label for="tamperEmailEngineerEnable">Email engineer on tamper</label>
+      </div>
+      <div class="toggle-row">
+        <input id="tamperRelay3Enable" type="checkbox" />
+        <label for="tamperRelay3Enable">In normal mode, switch Relay 3 ON when tamper opens (local siren)</label>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <h3 style="margin-top: 4px; font-size: 15px;">Forced rules (email + app)</h3>
+      <div class="toggle-row">
+        <input id="forcedGateEnable" type="checkbox" />
+        <label for="forcedGateEnable">Forced Gate detection (Input 1 opens without valid OPEN command)</label>
+      </div>
+      <div class="toggle-row">
+        <input id="forcedDoorEnable" type="checkbox" />
+        <label for="forcedDoorEnable">Forced Door detection (Input 2 opens without valid OPEN command)</label>
+      </div>
+      <p class="small">
+        Backend should email supervisor with last user + time since last command (hh:mm) and trigger flashing app message.
+      </p>
+
+      <button id="saveDeviceSettingsBtn">Save Device Settings</button>
+      <div id="deviceSettingsStatus" class="status"></div>
+
+      <p class="small">
+        Note: this UI calls <code>GET /devices/:id/settings</code> and <code>PUT /devices/:id/settings</code>.
+        Add those endpoints in the backend to persist these values.
+      </p>
     </div>
 
     <!-- Add / Attach User to Device -->
@@ -499,7 +657,7 @@
       </table>
     </div>
 
-        <!-- User Lookup (All Users) -->
+    <!-- User Lookup (All Users) -->
     <div class="card">
       <div class="card-header">
         <div>
@@ -515,7 +673,6 @@
       <button id="showAllUsersBtn" class="btn-secondary btn-small">Show All</button>
       <div id="userSearchStatus" class="status"></div>
 
-      <!-- New: show which device we're attaching to -->
       <div class="device-label-big">
         Attach to Device:
         <span id="selectedDeviceTextDirectory" class="device-label-value">None selected</span>
@@ -540,7 +697,6 @@
         <tbody></tbody>
       </table>
     </div>
-
 
     <!-- Edit User Details (global) -->
     <div class="card">
@@ -724,10 +880,30 @@
         </thead>
         <tbody></tbody>
       </table>
+
+      <div class="section-divider"></div>
+
+      <!-- NEW: Purge logs -->
+      <h3 style="margin-top: 4px; font-size: 15px;">Purge Logs</h3>
+      <p class="small">
+        Purge device_events older than a chosen number of days (admin action). Requires backend endpoint <code>POST /admin/purge-events</code>.
+      </p>
+      <div class="two-column">
+        <div>
+          <label for="purgeOlderThanDays">Delete events older than (days)</label>
+          <input id="purgeOlderThanDays" type="number" min="1" value="90" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="purgeEventsBtn" class="btn-danger">Purge</button>
+        </div>
+      </div>
+      <div id="purgeStatus" class="status"></div>
     </div>
+
   </div>
 
- <script>
+<script>
   let apiKey = "";
   let selectedDeviceId = "";
   let allSchedules = [];
@@ -745,6 +921,12 @@
     const headers = { "Content-Type": "application/json" };
     if (apiKey) headers["x-api-key"] = apiKey;
     return headers;
+  }
+
+  async function fetchJson(url, opts) {
+    const res = await fetch(url, opts);
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
   }
 
   function dayName(d) {
@@ -791,9 +973,7 @@
     var labelText = "None selected";
     if (selectedDeviceSelect) {
       var opt = selectedDeviceSelect.options[selectedDeviceSelect.selectedIndex];
-      if (opt && opt.value) {
-        labelText = opt.textContent;
-      }
+      if (opt && opt.value) labelText = opt.textContent;
     }
     [
       "selectedDeviceText",
@@ -801,7 +981,9 @@
       "selectedDeviceTextCsv",
       "selectedDeviceTextIo",
       "selectedDeviceTextEvents",
-      "selectedDeviceTextDirectory"   // new label in User Lookup card
+      "selectedDeviceTextDirectory",
+      "selectedDeviceTextNotify",
+      "selectedDeviceTextSettings"
     ].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.textContent = labelText;
@@ -824,7 +1006,269 @@
     }
   }
 
+  // Duration parse: "HH:MM" -> seconds
+  function parseHHMMToSeconds(s) {
+    const t = String(s || "").trim();
+    if (!t) return null;
+    const m = t.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (isNaN(hh) || isNaN(mm)) return null;
+    return hh * 3600 + mm * 60;
+  }
+
+  function secondsToHHMM(sec) {
+    if (sec == null || isNaN(sec)) return "";
+    sec = Math.max(0, Number(sec));
+    const hh = Math.floor(sec / 3600);
+    const mm = Math.floor((sec % 3600) / 60);
+    const pad = n => (n < 10 ? "0" + n : "" + n);
+    return pad(hh) + ":" + pad(mm);
+  }
+
+  // ===== Notifications =====
+  const EVENT_TYPES = [
+    "*",
+    "OPEN_REQUESTED",
+    "AUX1_REQUESTED",
+    "AUX2_REQUESTED",
+    "CMD_COMPLETED",
+    "GATE_OPENED",
+    "GATE_CLOSED",
+    "GATE_FORCED_OPEN",
+    "GATE_OPEN_TOO_LONG",
+    "DOOR_FORCED_OPEN",
+    "TAMPER_OPENED",
+    "ENGINEER_MODE_ON",
+    "ENGINEER_MODE_TIMEOUT",
+    "ENGINEER_MODE_OFF"
+  ];
+
+  function buildNotifyCheckboxes() {
+    var wrap = document.getElementById("notifyEventsWrap");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    EVENT_TYPES.forEach(function (ev) {
+      var row = document.createElement("div");
+      row.className = "check-item";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.dataset.ev = ev;
+      cb.id = "ev_" + ev;
+
+      var lab = document.createElement("label");
+      lab.htmlFor = cb.id;
+      lab.textContent = ev;
+
+      row.appendChild(cb);
+      row.appendChild(lab);
+      wrap.appendChild(row);
+    });
+  }
+
+  function getSelectedEventTypes() {
+    var wrap = document.getElementById("notifyEventsWrap");
+    if (!wrap) return [];
+    var cbs = wrap.querySelectorAll("input[type=checkbox]:checked");
+    return Array.prototype.map.call(cbs, function (cb) { return cb.dataset.ev; });
+  }
+
+  async function loadDeviceNotifications(deviceId) {
+    var tbody = document.querySelector("#notifyTable tbody");
+    var status = document.getElementById("notifyStatus");
+    if (!tbody || !status) return;
+    tbody.innerHTML = "";
+    setStatus(status, "Loading notifications...", false);
+
+    try {
+      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/notifications", {
+        method: "GET",
+        headers: getHeadersJson()
+      });
+
+      if (!out.res.ok) {
+        setStatus(status, (out.data && out.data.error) ? out.data.error : ("HTTP " + out.res.status), true);
+        return;
+      }
+
+      (out.data || []).forEach(function (row) {
+        var tr = document.createElement("tr");
+        var tdName = document.createElement("td");
+        var tdEmail = document.createElement("td");
+        var tdTypes = document.createElement("td");
+        tdName.textContent = row.name || row.userId || "";
+        tdEmail.textContent = row.email || "";
+        tdTypes.textContent = (row.eventTypes || []).join(", ");
+        tr.appendChild(tdName);
+        tr.appendChild(tdEmail);
+        tr.appendChild(tdTypes);
+        tbody.appendChild(tr);
+      });
+
+      setStatus(status, "Loaded " + (out.data ? out.data.length : 0) + " subscriptions", false);
+    } catch (err) {
+      console.error(err);
+      setStatus(status, "Error loading notifications", true);
+    }
+  }
+
+  async function saveUserNotifications(deviceId, userId, eventTypes) {
+    var status = document.getElementById("notifyStatus");
+    setStatus(status, "Saving notifications...", false);
+
+    try {
+      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId) + "/notifications", {
+        method: "PUT",
+        headers: getHeadersJson(),
+        body: JSON.stringify({ eventTypes: eventTypes })
+      });
+
+      if (!out.res.ok) {
+        setStatus(status, (out.data && out.data.error) ? out.data.error : ("HTTP " + out.res.status), true);
+        return;
+      }
+
+      setStatus(status, "Saved", false);
+      await loadDeviceNotifications(deviceId);
+    } catch (err) {
+      console.error(err);
+      setStatus(status, "Error saving notifications", true);
+    }
+  }
+
+  // ===== Device Settings (expects backend endpoints) =====
+  async function loadDeviceSettings(deviceId) {
+    var st = document.getElementById("deviceSettingsStatus");
+    setStatus(st, "Loading device settings...", false);
+
+    try {
+      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/settings", {
+        method: "GET",
+        headers: getHeadersJson()
+      });
+
+      if (!out.res.ok) {
+        setStatus(st, (out.data && out.data.error) ? out.data.error : ("Not implemented (HTTP " + out.res.status + ")"), true);
+        return;
+      }
+
+      var s = out.data || {};
+
+      document.getElementById("aux1ModeSelect").value = s.aux1Mode || "relay";
+      document.getElementById("supervisorEmailInput").value = s.supervisorEmail || "";
+      document.getElementById("engineerEmailInput").value = s.engineerEmail || "";
+
+      document.getElementById("gateAjarWarnInput").value = secondsToHHMM(s.gateAjarWarnSec);
+      document.getElementById("gateAjarEmailInput").value = secondsToHHMM(s.gateAjarEmailSec);
+      document.getElementById("engineerModeMaxInput").value = secondsToHHMM(s.engineerModeMaxSec);
+
+      document.getElementById("emailOnEngineerModeEnable").checked = !!s.emailOnEngineerModeEnable;
+      document.getElementById("emailOnEngineerModeTimeoutEnable").checked = !!s.emailOnEngineerModeTimeoutEnable;
+
+      document.getElementById("tamperEmailSupervisorEnable").checked = !!s.tamperEmailSupervisorEnable;
+      document.getElementById("tamperEmailEngineerEnable").checked = !!s.tamperEmailEngineerEnable;
+      document.getElementById("tamperRelay3Enable").checked = !!s.tamperRelay3Enable;
+
+      document.getElementById("forcedGateEnable").checked = !!s.forcedGateEnable;
+      document.getElementById("forcedDoorEnable").checked = !!s.forcedDoorEnable;
+
+      setStatus(st, "Loaded settings", false);
+    } catch (err) {
+      console.error(err);
+      setStatus(st, "Error loading settings", true);
+    }
+  }
+
+  async function saveDeviceSettings(deviceId) {
+    var st = document.getElementById("deviceSettingsStatus");
+
+    const payload = {
+      aux1Mode: document.getElementById("aux1ModeSelect").value,
+      supervisorEmail: document.getElementById("supervisorEmailInput").value.trim(),
+      engineerEmail: document.getElementById("engineerEmailInput").value.trim(),
+
+      gateAjarWarnSec: parseHHMMToSeconds(document.getElementById("gateAjarWarnInput").value),
+      gateAjarEmailSec: parseHHMMToSeconds(document.getElementById("gateAjarEmailInput").value),
+      engineerModeMaxSec: parseHHMMToSeconds(document.getElementById("engineerModeMaxInput").value),
+
+      emailOnEngineerModeEnable: document.getElementById("emailOnEngineerModeEnable").checked,
+      emailOnEngineerModeTimeoutEnable: document.getElementById("emailOnEngineerModeTimeoutEnable").checked,
+
+      tamperEmailSupervisorEnable: document.getElementById("tamperEmailSupervisorEnable").checked,
+      tamperEmailEngineerEnable: document.getElementById("tamperEmailEngineerEnable").checked,
+      tamperRelay3Enable: document.getElementById("tamperRelay3Enable").checked,
+
+      forcedGateEnable: document.getElementById("forcedGateEnable").checked,
+      forcedDoorEnable: document.getElementById("forcedDoorEnable").checked
+    };
+
+    // Basic validation for HH:MM fields
+    const bad =
+      (document.getElementById("gateAjarWarnInput").value.trim() && payload.gateAjarWarnSec == null) ||
+      (document.getElementById("gateAjarEmailInput").value.trim() && payload.gateAjarEmailSec == null) ||
+      (document.getElementById("engineerModeMaxInput").value.trim() && payload.engineerModeMaxSec == null);
+
+    if (bad) {
+      setStatus(st, "Invalid time format. Use HH:MM (e.g. 00:05).", true);
+      return;
+    }
+
+    setStatus(st, "Saving device settings...", false);
+
+    try {
+      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/settings", {
+        method: "PUT",
+        headers: getHeadersJson(),
+        body: JSON.stringify(payload)
+      });
+
+      if (!out.res.ok) {
+        setStatus(st, (out.data && out.data.error) ? out.data.error : ("Not implemented (HTTP " + out.res.status + ")"), true);
+        return;
+      }
+
+      setStatus(st, "Saved settings", false);
+    } catch (err) {
+      console.error(err);
+      setStatus(st, "Error saving settings", true);
+    }
+  }
+
+  // ===== Purge logs (expects backend endpoint) =====
+  async function purgeEventsOlderThan(days) {
+    var st = document.getElementById("purgeStatus");
+    if (!days || days < 1) {
+      setStatus(st, "Enter a valid number of days", true);
+      return;
+    }
+    if (!window.confirm("Permanently delete events older than " + days + " days?")) return;
+
+    setStatus(st, "Purging...", false);
+
+    try {
+      var out = await fetchJson("/admin/purge-events", {
+        method: "POST",
+        headers: getHeadersJson(),
+        body: JSON.stringify({ olderThanDays: days })
+      });
+
+      if (!out.res.ok) {
+        setStatus(st, (out.data && out.data.error) ? out.data.error : ("Not implemented (HTTP " + out.res.status + ")"), true);
+        return;
+      }
+
+      setStatus(st, "Purge complete", false);
+    } catch (err) {
+      console.error(err);
+      setStatus(st, "Error purging events", true);
+    }
+  }
+
+  // ===== Existing page logic =====
   window.addEventListener("load", function () {
+    buildNotifyCheckboxes();
+
     var apiKeyInput = document.getElementById("apiKeyInput");
     var setApiKeyBtn = document.getElementById("setApiKeyBtn");
     var apiKeyStatus = document.getElementById("apiKeyStatus");
@@ -903,6 +1347,17 @@
     var reportStatus = document.getElementById("reportStatus");
     var reportEventsTableBody = document.querySelector("#reportEventsTable tbody");
 
+    var notifyUserSelect = document.getElementById("notifyUserSelect");
+    var refreshNotificationsBtn = document.getElementById("refreshNotificationsBtn");
+    var saveNotificationsBtn = document.getElementById("saveNotificationsBtn");
+
+    var loadDeviceSettingsBtn = document.getElementById("loadDeviceSettingsBtn");
+    var saveDeviceSettingsBtn = document.getElementById("saveDeviceSettingsBtn");
+
+    var purgeEventsBtn = document.getElementById("purgeEventsBtn");
+    var purgeOlderThanDays = document.getElementById("purgeOlderThanDays");
+    var purgeStatus = document.getElementById("purgeStatus");
+
     var slotInputs = [];
     for (var i = 1; i <= 6; i++) {
       slotInputs.push({
@@ -930,17 +1385,19 @@
         setStatus(editUserStatus, "", false);
         setStatus(scheduleStatus, "", false);
         setStatus(reportStatus, "", false);
+        setStatus(document.getElementById("notifyStatus"), "", false);
+        setStatus(document.getElementById("deviceSettingsStatus"), "", false);
+        setStatus(purgeStatus, "", false);
 
-        // If a valid key was entered, reload key data sets
         if (hasKey) {
           loadDevices();
           loadUsers(null);
           loadSchedules();
 
-          // If a device is already selected, refresh those too
           if (selectedDeviceId) {
             loadDeviceUsers(selectedDeviceId);
             loadDeviceEvents(selectedDeviceId);
+            loadDeviceNotifications(selectedDeviceId);
           }
         }
       });
@@ -971,18 +1428,17 @@
       if (!devicesTableBody || !devicesStatus || !selectedDeviceSelect) return;
       devicesTableBody.innerHTML = "";
       selectedDeviceSelect.innerHTML = '<option value="">-- Select a device --</option>';
-      if (reportDeviceSelect) {
-        reportDeviceSelect.innerHTML = '<option value="">-- Any device --</option>';
-      }
+      if (reportDeviceSelect) reportDeviceSelect.innerHTML = '<option value="">-- Any device --</option>';
       setStatus(devicesStatus, "Loading devices...", false);
+
       try {
-        var res = await fetch("/devices", { method: "GET", headers: getHeadersJson() });
-        var data = await res.json().catch(function () { return []; });
-        if (!res.ok) {
-          setStatus(devicesStatus, data.error || ("HTTP " + res.status), true);
+        var out = await fetchJson("/devices", { method: "GET", headers: getHeadersJson() });
+        if (!out.res.ok) {
+          setStatus(devicesStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
-        data.forEach(function (d) {
+
+        (out.data || []).forEach(function (d) {
           var tr = document.createElement("tr");
           var tdId = document.createElement("td");
           var tdName = document.createElement("td");
@@ -1004,21 +1460,17 @@
             reportDeviceSelect.appendChild(opt2);
           }
         });
+
         updateSelectedDeviceLabels(selectedDeviceSelect);
-        setStatus(devicesStatus, "Loaded " + data.length + " devices", false);
+        setStatus(devicesStatus, "Loaded " + (out.data ? out.data.length : 0) + " devices", false);
       } catch (err) {
         console.error(err);
         setStatus(devicesStatus, "Error loading devices", true);
       }
     }
 
-    if (refreshDevicesBtn) {
-      refreshDevicesBtn.addEventListener("click", function () {
-        loadDevices();
-      });
-    }
+    if (refreshDevicesBtn) refreshDevicesBtn.addEventListener("click", function () { loadDevices(); });
 
-    // Add device button
     if (addDeviceBtn) {
       addDeviceBtn.addEventListener("click", async function () {
         var id = newDeviceIdInput.value.trim();
@@ -1029,14 +1481,13 @@
         }
         setStatus(addDeviceStatus, "Creating device...", false);
         try {
-          var res = await fetch("/devices", {
+          var out = await fetchJson("/devices", {
             method: "POST",
             headers: getHeadersJson(),
             body: JSON.stringify({ id: id, name: name })
           });
-          var data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            setStatus(addDeviceStatus, data.error || ("HTTP " + res.status), true);
+          if (!out.res.ok) {
+            setStatus(addDeviceStatus, out.data.error || ("HTTP " + out.res.status), true);
             return;
           }
           setStatus(addDeviceStatus, "Device created", false);
@@ -1053,15 +1504,20 @@
     if (selectedDeviceSelect) {
       selectedDeviceSelect.addEventListener("change", function () {
         selectedDeviceId = selectedDeviceSelect.value;
+
         if (deviceUsersTableBody) deviceUsersTableBody.innerHTML = "";
         if (deviceEventsTableBody) deviceEventsTableBody.innerHTML = "";
+
         setStatus(deviceUsersStatus, "", false);
         setStatus(auxStatus, "", false);
         setStatus(simStatus, "", false);
+
         updateSelectedDeviceLabels(selectedDeviceSelect);
+
         if (selectedDeviceId) {
           loadDeviceUsers(selectedDeviceId);
           loadDeviceEvents(selectedDeviceId);
+          loadDeviceNotifications(selectedDeviceId);
           startDeviceEventsPolling(selectedDeviceSelect);
         } else {
           stopDeviceEventsPolling();
@@ -1073,17 +1529,30 @@
       if (!deviceUsersTableBody || !deviceUsersStatus) return;
       deviceUsersTableBody.innerHTML = "";
       setStatus(deviceUsersStatus, "Loading users...", false);
+
       try {
-        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users", {
+        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users", {
           method: "GET",
           headers: getHeadersJson()
         });
-        var data = await res.json().catch(function () { return []; });
-        if (!res.ok) {
-          setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
+
+        if (!out.res.ok) {
+          setStatus(deviceUsersStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
-        data.forEach(function (u) {
+
+        // Populate notification user dropdown from device users
+        if (notifyUserSelect) {
+          notifyUserSelect.innerHTML = '<option value="">-- Select a user on this device --</option>';
+          (out.data || []).forEach(function (u) {
+            var opt = document.createElement("option");
+            opt.value = u.userId;
+            opt.textContent = (u.name || u.userId) + (u.email ? (" <" + u.email + ">") : "");
+            notifyUserSelect.appendChild(opt);
+          });
+        }
+
+        (out.data || []).forEach(function (u) {
           var tr = document.createElement("tr");
           var tdId = document.createElement("td");
           var tdName = document.createElement("td");
@@ -1099,31 +1568,32 @@
           tdPhone.textContent = u.phone || "";
           tdRole.textContent = u.role || "";
 
-var sel = document.createElement("select");
-var defOpt = document.createElement("option");
-defOpt.value = "";
-defOpt.textContent = "24/7 (no schedule)";
-sel.appendChild(defOpt);
-allSchedules.forEach(function (s) {
-  var opt = document.createElement("option");
-  opt.value = String(s.id);
-  opt.textContent = s.name;
-  sel.appendChild(opt);
-});
-if (u.scheduleId) sel.value = String(u.scheduleId);
+          var sel = document.createElement("select");
+          var defOpt = document.createElement("option");
+          defOpt.value = "";
+          defOpt.textContent = "24/7 (no schedule)";
+          sel.appendChild(defOpt);
 
-// NEW: explicit Save button instead of auto-apply on change
-var saveBtn = document.createElement("button");
-saveBtn.textContent = "Save";
-saveBtn.className = "btn-small";
-saveBtn.style.marginLeft = "6px";
-saveBtn.addEventListener("click", function () {
-  var chosen = sel.value || null;
-  assignScheduleToUser(deviceId, u.userId, chosen);
-});
+          allSchedules.forEach(function (s) {
+            var opt = document.createElement("option");
+            opt.value = String(s.id);
+            opt.textContent = s.name;
+            sel.appendChild(opt);
+          });
 
-tdSchedule.appendChild(sel);
-tdSchedule.appendChild(saveBtn);
+          if (u.scheduleId) sel.value = String(u.scheduleId);
+
+          var saveBtn = document.createElement("button");
+          saveBtn.textContent = "Save";
+          saveBtn.className = "btn-small";
+          saveBtn.style.marginLeft = "6px";
+          saveBtn.addEventListener("click", function () {
+            var chosen = sel.value || null;
+            assignScheduleToUser(deviceId, u.userId, chosen);
+          });
+
+          tdSchedule.appendChild(sel);
+          tdSchedule.appendChild(saveBtn);
 
           var removeBtn = document.createElement("button");
           removeBtn.textContent = "Remove";
@@ -1142,7 +1612,8 @@ tdSchedule.appendChild(saveBtn);
           tr.appendChild(tdRemove);
           deviceUsersTableBody.appendChild(tr);
         });
-        setStatus(deviceUsersStatus, "Loaded " + data.length + " users for device", false);
+
+        setStatus(deviceUsersStatus, "Loaded " + (out.data ? out.data.length : 0) + " users for device", false);
       } catch (err) {
         console.error(err);
         setStatus(deviceUsersStatus, "Error loading device users", true);
@@ -1152,13 +1623,12 @@ tdSchedule.appendChild(saveBtn);
     async function removeUserFromDevice(deviceId, userId) {
       if (!window.confirm("Remove user " + userId + " from device " + deviceId + "?")) return;
       try {
-        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId), {
+        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId), {
           method: "DELETE",
           headers: getHeadersJson()
         });
-        var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) {
-          setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
+        if (!out.res.ok) {
+          setStatus(deviceUsersStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
         setStatus(deviceUsersStatus, "Removed user " + userId + " from device", false);
@@ -1172,14 +1642,13 @@ tdSchedule.appendChild(saveBtn);
     async function assignScheduleToUser(deviceId, userId, scheduleId) {
       setStatus(deviceUsersStatus, "Saving schedule...", false);
       try {
-        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId) + "/schedule-assignment", {
+        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId) + "/schedule-assignment", {
           method: "PUT",
           headers: getHeadersJson(),
           body: JSON.stringify({ scheduleId: scheduleId })
         });
-        var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) {
-          setStatus(deviceUsersStatus, data.error || ("HTTP " + res.status), true);
+        if (!out.res.ok) {
+          setStatus(deviceUsersStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
         setStatus(deviceUsersStatus, "Schedule updated", false);
@@ -1216,17 +1685,16 @@ tdSchedule.appendChild(saveBtn);
 
         setStatus(attachUserStatus, "Attaching user...", false);
         try {
-          var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
+          var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
             method: "POST",
             headers: getHeadersJson(),
             body: JSON.stringify(body)
           });
-          var data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            setStatus(attachUserStatus, data.error || ("HTTP " + res.status), true);
+          if (!out.res.ok) {
+            setStatus(attachUserStatus, out.data.error || ("HTTP " + out.res.status), true);
             return;
           }
-          var attachedUserId = data.userId || (data.user && data.user.id);
+          var attachedUserId = out.data.userId || (out.data.user && out.data.user.id);
           if (attachedUserId && scheduleId) {
             await assignScheduleToUser(selectedDeviceId, attachedUserId, scheduleId);
           }
@@ -1289,18 +1757,17 @@ tdSchedule.appendChild(saveBtn);
               return;
             }
             setStatus(csvImportStatus, "Importing " + rows.length + " rows...", false);
-            var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/import", {
+            var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/import", {
               method: "POST",
               headers: getHeadersJson(),
               body: JSON.stringify({ rows: rows })
             });
-            var data = await res.json().catch(function () { return {}; });
-            if (!res.ok) {
-              setStatus(csvImportStatus, data.error || ("HTTP " + res.status), true);
+            if (!out.res.ok) {
+              setStatus(csvImportStatus, out.data.error || ("HTTP " + out.res.status), true);
               return;
             }
             setStatus(csvImportStatus,
-              "Created " + data.created.length + " users, reused " + data.reused.length,
+              "Created " + out.data.created.length + " users, reused " + out.data.reused.length,
               false
             );
             await loadDeviceUsers(selectedDeviceId);
@@ -1386,17 +1853,16 @@ tdSchedule.appendChild(saveBtn);
       var path = (which === "aux1") ? "aux1-test" : "aux2-test";
       setStatus(auxStatus, "Triggering " + which.toUpperCase() + " (admin test)...", false);
       try {
-        var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/" + path, {
+        var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/" + path, {
           method: "POST",
           headers: getHeadersJson(),
           body: JSON.stringify({ durationMs: 1000 })
         });
-        var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) {
-          setStatus(auxStatus, data.error || ("HTTP " + res.status), true);
+        if (!out.res.ok) {
+          setStatus(auxStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
-        setStatus(auxStatus, which.toUpperCase() + " command queued (id: " + data.id + ")", false);
+        setStatus(auxStatus, which.toUpperCase() + " command queued (id: " + out.data.id + ")", false);
         await loadDeviceEvents(selectedDeviceId);
       } catch (err) {
         console.error(err);
@@ -1414,14 +1880,13 @@ tdSchedule.appendChild(saveBtn);
       }
       setStatus(simStatus, "Simulating " + type + "...", false);
       try {
-        var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/simulate-event", {
+        var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/simulate-event", {
           method: "POST",
           headers: getHeadersJson(),
           body: JSON.stringify({ type: type })
         });
-        var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) {
-          setStatus(simStatus, data.error || ("HTTP " + res.status), true);
+        if (!out.res.ok) {
+          setStatus(simStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
         setStatus(simStatus, "Event simulated", false);
@@ -1441,16 +1906,13 @@ tdSchedule.appendChild(saveBtn);
       if (!deviceEventsTableBody) return;
       deviceEventsTableBody.innerHTML = "";
       try {
-        var res = await fetch("/devices/" + encodeURIComponent(deviceId) + "/events?limit=20", {
+        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/events?limit=20", {
           method: "GET",
           headers: getHeadersJson()
         });
-        var data = await res.json().catch(function () { return []; });
-        if (!res.ok) {
-          console.warn("Error loading device events:", data);
-          return;
-        }
-        data.forEach(function (ev) {
+        if (!out.res.ok) return;
+
+        (out.data || []).forEach(function (ev) {
           var tr = document.createElement("tr");
           var tdTime = document.createElement("td");
           var tdEvent = document.createElement("td");
@@ -1470,16 +1932,52 @@ tdSchedule.appendChild(saveBtn);
           tr.appendChild(tdDetails);
           deviceEventsTableBody.appendChild(tr);
         });
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     }
 
     if (refreshDeviceEventsBtn) {
       refreshDeviceEventsBtn.addEventListener("click", function () {
-        if (selectedDeviceId) {
-          loadDeviceEvents(selectedDeviceId);
-        }
+        if (selectedDeviceId) loadDeviceEvents(selectedDeviceId);
+      });
+    }
+
+    // ---- Notifications buttons ----
+    if (refreshNotificationsBtn) {
+      refreshNotificationsBtn.addEventListener("click", function () {
+        if (!selectedDeviceId) return setStatus(document.getElementById("notifyStatus"), "Select a device first", true);
+        loadDeviceNotifications(selectedDeviceId);
+      });
+    }
+
+    if (saveNotificationsBtn) {
+      saveNotificationsBtn.addEventListener("click", function () {
+        if (!selectedDeviceId) return setStatus(document.getElementById("notifyStatus"), "Select a device first", true);
+        var uid = notifyUserSelect && notifyUserSelect.value;
+        if (!uid) return setStatus(document.getElementById("notifyStatus"), "Select a user first", true);
+        saveUserNotifications(selectedDeviceId, uid, getSelectedEventTypes());
+      });
+    }
+
+    // ---- Device settings buttons ----
+    if (loadDeviceSettingsBtn) {
+      loadDeviceSettingsBtn.addEventListener("click", function () {
+        if (!selectedDeviceId) return setStatus(document.getElementById("deviceSettingsStatus"), "Select a device first", true);
+        loadDeviceSettings(selectedDeviceId);
+      });
+    }
+
+    if (saveDeviceSettingsBtn) {
+      saveDeviceSettingsBtn.addEventListener("click", function () {
+        if (!selectedDeviceId) return setStatus(document.getElementById("deviceSettingsStatus"), "Select a device first", true);
+        saveDeviceSettings(selectedDeviceId);
+      });
+    }
+
+    // ---- Purge events ----
+    if (purgeEventsBtn) {
+      purgeEventsBtn.addEventListener("click", function () {
+        var days = Number(purgeOlderThanDays.value || 0);
+        purgeEventsOlderThan(days);
       });
     }
 
@@ -1490,16 +1988,13 @@ tdSchedule.appendChild(saveBtn);
       setStatus(userSearchStatus, "Loading users...", false);
       try {
         var url = query ? ("/users?q=" + encodeURIComponent(query)) : "/users";
-        var res = await fetch(url, {
-          method: "GET",
-          headers: getHeadersJson()
-        });
-        var data = await res.json().catch(function () { return []; });
-        if (!res.ok) {
-          setStatus(userSearchStatus, data.error || ("HTTP " + res.status), true);
+        var out = await fetchJson(url, { method: "GET", headers: getHeadersJson() });
+        if (!out.res.ok) {
+          setStatus(userSearchStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
-        data.forEach(function (u) {
+
+        (out.data || []).forEach(function (u) {
           var tr = document.createElement("tr");
 
           var tdSelect = document.createElement("td");
@@ -1534,17 +2029,13 @@ tdSchedule.appendChild(saveBtn);
           var editBtn = document.createElement("button");
           editBtn.textContent = "Edit";
           editBtn.className = "btn-small";
-          editBtn.addEventListener("click", function () {
-            startEditUser(u);
-          });
+          editBtn.addEventListener("click", function () { startEditUser(u); });
           tdEdit.appendChild(editBtn);
 
           var delBtn = document.createElement("button");
           delBtn.textContent = "Delete";
           delBtn.className = "btn-danger btn-small";
-          delBtn.addEventListener("click", function () {
-            deleteUser(u.id);
-          });
+          delBtn.addEventListener("click", function () { deleteUser(u.id); });
           tdDelete.appendChild(delBtn);
 
           tr.appendChild(tdSelect);
@@ -1557,69 +2048,44 @@ tdSchedule.appendChild(saveBtn);
           tr.appendChild(tdDelete);
           globalUsersTableBody.appendChild(tr);
         });
-        setStatus(userSearchStatus, "Loaded " + data.length + " users", false);
+
+        setStatus(userSearchStatus, "Loaded " + (out.data ? out.data.length : 0) + " users", false);
       } catch (err) {
         console.error(err);
         setStatus(userSearchStatus, "Error loading users", true);
       }
     }
 
-    // Bulk attach selected users to the currently selected device
     if (attachSelectedUsersBtn) {
       attachSelectedUsersBtn.addEventListener("click", async function () {
         if (!selectedDeviceId) {
-          setStatus(
-            userSearchStatus,
-            'Select a device first in "Select Device & Users".',
-            true
-          );
+          setStatus(userSearchStatus, 'Select a device first in "Select Device & Users".', true);
           return;
         }
-        if (!globalUsersTableBody) return;
-
         var checkboxes = globalUsersTableBody.querySelectorAll("input.userAttachCheckbox:checked");
         if (!checkboxes.length) {
           setStatus(userSearchStatus, "No users selected to attach", true);
           return;
         }
 
-        var userIds = Array.prototype.map.call(checkboxes, function (cb) {
-          return cb.dataset.userId;
-        });
-
-        setStatus(
-          userSearchStatus,
-          "Attaching " + userIds.length + " users to " + selectedDeviceId + "...",
-          false
-        );
+        var userIds = Array.prototype.map.call(checkboxes, function (cb) { return cb.dataset.userId; });
+        setStatus(userSearchStatus, "Attaching " + userIds.length + " users to " + selectedDeviceId + "...", false);
 
         try {
           for (var i = 0; i < userIds.length; i++) {
             var userId = userIds[i];
-            var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
+            var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
               method: "POST",
               headers: getHeadersJson(),
               body: JSON.stringify({ userId: userId, role: "operator" })
             });
-            if (!res.ok) {
-              var data = await res.json().catch(function () { return {}; });
-              console.warn("Failed to attach user", userId, data);
-            }
+            if (!out.res.ok) console.warn("Failed to attach user", userId, out.data);
           }
 
-          setStatus(
-            userSearchStatus,
-            "Attached " + userIds.length + " users to " + selectedDeviceId,
-            false
-          );
+          setStatus(userSearchStatus, "Attached " + userIds.length + " users to " + selectedDeviceId, false);
+          Array.prototype.forEach.call(checkboxes, function (cb) { cb.checked = false; });
 
-          Array.prototype.forEach.call(checkboxes, function (cb) {
-            cb.checked = false;
-          });
-
-          if (selectedDeviceId) {
-            await loadDeviceUsers(selectedDeviceId);
-          }
+          if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
         } catch (err) {
           console.error(err);
           setStatus(userSearchStatus, "Error attaching selected users", true);
@@ -1627,19 +2093,15 @@ tdSchedule.appendChild(saveBtn);
       });
     }
 
-    if (searchUsersBtn) {
-      searchUsersBtn.addEventListener("click", function () {
-        var q = userSearchInput.value.trim();
-        loadUsers(q || null);
-      });
-    }
+    if (searchUsersBtn) searchUsersBtn.addEventListener("click", function () {
+      var q = userSearchInput.value.trim();
+      loadUsers(q || null);
+    });
 
-    if (showAllUsersBtn) {
-      showAllUsersBtn.addEventListener("click", function () {
-        userSearchInput.value = "";
-        loadUsers(null);
-      });
-    }
+    if (showAllUsersBtn) showAllUsersBtn.addEventListener("click", function () {
+      userSearchInput.value = "";
+      loadUsers(null);
+    });
 
     function startEditUser(u) {
       editingUserId = u.id;
@@ -1654,13 +2116,12 @@ tdSchedule.appendChild(saveBtn);
     async function deleteUser(userId) {
       if (!window.confirm("Delete user " + userId + " from all devices?")) return;
       try {
-        var res = await fetch("/users/" + encodeURIComponent(userId), {
+        var out = await fetchJson("/users/" + encodeURIComponent(userId), {
           method: "DELETE",
           headers: getHeadersJson()
         });
-        var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) {
-          window.alert("Error deleting user: " + (data.error || ("HTTP " + res.status)));
+        if (!out.res.ok) {
+          window.alert("Error deleting user: " + (out.data.error || ("HTTP " + out.res.status)));
           return;
         }
         window.alert("User deleted");
@@ -1673,9 +2134,7 @@ tdSchedule.appendChild(saveBtn);
           editUserPassword.value = "";
         }
         await loadUsers(userSearchInput.value.trim() || null);
-        if (selectedDeviceId) {
-          await loadDeviceUsers(selectedDeviceId);
-        }
+        if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
       } catch (err) {
         console.error(err);
         window.alert("Error deleting user");
@@ -1694,22 +2153,19 @@ tdSchedule.appendChild(saveBtn);
         var password = editUserPassword.value;
         setStatus(editUserStatus, "Saving changes...", false);
         try {
-          var res = await fetch("/users/" + encodeURIComponent(editingUserId), {
+          var out = await fetchJson("/users/" + encodeURIComponent(editingUserId), {
             method: "PUT",
             headers: getHeadersJson(),
             body: JSON.stringify({ name: name, email: email, phone: phone, password: password })
           });
-          var data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            setStatus(editUserStatus, data.error || ("HTTP " + res.status), true);
+          if (!out.res.ok) {
+            setStatus(editUserStatus, out.data.error || ("HTTP " + out.res.status), true);
             return;
           }
           setStatus(editUserStatus, "User updated", false);
           editUserPassword.value = "";
           await loadUsers(userSearchInput.value.trim() || null);
-          if (selectedDeviceId) {
-            await loadDeviceUsers(selectedDeviceId);
-          }
+          if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
         } catch (err) {
           console.error(err);
           setStatus(editUserStatus, "Error saving user changes", true);
@@ -1767,19 +2223,15 @@ tdSchedule.appendChild(saveBtn);
       schedulesTableBody.innerHTML = "";
       setStatus(scheduleStatus, "Loading schedules...", false);
       try {
-        var res = await fetch("/schedules", {
-          method: "GET",
-          headers: getHeadersJson()
-        });
-        var data = await res.json().catch(function () { return []; });
-        if (!res.ok) {
-          setStatus(scheduleStatus, data.error || ("HTTP " + res.status), true);
+        var out = await fetchJson("/schedules", { method: "GET", headers: getHeadersJson() });
+        if (!out.res.ok) {
+          setStatus(scheduleStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
-        allSchedules = data;
+        allSchedules = out.data || [];
         rebuildAttachUserScheduleOptions();
 
-        data.forEach(function (s) {
+        (out.data || []).forEach(function (s) {
           var tr = document.createElement("tr");
           var tdId = document.createElement("td");
           var tdName = document.createElement("td");
@@ -1801,32 +2253,31 @@ tdSchedule.appendChild(saveBtn);
             setStatus(scheduleStatus, "Editing schedule " + s.id, false);
           });
           tdEdit.appendChild(editBtn);
+
           var delBtn = document.createElement("button");
           delBtn.textContent = "Delete";
           delBtn.className = "btn-danger btn-small";
           delBtn.addEventListener("click", async function () {
             if (!window.confirm('Delete schedule "' + s.name + '"?')) return;
             try {
-              var res2 = await fetch("/schedules/" + s.id, {
+              var out2 = await fetchJson("/schedules/" + s.id, {
                 method: "DELETE",
                 headers: getHeadersJson()
               });
-              var d2 = await res2.json().catch(function () { return {}; });
-              if (!res2.ok) {
-                window.alert("Error deleting schedule: " + (d2.error || ("HTTP " + res2.status)));
+              if (!out2.res.ok) {
+                window.alert("Error deleting schedule: " + (out2.data.error || ("HTTP " + out2.res.status)));
                 return;
               }
               resetScheduleForm();
               await loadSchedules();
-              if (selectedDeviceId) {
-                await loadDeviceUsers(selectedDeviceId);
-              }
+              if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
             } catch (err) {
               console.error(err);
               window.alert("Error deleting schedule");
             }
           });
           tdDelete.appendChild(delBtn);
+
           tr.appendChild(tdId);
           tr.appendChild(tdName);
           tr.appendChild(tdSlots);
@@ -1834,23 +2285,17 @@ tdSchedule.appendChild(saveBtn);
           tr.appendChild(tdDelete);
           schedulesTableBody.appendChild(tr);
         });
-        setStatus(scheduleStatus, "Loaded " + data.length + " schedules", false);
+
+        setStatus(scheduleStatus, "Loaded " + (out.data ? out.data.length : 0) + " schedules", false);
       } catch (err) {
         console.error(err);
         setStatus(scheduleStatus, "Error loading schedules", true);
       }
     }
 
-    if (refreshSchedulesBtn) {
-      refreshSchedulesBtn.addEventListener("click", function () {
-        loadSchedules();
-      });
-    }
-    if (resetScheduleFormBtn) {
-      resetScheduleFormBtn.addEventListener("click", function () {
-        resetScheduleForm();
-      });
-    }
+    if (refreshSchedulesBtn) refreshSchedulesBtn.addEventListener("click", function () { loadSchedules(); });
+    if (resetScheduleFormBtn) resetScheduleFormBtn.addEventListener("click", function () { resetScheduleForm(); });
+
     if (saveScheduleBtn) {
       saveScheduleBtn.addEventListener("click", async function () {
         var name = scheduleNameInput.value.trim();
@@ -1861,42 +2306,36 @@ tdSchedule.appendChild(saveBtn);
           return;
         }
         if (slots.length === 0) {
-          if (!window.confirm("No slots defined. This schedule will give NO access. Continue?")) {
-            return;
-          }
+          if (!window.confirm("No slots defined. This schedule will give NO access. Continue?")) return;
         }
         var payload = { name: name, description: description, slots: slots };
         try {
           if (editingScheduleId) {
             setStatus(scheduleStatus, "Updating schedule...", false);
-            var res = await fetch("/schedules/" + editingScheduleId, {
+            var out = await fetchJson("/schedules/" + editingScheduleId, {
               method: "PUT",
               headers: getHeadersJson(),
               body: JSON.stringify(payload)
             });
-            var data = await res.json().catch(function () { return {}; });
-            if (!res.ok) {
-              setStatus(scheduleStatus, data.error || ("HTTP " + res.status), true);
+            if (!out.res.ok) {
+              setStatus(scheduleStatus, out.data.error || ("HTTP " + out.res.status), true);
               return;
             }
           } else {
             setStatus(scheduleStatus, "Creating schedule...", false);
-            var res2 = await fetch("/schedules", {
+            var out2 = await fetchJson("/schedules", {
               method: "POST",
               headers: getHeadersJson(),
               body: JSON.stringify(payload)
             });
-            var data2 = await res2.json().catch(function () { return {}; });
-            if (!res2.ok) {
-              setStatus(scheduleStatus, data2.error || ("HTTP " + res2.status), true);
+            if (!out2.res.ok) {
+              setStatus(scheduleStatus, out2.data.error || ("HTTP " + out2.res.status), true);
               return;
             }
           }
           resetScheduleForm();
           await loadSchedules();
-          if (selectedDeviceId) {
-            await loadDeviceUsers(selectedDeviceId);
-          }
+          if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
         } catch (err) {
           console.error(err);
           setStatus(scheduleStatus, "Error saving schedule", true);
@@ -1907,18 +2346,10 @@ tdSchedule.appendChild(saveBtn);
     // ---- Reports / audit ----
     function buildReportQueryParams() {
       var params = [];
-      if (reportDeviceSelect && reportDeviceSelect.value) {
-        params.push("deviceId=" + encodeURIComponent(reportDeviceSelect.value));
-      }
-      if (reportUserIdInput && reportUserIdInput.value.trim()) {
-        params.push("userId=" + encodeURIComponent(reportUserIdInput.value.trim()));
-      }
-      if (reportFromDate && reportFromDate.value) {
-        params.push("from=" + encodeURIComponent(reportFromDate.value + "T00:00:00"));
-      }
-      if (reportToDate && reportToDate.value) {
-        params.push("to=" + encodeURIComponent(reportToDate.value + "T23:59:59"));
-      }
+      if (reportDeviceSelect && reportDeviceSelect.value) params.push("deviceId=" + encodeURIComponent(reportDeviceSelect.value));
+      if (reportUserIdInput && reportUserIdInput.value.trim()) params.push("userId=" + encodeURIComponent(reportUserIdInput.value.trim()));
+      if (reportFromDate && reportFromDate.value) params.push("from=" + encodeURIComponent(reportFromDate.value + "T00:00:00"));
+      if (reportToDate && reportToDate.value) params.push("to=" + encodeURIComponent(reportToDate.value + "T23:59:59"));
       params.push("limit=1000");
       return params.join("&");
     }
@@ -1929,16 +2360,16 @@ tdSchedule.appendChild(saveBtn);
       var qs = buildReportQueryParams();
       setStatus(reportStatus, "Loading report...", false);
       try {
-        var res = await fetch("/events" + (qs ? ("?" + qs) : ""), {
+        var out = await fetchJson("/events" + (qs ? ("?" + qs) : ""), {
           method: "GET",
           headers: getHeadersJson()
         });
-        var data = await res.json().catch(function () { return []; });
-        if (!res.ok) {
-          setStatus(reportStatus, data.error || ("HTTP " + res.status), true);
+        if (!out.res.ok) {
+          setStatus(reportStatus, out.data.error || ("HTTP " + out.res.status), true);
           return;
         }
-        data.forEach(function (ev) {
+
+        (out.data || []).forEach(function (ev) {
           var tr = document.createElement("tr");
           var tdTime = document.createElement("td");
           var tdDevice = document.createElement("td");
@@ -1961,7 +2392,8 @@ tdSchedule.appendChild(saveBtn);
           tr.appendChild(tdDetails);
           reportEventsTableBody.appendChild(tr);
         });
-        setStatus(reportStatus, "Report loaded: " + data.length + " events", false);
+
+        setStatus(reportStatus, "Report loaded: " + (out.data ? out.data.length : 0) + " events", false);
       } catch (err) {
         console.error(err);
         setStatus(reportStatus, "Error loading report", true);
@@ -1997,16 +2429,8 @@ tdSchedule.appendChild(saveBtn);
       }
     }
 
-    if (runReportBtn) {
-      runReportBtn.addEventListener("click", function () {
-        runReport();
-      });
-    }
-    if (downloadReportCsvBtn) {
-      downloadReportCsvBtn.addEventListener("click", function () {
-        downloadReportCsv();
-      });
-    }
+    if (runReportBtn) runReportBtn.addEventListener("click", function () { runReport(); });
+    if (downloadReportCsvBtn) downloadReportCsvBtn.addEventListener("click", function () { downloadReportCsv(); });
 
     // ---- Initial load ----
     loadDevices();

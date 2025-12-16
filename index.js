@@ -907,6 +907,83 @@ app.get("/devices/:id/users", requireAdminKey, asyncHandler(async (req, res) => 
   if (!device) return res.status(404).json({ error: "Device not found" });
   res.json(await listDeviceUsers(deviceId));
 }));
+// ======================================================
+// Device Settings (Admin)
+// Used by admin.html: GET/PUT /devices/:deviceId/settings
+// ======================================================
+
+app.get("/devices/:deviceId/settings", requireAdmin, async (req, res) => {
+  const deviceId = req.params.deviceId;
+
+  try {
+    const r = await pool.query(
+      "select settings from public.device_settings where device_id = $1",
+      [deviceId]
+    );
+
+    if (r.rows.length === 0) {
+      // No row yet => return defaults (empty object)
+      return res.json({});
+    }
+
+    return res.json(r.rows[0].settings || {});
+  } catch (err) {
+    console.error("GET /devices/:deviceId/settings failed", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.put("/devices/:deviceId/settings", requireAdmin, async (req, res) => {
+  const deviceId = req.params.deviceId;
+  const settings = req.body || {};
+
+  try {
+    const r = await pool.query(
+      `
+      insert into public.device_settings (device_id, settings, updated_at)
+      values ($1, $2::jsonb, now())
+      on conflict (device_id)
+      do update set settings = excluded.settings, updated_at = now()
+      returning settings
+      `,
+      [deviceId, JSON.stringify(settings)]
+    );
+
+    return res.json(r.rows[0].settings || {});
+  } catch (err) {
+    console.error("PUT /devices/:deviceId/settings failed", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+// ======================================================
+// Purge old events (Admin)
+// Used by admin.html: POST /admin/purge-events
+// ======================================================
+
+app.post("/admin/purge-events", requireAdmin, async (req, res) => {
+  const olderThanDays = Number(req.body?.olderThanDays);
+
+  if (!Number.isFinite(olderThanDays) || olderThanDays < 1) {
+    return res.status(400).json({ error: "olderThanDays must be a number >= 1" });
+  }
+
+  try {
+    // Assumes your events table is named public.device_events
+    const r = await pool.query(
+      `delete from public.device_events
+       where at < (now() - make_interval(days => $1))`,
+      [olderThanDays]
+    );
+
+    return res.json({ ok: true, deleted: r.rowCount });
+  } catch (err) {
+    console.error("POST /admin/purge-events failed", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 app.post("/devices/:id/users", requireAdminKey, asyncHandler(async (req, res) => {
   const deviceId = req.params.id;
