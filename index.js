@@ -820,6 +820,14 @@ function requireUser(req, res, next) {
 // ---- Routes ----
 
 // Health
+app.get("/__whoami", (req, res) => {
+  res.json({
+    serviceName: process.env.RENDER_SERVICE_NAME || null,
+    commit: process.env.RENDER_GIT_COMMIT || null,
+    nodeEnv: process.env.NODE_ENV || null,
+    hasDb: !!process.env.DATABASE_URL
+  });
+});
 app.get("/", (req, res) => {
   res.send("Geata API is running");
 });
