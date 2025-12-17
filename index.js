@@ -826,7 +826,7 @@ function shortHash(s) {
   return crypto.createHash("sha256").update(String(s || "")).digest("hex").slice(0, 10);
 }
 
-app.get("/__whoami", (req, res) => {
+/*app.get("/__whoami", (req, res) => {
   res.json({
     hostHeader: req.headers.host,
     renderServiceName: process.env.RENDER_SERVICE_NAME || null,
@@ -836,7 +836,7 @@ app.get("/__whoami", (req, res) => {
     hasDb: !!process.env.DATABASE_URL,
     adminKeyHash: shortHash(process.env.ADMIN_API_KEY) // safe fingerprint, not the key
   });
-});
+});*/
 
 // Auth
 app.post("/admin/test-email", requireAdminKey, asyncHandler(async (req, res) => {
