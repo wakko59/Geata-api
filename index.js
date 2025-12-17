@@ -820,16 +820,22 @@ function requireUser(req, res, next) {
 // ---- Routes ----
 
 // Health
+const crypto = require("crypto");
+
+function shortHash(s) {
+  return crypto.createHash("sha256").update(String(s || "")).digest("hex").slice(0, 10);
+}
+
 app.get("/__whoami", (req, res) => {
   res.json({
-    serviceName: process.env.RENDER_SERVICE_NAME || null,
+    hostHeader: req.headers.host,
+    renderServiceName: process.env.RENDER_SERVICE_NAME || null,
+    renderServiceId: process.env.RENDER_SERVICE_ID || null,
     commit: process.env.RENDER_GIT_COMMIT || null,
     nodeEnv: process.env.NODE_ENV || null,
-    hasDb: !!process.env.DATABASE_URL
+    hasDb: !!process.env.DATABASE_URL,
+    adminKeyHash: shortHash(process.env.ADMIN_API_KEY) // safe fingerprint, not the key
   });
-});
-app.get("/", (req, res) => {
-  res.send("Geata API is running");
 });
 
 // Auth
