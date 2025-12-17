@@ -600,7 +600,21 @@ async function getSubscribedEmails(deviceId, eventType) {
   );
   return r.rows.map(x => x.email).filter(Boolean);
 }
-
+async function isUserSubscribed(deviceId, userId, eventType) {
+  const row = await one(
+    `
+    SELECT 1
+    FROM device_notification_subscriptions
+    WHERE device_id=$1
+      AND user_id=$2
+      AND enabled=TRUE
+      AND (event_type=$3 OR event_type='*')
+    LIMIT 1
+    `,
+    [deviceId, userId, eventType]
+  );
+  return !!row;
+}
 // ---- Commands & events ----
 
 async function logDeviceEvent(deviceId, eventType, opts) {
@@ -661,11 +675,15 @@ async function notifyEventByEmail(ev) {
   const subscribed = await getSubscribedEmails(ev.deviceId, ev.eventType);
   subscribed.forEach(e => recipients.add(e));
 
-  // 2) Initiating user (if configured to always notify)
-  if (ev.userId && ALWAYS_NOTIFY_USER_EVENTS.has(ev.eventType)) {
+ // 2) Initiating user — ONLY if they are subscribed
+if (ev.userId && ALWAYS_NOTIFY_USER_EVENTS.has(ev.eventType)) {
+  const wantsIt = await isUserSubscribed(ev.deviceId, ev.userId, ev.eventType);
+  if (wantsIt) {
     const u = await getUserById(ev.userId);
     if (u?.email) recipients.add(u.email);
   }
+}
+
 
   if (recipients.size === 0) return;
 
