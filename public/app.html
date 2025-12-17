@@ -214,6 +214,24 @@
     let devices = [];
     let selectedDeviceId = localStorage.getItem("geata_deviceId") || "";
     let selectedRole = null;
+	// ---- session + alert state ----
+	let sessionStartIso = null;
+
+	let alertGateAjar = false;
+	let alertGateForced = false;
+	let alertDoorForced = false;
+	let alertTamper = false;
+
+  function resetAlertsUI() {
+	alertGateAjar = false;
+	alertGateForced = false;
+	alertDoorForced = false;
+	alertTamper = false;
+
+  // IMPORTANT: call your existing UI render/update function here
+  // e.g. renderAlerts(); or updateStatusPills(); etc.
+}
+
 
     // Device settings (comes from backend; defaults here)
     let deviceSettings = {
@@ -424,36 +442,41 @@
         : "";
     }
 
-    async function login(){
-      setStatus(authStatus, "Logging in...", false);
-      const ident = identityInput.value.trim();
-      const pwd = passwordInput.value;
+ async function login(){
+  setStatus(authStatus, "Logging in...", false);
+  const ident = identityInput.value.trim();
+  const pwd = passwordInput.value;
 
-      if (!ident || !pwd) {
-        setStatus(authStatus, "Enter email/phone + password", true);
-        return;
-      }
+  if (!ident || !pwd) {
+    setStatus(authStatus, "Enter email/phone + password", true);
+    return;
+  }
 
-      const body = isEmail(ident)
-        ? { email: ident, password: pwd }
-        : { phone: ident, password: pwd };
+  const body = isEmail(ident)
+    ? { email: ident, password: pwd }
+    : { phone: ident, password: pwd };
 
-      try {
-        const data = await apiFetch("/auth/login", {
-          method: "POST",
-          body: JSON.stringify(body)
-        });
-        token = data.token;
-        localStorage.setItem("geata_token", token);
+  try {
+    const data = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+    token = data.token;
+    localStorage.setItem("geata_token", token);
 
-        logoutBtn.disabled = false;
-        await loadMeAndDevices();
-      } catch (err) {
-        token = "";
-        localStorage.removeItem("geata_token");
-        setStatus(authStatus, "Login failed: " + err.message, true);
-      }
-    }
+    //
+    sessionStartIso = new Date().toISOString();
+    resetAlertsUI();
+
+    logoutBtn.disabled = false;
+    await loadMeAndDevices();
+  } catch (err) {
+    token = "";
+    localStorage.removeItem("geata_token");
+    setStatus(authStatus, "Login failed: " + err.message, true);
+  }
+}
+
 
     function logout(){
       token = "";
