@@ -511,24 +511,25 @@
 
         <button id="deviceSettingsLoadBtn" class="btn-secondary btn-small">Load</button>
         <div id="deviceSettingsStatus" class="status"></div>
-		<div class="whitebox" id="aux1ModePanel">
-  <div class="pill-title">AUX 1 Function</div>
 
-  <label style="margin-top:8px;">
-    <input type="radio" name="aux1Mode" value="relay" />
-    Relay On/Off (single gate) — AUX1 acts as a simple switch output
-  </label>
+        <div class="whitebox" id="aux1ModePanel">
+          <div class="pill-title">AUX 1 Function</div>
 
-  <label style="margin-top:8px;">
-    <input type="radio" name="aux1Mode" value="gate2" />
-    Gate2 monitor (two gates) — Input 2 is used to monitor pedestrian gate status
-  </label>
+          <label style="margin-top:8px; color:#122b3a;">
+            <input type="radio" name="aux1Mode" value="relay" />
+            Relay On/Off (single gate) — AUX1 acts as a simple switch output
+          </label>
 
-  <div class="small" style="margin-top:8px; color:#1c3b4f;">
-    “Relay On/Off” = app shows ON persistently when enabled. <br/>
-    “Gate2 monitor” = app uses Input2 like Input1 (Opened/Closed/Forced/Ajar) for the second gate.
-  </div>
-</div>
+          <label style="margin-top:8px; color:#122b3a;">
+            <input type="radio" name="aux1Mode" value="gate2" />
+            Gate2 monitor (two gates) — Input 2 is used to monitor pedestrian gate status
+          </label>
+
+          <div class="small" style="margin-top:8px; color:#1c3b4f;">
+            “Relay On/Off” = app shows ON persistently when enabled. <br/>
+            “Gate2 monitor” = app uses Input2 like Input1 (Opened/Closed/Forced/Ajar) for the second gate.
+          </div>
+        </div>
 
         <label for="deviceSettingsJson">Settings JSON</label>
         <textarea id="deviceSettingsJson" readonly placeholder="Click Load, then Edit to change..."></textarea>
@@ -572,14 +573,14 @@
           </div>
         </div>
 
-        <button id="ioLoadSubsBtn" class="btn-secondary btn-small">Email Link (View/Set Subscriptions)</button>
+        <button id="ioLoadSubsBtn" class="btn-secondary btn-small">Load Subscriptions</button>
         <div id="ioStatus" class="status"></div>
 
         <div class="section-divider"></div>
 
         <h3 style="margin: 4px 0 6px; font-size: 15px;">Email Subscriptions (for selected Device + User)</h3>
-		<div class="device-label-big">Event Types</div>
-		<div id="ioEventTypesPanel"></div>
+        <div class="device-label-big">Event Types</div>
+        <div id="ioEventTypesPanel"></div>
 
         <button id="ioSaveSubsBtn" class="btn-small">Save</button>
 
@@ -590,14 +591,12 @@
         <div class="section-divider"></div>
 
         <h3 style="margin: 4px 0 6px; font-size: 15px;">Outputs</h3>
-        <button id="ioGateOpenBtn">Gate Open (try)</button>
         <button id="ioAux1PulseBtn" class="btn-secondary btn-small">AUX1 Pulse (1s)</button>
         <button id="ioOutput3PulseBtn" class="btn-secondary btn-small">Output 3 Pulse (2s)</button>
         <div id="ioOutputStatus" class="status"></div>
 
         <div class="small">
-          Gate Open tries <code>POST /devices/:deviceId/open</code>. AUX pulses use <code>/aux1-test</code> and <code>/aux2-test</code>.
-          If your backend uses different paths, tell me the exact endpoints and I’ll wire them.
+          AUX pulses use <code>/aux1-test</code> and <code>/aux2-test</code> (admin-only endpoints).
         </div>
 
         <div class="section-divider"></div>
@@ -972,7 +971,7 @@
           <div>
             <div class="pill-title">Emails</div>
             <h2 class="card-title">Email Notifications</h2>
-            <p class="card-subtitle">Not restricted to Select Devices & Users. Pick a user + one of their devices.</p>
+            <p class="card-subtitle">Pick a user + one of their devices.</p>
           </div>
         </div>
 
@@ -996,13 +995,13 @@
 
         <div class="section-divider"></div>
 
-		<div class="device-label-big">Event Types</div>
-		<div id="ioEventTypesPanel"></div>
-		<button id="ioSaveSubsBtn" class="btn-small">Save</button>
+        <div class="device-label-big">Event Types</div>
+        <div id="emailEventTypesPanel"></div>
 
+        <button id="emailSaveBtn" class="btn-small">Save</button>
 
         <div class="small">
-          If user/device aren’t compatible (user not enrolled on device), the backend may refuse.
+          Uses backend: <code>GET /devices/:deviceId/notifications</code> and <code>PUT /devices/:deviceId/users/:userId/notifications</code>.
         </div>
       </div>
     </section>
@@ -1095,7 +1094,6 @@
         <div class="whitebox">
           <div class="small" style="color:#1c3b4f;">
             This page calls <code>GET/PUT /log-settings</code>.
-            If your backend uses a different endpoint, tell me and I’ll wire it.
           </div>
         </div>
 
@@ -1120,7 +1118,7 @@
           <div>
             <div class="pill-title">Monitoring</div>
             <h2 class="card-title">Recent Events</h2>
-            <p class="card-subtitle">Shows logged events (up to latest limit). Purge button requires backend support.</p>
+            <p class="card-subtitle">Shows logged events (up to latest limit).</p>
           </div>
         </div>
 
@@ -1150,7 +1148,7 @@
           </div>
           <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;">
             <button id="purgeBtn" class="btn-danger btn-small">Purge</button>
-            <div class="small">Calls <code>POST /events/purge</code> if implemented.</div>
+            <div class="small">Calls <code>POST /admin/purge-events</code>.</div>
           </div>
         </div>
 
@@ -1187,7 +1185,6 @@
     let editingUserDevices = []; // array of {deviceId, role}
     let preselectEmail = { userId: null, deviceId: null };
 
-    // Log types (adjust if your backend supports more)
     const LOGGABLE_EVENTS = [
       "OPEN_REQUESTED",
       "AUX1_REQUESTED",
@@ -1202,6 +1199,26 @@
       "ENGINEER_MODE_ON",
       "ENGINEER_MODE_OFF",
       "ENGINEER_MODE_TIMEOUT"
+    ];
+
+    // Email checkbox list (matches backend event_type strings)
+    const EMAIL_EVENT_TYPES = [
+      "OPEN_REQUESTED",
+      "CMD_COMPLETED",
+      "GATE_OPENED",
+      "GATE_CLOSED",
+      "GATE_FORCED_OPEN",
+      "DOOR_FORCED_OPEN",
+      "GATE_OPEN_TOO_LONG",
+      "TAMPER_OPENED",
+      "ACCESS_DENIED_NOT_ASSIGNED",
+      "ACCESS_DENIED_SCHEDULE",
+      "AUX1_REQUESTED",
+      "AUX2_REQUESTED",
+      "AUX1_DENIED_NOT_ASSIGNED",
+      "AUX1_DENIED_SCHEDULE",
+      "AUX2_DENIED_NOT_ASSIGNED",
+      "AUX2_DENIED_SCHEDULE"
     ];
 
     // ------------------------------
@@ -1291,27 +1308,24 @@
       if (!devices || !devices.length) return [];
       return devices.map(d => ({ deviceId: d.deviceId, role: d.role || "operator" }));
     }
-	function getSettingsFromTextarea() {
-		try { return JSON.parse($("deviceSettingsJson").value || "{}"); }
-		catch { return {}; }
-	}
 
-	function setSettingsToTextarea(obj) {
-		$("deviceSettingsJson").value = JSON.stringify(obj || {}, null, 2);
-	}
-
-	function setAux1ModeRadiosFromSettings(settings) {
-		const mode = (settings && settings.aux1Mode) ? String(settings.aux1Mode) : "relay";
-		const radios = document.querySelectorAll('input[name="aux1Mode"]');
-		radios.forEach(r => r.checked = (r.value === mode));
-	}
-
-	function applyAux1ModeToSettingsFromRadios() {
-		const settings = getSettingsFromTextarea();
-		const picked = document.querySelector('input[name="aux1Mode"]:checked');
-		settings.aux1Mode = picked ? picked.value : "relay";
-		setSettingsToTextarea(settings);
-	}
+    function getSettingsFromTextarea() {
+      try { return JSON.parse($("deviceSettingsJson").value || "{}"); }
+      catch { return {}; }
+    }
+    function setSettingsToTextarea(obj) {
+      $("deviceSettingsJson").value = JSON.stringify(obj || {}, null, 2);
+    }
+    function setAux1ModeRadiosFromSettings(settings) {
+      const mode = (settings && settings.aux1Mode) ? String(settings.aux1Mode) : "relay";
+      document.querySelectorAll('input[name="aux1Mode"]').forEach(r => r.checked = (r.value === mode));
+    }
+    function applyAux1ModeToSettingsFromRadios() {
+      const settings = getSettingsFromTextarea();
+      const picked = document.querySelector('input[name="aux1Mode"]:checked');
+      settings.aux1Mode = picked ? picked.value : "relay";
+      setSettingsToTextarea(settings);
+    }
 
     function updateDeviceContextLabels() {
       const selectedDeviceSelect = $("selectedDeviceSelect");
@@ -1325,70 +1339,52 @@
       if (txt) txt.textContent = label;
       if (txt2) txt2.textContent = label;
     }
-		// Email event types to show as checkboxes.
-// You can edit this list any time. It should match your system's event_type names.
-const EMAIL_EVENT_TYPES = [
-  "OPEN_REQUESTED",
-  "CMD_COMPLETED",
-  "GATE_OPENED",
-  "GATE_CLOSED",
-  "GATE_FORCED_OPEN",
-  "DOOR_FORCED_OPEN",
-  "GATE_OPEN_TOO_LONG",
-  "TAMPER_OPENED",
-  "ACCESS_DENIED_NOT_ASSIGNED",
-  "ACCESS_DENIED_SCHEDULE",
-  "AUX1_REQUESTED",
-  "AUX2_REQUESTED",
-  "AUX1_DENIED_NOT_ASSIGNED",
-  "AUX1_DENIED_SCHEDULE",
-  "AUX2_DENIED_NOT_ASSIGNED",
-  "AUX2_DENIED_SCHEDULE"
-];
 
-// Renders checkboxes into a container. Call setChecked(list) after rendering.
-function renderEventCheckboxPanel(containerEl, eventTypes) {
-  if (!containerEl) return;
+    // Checkbox panel helpers
+    function renderEventCheckboxPanel(containerEl, eventTypes) {
+      if (!containerEl) return;
 
-  containerEl.innerHTML = "";
-  const wrap = document.createElement("div");
-  wrap.className = "whitebox";
+      containerEl.innerHTML = "";
+      const wrap = document.createElement("div");
+      wrap.className = "whitebox";
 
-  (eventTypes || []).forEach(ev => {
-    const row = document.createElement("label");
-    row.style.display = "flex";
-    row.style.alignItems = "center";
-    row.style.gap = "10px";
-    row.style.margin = "6px 0";
-    row.style.color = "#122b3a";
+      (eventTypes || []).forEach(ev => {
+        const row = document.createElement("label");
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.gap = "10px";
+        row.style.margin = "6px 0";
+        row.style.color = "#122b3a";
 
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.value = ev;
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = ev;
 
-    const txt = document.createElement("span");
-    txt.textContent = ev;
+        const txt = document.createElement("span");
+        txt.textContent = ev;
 
-    row.appendChild(cb);
-    row.appendChild(txt);
-    wrap.appendChild(row);
-  });
+        row.appendChild(cb);
+        row.appendChild(txt);
+        wrap.appendChild(row);
+      });
 
-  containerEl.appendChild(wrap);
-}
+      containerEl.appendChild(wrap);
+    }
 
-function setPanelChecked(containerEl, selectedList) {
-  const set = new Set((selectedList || []).map(String));
-  containerEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked = set.has(cb.value);
-  });
-}
+    function setPanelChecked(containerEl, selectedList) {
+      if (!containerEl) return;
+      const set = new Set((selectedList || []).map(String));
+      containerEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = set.has(cb.value);
+      });
+    }
 
-function getPanelChecked(containerEl) {
-  const out = [];
-  containerEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => out.push(cb.value));
-  return out;
-}
+    function getPanelChecked(containerEl) {
+      if (!containerEl) return [];
+      const out = [];
+      containerEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => out.push(cb.value));
+      return out;
+    }
 
     // ------------------------------
     // Screen navigation
@@ -1402,15 +1398,12 @@ function getPanelChecked(containerEl) {
 
       $("homeHeader").style.display = (screenId === "screen-home") ? "block" : "none";
 
-      // Device context bar only for screen-device-users
       const needsContext = el && el.getAttribute("data-show-context") === "true";
       $("deviceContextBar").classList.toggle("active", !!needsContext);
 
       if (pushHistory) navStack.push(screenId);
 
-      // screen-specific refresh hooks
       if (screenId === "screen-emails" && preselectEmail.userId) {
-        // apply once, then clear
         $("emailUserSelect").value = preselectEmail.userId;
         onEmailUserChanged();
         if (preselectEmail.deviceId) $("emailDeviceSelect").value = preselectEmail.deviceId;
@@ -1442,7 +1435,7 @@ function getPanelChecked(containerEl) {
       try {
         const data = await apiJson("/devices");
         allDevices = Array.isArray(data) ? data : [];
-        // fill all device selects
+
         fillDeviceSelect($("selectedDeviceSelect"), true, "-- Select a device --");
         fillDeviceSelect($("deviceSettingsSelect"));
         fillDeviceSelect($("ioDeviceSelect"));
@@ -1450,10 +1443,8 @@ function getPanelChecked(containerEl) {
         fillDeviceSelect($("attachDeviceSelect"));
         fillDeviceSelect($("csvDeviceSelect"));
         fillDeviceSelect($("reportDeviceSelect"), true, "-- Any device --");
-        fillDeviceSelect($("emailDeviceSelect"));
         fillDeviceSelect($("eventsDeviceFilterSelect"), true, "-- Any device --");
 
-        // restore device context selection
         if (selectedDeviceId && allDevices.some(d => d.id === selectedDeviceId)) {
           $("selectedDeviceSelect").value = selectedDeviceId;
         } else {
@@ -1473,7 +1464,6 @@ function getPanelChecked(containerEl) {
         const url = query ? ("/users?q=" + encodeURIComponent(query)) : "/users";
         const data = await apiJson(url);
         allUsers = Array.isArray(data) ? data : [];
-        // fill user selects used elsewhere
         fillUserSelect($("ioUserSelect"));
         fillUserSelect($("emailUserSelect"));
         if (status && !query) setStatus(status, `Loaded ${allUsers.length} users`, false);
@@ -1488,7 +1478,6 @@ function getPanelChecked(containerEl) {
         const data = await apiJson("/schedules");
         allSchedules = Array.isArray(data) ? data : [];
         rebuildAttachUserScheduleOptions();
-        rebuildDeviceUserScheduleSelects();
         if (scheduleStatus) setStatus(scheduleStatus, `Loaded ${allSchedules.length} schedules`, false);
       } catch (e) {
         if (scheduleStatus) setStatus(scheduleStatus, "Error loading schedules: " + e.message, true);
@@ -1500,18 +1489,21 @@ function getPanelChecked(containerEl) {
     // ------------------------------
     function initAuthUI() {
       $("apiKeyInput").value = apiKey || "";
-      $("setApiKeyBtn").addEventListener("click", () => {
+
+      $("setApiKeyBtn").addEventListener("click", async () => {
         apiKey = $("apiKeyInput").value.trim();
         localStorage.setItem("geata_admin_api_key", apiKey);
         setStatus($("apiKeyStatus"), apiKey ? "API key saved" : "API key cleared", false);
-		// ✅ reload everything now that auth is valid
-  if (apiKey) {
-    await loadDevices(); await renderDevicesTable();
-    await loadUsers(null); await renderUserLookupTable(allUsers);
-    await loadSchedules(); await renderSchedules();
-    await logsLoad();
-  }
+
+        // Reload tables now that key is valid
+        if (apiKey) {
+          await loadDevices(); await renderDevicesTable();
+          await loadUsers(null); await renderUserLookupTable(allUsers);
+          await loadSchedules(); await renderSchedules();
+          await logsLoad();
+        }
       });
+
       $("clearApiKeyBtn").addEventListener("click", () => {
         apiKey = "";
         $("apiKeyInput").value = "";
@@ -1550,7 +1542,6 @@ function getPanelChecked(containerEl) {
         try {
           await apiJson("/devices", { method: "POST", body: JSON.stringify({ id, name }) });
           setStatus($("addDeviceStatus"), "Saved device", false);
-          // reset form for next entry
           $("newDeviceId").value = "";
           $("newDeviceName").value = "";
           await loadDevices();
@@ -1580,10 +1571,6 @@ function getPanelChecked(containerEl) {
         sel.appendChild(opt);
       });
       if (current && allSchedules.some(s => String(s.id) === current)) sel.value = current;
-    }
-
-    function rebuildDeviceUserScheduleSelects() {
-      // no-op: selects are built per row when loading device users
     }
 
     async function loadDeviceUsers(deviceId) {
@@ -1700,7 +1687,6 @@ function getPanelChecked(containerEl) {
     // EDIT USER DETAILS
     // ------------------------------
     async function fetchUserById(userId) {
-      // Try /users/:id first, then fallback to /users?q=
       try {
         return await apiJson(`/users/${encodeURIComponent(userId)}`);
       } catch (e) {
@@ -1786,8 +1772,6 @@ function getPanelChecked(containerEl) {
           $("editUserPassword").value = "";
           setEditUserEditing(false);
           setStatus($("editUserStatus"), "Saved user changes", false);
-
-          // refresh global users cache for dropdowns
           await loadUsers(null);
         } catch (e) {
           setStatus($("editUserStatus"), "Error saving user: " + e.message, true);
@@ -1910,7 +1894,6 @@ function getPanelChecked(containerEl) {
           setStatus($("userSearchStatus"), `Attached ${userIds.length} users to ${deviceId}`, false);
           checked.forEach(cb => cb.checked = false);
 
-          // refresh caches
           await loadUsers(null);
           await renderUserLookupTable(allUsers);
         } catch (e) {
@@ -1965,7 +1948,6 @@ function getPanelChecked(containerEl) {
 
           setStatus($("attachUserStatus"), "Saved user + attached to device", false);
 
-          // Reset form for next instance
           $("userNameInput").value = "";
           $("userEmailInput").value = "";
           $("userPhoneInput").value = "";
@@ -1974,7 +1956,6 @@ function getPanelChecked(containerEl) {
           $("userRoleSelect").value = "operator";
           $("attachUserScheduleSelect").value = "";
 
-          // Refresh caches
           await loadUsers(null);
         } catch (e) {
           setStatus($("attachUserStatus"), "Error: " + e.message, true);
@@ -2028,8 +2009,6 @@ function getPanelChecked(containerEl) {
               body: JSON.stringify({ rows })
             });
             setStatus($("csvImportStatus"), `Imported ${rows.length} rows`, false);
-
-            // reset file input for next import
             $("csvFileInput").value = "";
           } catch (err) {
             setStatus($("csvImportStatus"), "Import error: " + err.message, true);
@@ -2083,7 +2062,7 @@ function getPanelChecked(containerEl) {
     }
 
     // ------------------------------
-    // SCHEDULES
+    // SCHEDULES (unchanged logic from your version)
     // ------------------------------
     function dayName(d) { return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d] || "?"; }
 
@@ -2258,10 +2237,7 @@ function getPanelChecked(containerEl) {
             await apiJson("/schedules", { method: "POST", body: JSON.stringify(payload) });
           }
           setStatus($("scheduleStatus"), "Saved schedule", false);
-
-          // reset form for next instance
           resetScheduleForm();
-
           await loadSchedules();
           await renderSchedules();
         } catch (e) {
@@ -2281,6 +2257,9 @@ function getPanelChecked(containerEl) {
       deviceSettingsEditing = enabled;
       $("deviceSettingsJson").readOnly = !enabled;
       $("deviceSettingsSaveBtn").disabled = !enabled;
+
+      // disable/enable radios too
+      document.querySelectorAll('input[name="aux1Mode"]').forEach(r => r.disabled = !enabled);
     }
 
     function initDeviceSettingsUI() {
@@ -2298,9 +2277,8 @@ function getPanelChecked(containerEl) {
         }
         try {
           const data = await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`);
-          $("deviceSettingsJson").value = JSON.stringify(data, null, 2);
-		  setAux1ModeRadiosFromSettings(data);
-
+          setSettingsToTextarea(data);
+          setAux1ModeRadiosFromSettings(data);
           setDeviceSettingsEditing(false);
           setStatus($("deviceSettingsStatus"), "Loaded device settings", false);
         } catch (e) {
@@ -2315,6 +2293,7 @@ function getPanelChecked(containerEl) {
           return;
         }
         try {
+          applyAux1ModeToSettingsFromRadios();
           const parsed = JSON.parse($("deviceSettingsJson").value || "{}");
           await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`, {
             method: "PUT",
@@ -2326,30 +2305,43 @@ function getPanelChecked(containerEl) {
           setStatus($("deviceSettingsStatus"), "Save error: " + e.message, true);
         }
       });
-	    // AUX1 mode radios -> keep JSON in sync
-  document.querySelectorAll('input[name="aux1Mode"]').forEach(r => {
-    r.addEventListener("change", () => {
-      applyAux1ModeToSettingsFromRadios();
-			});
-		});
 
+      // keep JSON synced with radios (only when editing)
+      document.querySelectorAll('input[name="aux1Mode"]').forEach(r => {
+        r.addEventListener("change", () => {
+          if (!deviceSettingsEditing) return;
+          applyAux1ModeToSettingsFromRadios();
+        });
+      });
+
+      // default (locked)
+      setDeviceSettingsEditing(false);
     }
 
     // ------------------------------
-    // EMAIL NOTIFICATIONS (filter by user + device)
+    // SUBSCRIPTIONS (shared)
+    // ------------------------------
+    async function loadSubscriptionsFor(userId, deviceId, statusEl, panelEl) {
+      const subs = await apiJson(`/devices/${encodeURIComponent(deviceId)}/notifications`);
+      const row = (subs || []).find(r => r.userId === userId);
+      const list = row ? (row.eventTypes || []) : [];
+      setPanelChecked(panelEl, list);
+      setStatus(statusEl, "Loaded subscriptions", false);
+    }
+
+    // ------------------------------
+    // EMAIL NOTIFICATIONS
     // ------------------------------
     function onEmailUserChanged() {
       const userId = $("emailUserSelect").value;
       const user = allUsers.find(u => u.id === userId);
-      if (!user) {
-        fillDeviceSelect($("emailDeviceSelect"));
-        return;
-      }
-      // Filter device list to user enrolled devices
-      const enrolled = (user.devices || []).map(d => d.deviceId);
       const sel = $("emailDeviceSelect");
       const current = sel.value;
+
       sel.innerHTML = `<option value="">-- Select a device --</option>`;
+      if (!user) return;
+
+      const enrolled = (user.devices || []).map(d => d.deviceId);
       enrolled.forEach(devId => {
         const d = allDevices.find(x => x.id === devId);
         const opt = document.createElement("option");
@@ -2357,78 +2349,58 @@ function getPanelChecked(containerEl) {
         opt.textContent = d ? `${d.id} – ${d.name}` : devId;
         sel.appendChild(opt);
       });
+
       if (current && enrolled.includes(current)) sel.value = current;
     }
 
-    aasync function loadSubscriptionsFor(userId, deviceId, statusEl, panelEl) {
-  const subs = await apiJson(`/devices/${encodeURIComponent(deviceId)}/notifications`);
-  const row = (subs || []).find(r => r.userId === userId);
-  const list = row ? (row.eventTypes || []) : [];
-
-  // checkbox panel
-  setPanelChecked(panelEl, list);
-
-  setStatus(statusEl, "Loaded subscriptions", false);
-}
-
-
-    function normEventList(str) {
-      return (str || "").split(",").map(s => s.trim()).filter(Boolean);
-    }
-
     function initEmailUI() {
-  // render panel once
-  renderEventCheckboxPanel($("ioEventTypesPanel"), EMAIL_EVENT_TYPES);
-  renderEventCheckboxPanel($("emailEventTypesPanel"), EMAIL_EVENT_TYPES);
+      renderEventCheckboxPanel($("emailEventTypesPanel"), EMAIL_EVENT_TYPES);
 
-  $("emailUserSelect").addEventListener("change", onEmailUserChanged);
+      $("emailUserSelect").addEventListener("change", onEmailUserChanged);
 
-  $("emailLoadBtn").addEventListener("click", async () => {
-    const userId = $("emailUserSelect").value;
-    const deviceId = $("emailDeviceSelect").value;
-    if (!userId || !deviceId) {
-      setStatus($("emailStatus"), "Select both User and Device", true);
-      return;
-    }
-    try {
-      await loadSubscriptionsFor(userId, deviceId, $("emailStatus"), $("emailEventTypesPanel"));
-    } catch (e) {
-      setStatus($("emailStatus"), "Load error: " + e.message, true);
-    }
-  });
-
-  $("emailSaveBtn").addEventListener("click", async () => {
-    const userId = $("emailUserSelect").value;
-    const deviceId = $("emailDeviceSelect").value;
-    if (!userId || !deviceId) {
-      setStatus($("emailStatus"), "Select both User and Device", true);
-      return;
-    }
-    try {
-      const eventTypes = getPanelChecked($("emailEventTypesPanel"));
-
-      await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`, {
-        method: "PUT",
-        body: JSON.stringify({ eventTypes })
+      $("emailLoadBtn").addEventListener("click", async () => {
+        const userId = $("emailUserSelect").value;
+        const deviceId = $("emailDeviceSelect").value;
+        if (!userId || !deviceId) {
+          setStatus($("emailStatus"), "Select both User and Device", true);
+          return;
+        }
+        try {
+          await loadSubscriptionsFor(userId, deviceId, $("emailStatus"), $("emailEventTypesPanel"));
+        } catch (e) {
+          setStatus($("emailStatus"), "Load error: " + e.message, true);
+        }
       });
-      setStatus($("emailStatus"), "Saved subscriptions", false);
-    } catch (e) {
-      setStatus($("emailStatus"), "Save error: " + e.message, true);
-    }
-  });
 
-  $("emailRefreshBtn").addEventListener("click", async () => {
-    await loadUsers(null);
-    fillUserSelect($("emailUserSelect"));
-    onEmailUserChanged();
-    setStatus($("emailStatus"), "Refreshed users list", false);
-  });
-}
+      $("emailSaveBtn").addEventListener("click", async () => {
+        const userId = $("emailUserSelect").value;
+        const deviceId = $("emailDeviceSelect").value;
+        if (!userId || !deviceId) {
+          setStatus($("emailStatus"), "Select both User and Device", true);
+          return;
+        }
+        try {
+          const eventTypes = getPanelChecked($("emailEventTypesPanel"));
+          await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`, {
+            method: "PUT",
+            body: JSON.stringify({ eventTypes })
+          });
+          setStatus($("emailStatus"), "Saved subscriptions", false);
+        } catch (e) {
+          setStatus($("emailStatus"), "Save error: " + e.message, true);
+        }
+      });
 
+      $("emailRefreshBtn").addEventListener("click", async () => {
+        await loadUsers(null);
+        fillUserSelect($("emailUserSelect"));
+        onEmailUserChanged();
+        setStatus($("emailStatus"), "Refreshed users list", false);
+      });
     }
 
     // ------------------------------
-    // DEVICE I/O TEST (Engineer)
+    // DEVICE I/O TEST
     // ------------------------------
     async function ioLoadSubs() {
       const deviceId = $("ioDeviceSelect").value;
@@ -2452,9 +2424,10 @@ function getPanelChecked(containerEl) {
         return;
       }
       try {
+        const eventTypes = getPanelChecked($("ioEventTypesPanel"));
         await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`, {
           method: "PUT",
-          body: JSON.stringify({ eventTypes: normEventList($("ioEventTypesInput").value) })
+          body: JSON.stringify({ eventTypes })
         });
         setStatus($("ioStatus"), "Saved subscriptions", false);
       } catch (e) {
@@ -2479,21 +2452,6 @@ function getPanelChecked(containerEl) {
       }
     }
 
-    async function ioGateOpenTry() {
-      const deviceId = $("ioDeviceSelect").value;
-      const userId = $("ioUserSelect").value;
-      if (!deviceId) { setStatus($("ioOutputStatus"), "Select a device", true); return; }
-      try {
-        await apiJson(`/devices/${encodeURIComponent(deviceId)}/open`, {
-          method: "POST",
-          body: JSON.stringify({ userId: userId || null })
-        });
-        setStatus($("ioOutputStatus"), "Gate Open command sent", false);
-      } catch (e) {
-        setStatus($("ioOutputStatus"), "Gate Open failed: " + e.message, true);
-      }
-    }
-
     async function ioSim(type, alsoPulseOutput3 = false) {
       const deviceId = $("ioDeviceSelect").value;
       if (!deviceId) { setStatus($("ioSimStatus"), "Select a device", true); return; }
@@ -2503,7 +2461,6 @@ function getPanelChecked(containerEl) {
           body: JSON.stringify({ type })
         });
         if (alsoPulseOutput3) {
-          // pulse output 3 for 2s (uses aux2-test as per earlier assumption)
           await apiJson(`/devices/${encodeURIComponent(deviceId)}/aux2-test`, {
             method: "POST",
             body: JSON.stringify({ durationMs: 2000 })
@@ -2516,10 +2473,11 @@ function getPanelChecked(containerEl) {
     }
 
     function initIoUI() {
+      renderEventCheckboxPanel($("ioEventTypesPanel"), EMAIL_EVENT_TYPES);
+
       $("ioLoadSubsBtn").addEventListener("click", ioLoadSubs);
       $("ioSaveSubsBtn").addEventListener("click", ioSaveSubs);
 
-      $("ioGateOpenBtn").addEventListener("click", ioGateOpenTry);
       $("ioAux1PulseBtn").addEventListener("click", () => ioPulse("aux1-test", 1000, $("ioOutputStatus")));
       $("ioOutput3PulseBtn").addEventListener("click", () => ioPulse("aux2-test", 2000, $("ioOutputStatus")));
 
@@ -2596,10 +2554,10 @@ function getPanelChecked(containerEl) {
     }
 
     // ------------------------------
-    // LOGS (include/exclude event types)
+    // LOGS
     // ------------------------------
     let logsEditing = false;
-    let logEnabledSet = new Set(LOGGABLE_EVENTS); // default all enabled
+    let logEnabledSet = new Set(LOGGABLE_EVENTS);
 
     function setLogsEditing(enabled) {
       logsEditing = enabled;
@@ -2642,20 +2600,17 @@ function getPanelChecked(containerEl) {
       setStatus($("logsStatus"), "Loading log settings...", false);
       try {
         const data = await apiJson("/log-settings");
-        // accept either {enabledEvents:[...]} or {disabledEvents:[...]}
         if (data && Array.isArray(data.enabledEvents)) {
           logEnabledSet = new Set(data.enabledEvents);
         } else if (data && Array.isArray(data.disabledEvents)) {
           logEnabledSet = new Set(LOGGABLE_EVENTS.filter(x => !data.disabledEvents.includes(x)));
         } else {
-          // fallback
           logEnabledSet = new Set(LOGGABLE_EVENTS);
         }
         renderLogEventList();
         setLogsEditing(false);
         setStatus($("logsStatus"), "Loaded log settings", false);
       } catch (e) {
-        // fallback: localStorage
         const local = localStorage.getItem("geata_log_enabled_events");
         if (local) {
           try { logEnabledSet = new Set(JSON.parse(local)); } catch {}
@@ -2731,11 +2686,11 @@ function getPanelChecked(containerEl) {
       const days = Math.max(1, parseInt($("purgeDaysInput").value || "90", 10));
       if (!confirm(`Purge events older than ${days} days?`)) return;
       try {
-	    await apiJson("/admin/purge-events", { method: "POST", body: JSON.stringify({ olderThanDays: days }) });       
+        await apiJson("/admin/purge-events", { method: "POST", body: JSON.stringify({ olderThanDays: days }) });
         setStatus($("eventsStatus"), "Purge complete", false);
         await loadRecentEvents();
       } catch (e) {
-        setStatus($("eventsStatus"), "Purge failed (endpoint may not exist): " + e.message, true);
+        setStatus($("eventsStatus"), "Purge failed: " + e.message, true);
       }
     }
 
@@ -2746,7 +2701,7 @@ function getPanelChecked(containerEl) {
     }
 
     // ------------------------------
-    // NAV button wiring
+    // NAV wiring
     // ------------------------------
     function initNavigation() {
       document.querySelectorAll("[data-nav]").forEach(btn => {
@@ -2761,7 +2716,7 @@ function getPanelChecked(containerEl) {
     }
 
     // ------------------------------
-    // Page init on load
+    // Page init
     // ------------------------------
     window.addEventListener("load", async () => {
       initNavigation();
@@ -2780,7 +2735,6 @@ function getPanelChecked(containerEl) {
       initLogsUI();
       initEventsUI();
 
-      // preload datasets
       await loadDevices();
       await renderDevicesTable();
 
@@ -2790,21 +2744,16 @@ function getPanelChecked(containerEl) {
       await loadSchedules();
       await renderSchedules();
 
-      // set device context selection and load users for that device
       if ($("selectedDeviceSelect")) {
         $("selectedDeviceSelect").value = selectedDeviceId || "";
         updateDeviceContextLabels();
         if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
       }
 
-      // If user came straight to Edit User Details from Home without selection
       $("editUserIdBox").textContent = "(none)";
       $("editUserDevicesPills").innerHTML = `<span class="small">Use User Lookup → Edit to open a user here.</span>`;
 
-      // Email page: filter device list once user selected
       onEmailUserChanged();
-
-      // Logs: load settings
       await logsLoad();
     });
   </script>
