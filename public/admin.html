@@ -19,6 +19,41 @@
     }
 
     * { box-sizing: border-box; }
+	
+	/* Email/IO event checkbox panel (blue + aligned) */
+.event-panel {
+  background: var(--bg-card-soft);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.event-row {
+  display: grid;
+  grid-template-columns: 26px 1fr;  /* checkbox column + text column */
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.event-row:last-child {
+  border-bottom: none;
+}
+
+.event-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  justify-self: start; /* hard left */
+}
+
+.event-row span {
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
 
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
