@@ -1146,6 +1146,37 @@ app.post("/devices/:id/users", requireAdminKey, asyncHandler(async (req, res) =>
     user: { id: user.id, name: user.name, email: user.email, phone: user.phone }
   });
 }));
+// CSV import (admin)
+app.post("/devices/:id/users/import", requireAdminKey, asyncHandler(async (req, res) => {
+  const deviceId = req.params.id;
+  const device = await getDeviceById(deviceId);
+  if (!device) return res.status(404).json({ error: "Device not found" });
+
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+  if (!rows.length) return res.status(400).json({ error: "rows[] required" });
+
+  let created = 0, attached = 0, skipped = 0;
+
+  for (const r of rows) {
+    const name = (r?.name || "").trim();
+    const email = (r?.email || "").trim() || null;
+    const phone = normalizePhone(r?.phone || null);
+    const role  = (r?.role || "operator").trim() || "operator";
+
+    if (!email && !phone) { skipped++; continue; }
+
+    let user = null;
+    if (phone) user = await getUserByPhone(phone);
+    if (!user && email) user = await getUserByEmail(email);
+
+    if (!user) { user = await createUser({ name, email, phone, password: null }); created++; }
+
+    await attachUserToDevice(deviceId, user.id, role);
+    attached++;
+  }
+
+  res.json({ ok: true, deviceId, created, attached, skipped });
+}));
 
 app.delete("/devices/:id/users/:userId", requireAdminKey, asyncHandler(async (req, res) => {
   const removed = await detachUserFromDevice(req.params.id, req.params.userId);
@@ -1265,6 +1296,14 @@ app.get("/users", requireAdminKey, asyncHandler(async (req, res) => {
     result.push({ id: u.id, name: u.name, email: u.email, phone: u.phone, devices });
   }
   res.json(result);
+}));
+// Users (admin) - fetch single user
+app.get("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
+  const id = req.params.id;
+  const u = await getUserById(id);
+  if (!u) return res.status(404).json({ error: "User not found" });
+  const devices = await listUserDevices(u.id);
+  res.json({ id: u.id, name: u.name, email: u.email, phone: u.phone, devices });
 }));
 
 app.put("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
