@@ -14,11 +14,12 @@
       --accent-soft: rgba(28, 94, 134, 0.2);
       --danger: #d9534f;
       --text-main: #f5f7fa;
-      --text-dark: #f5f7fa;
       --text-muted: #7b8a9b;
+      --whitebox: rgba(255,255,255,0.95);
     }
 
     * { box-sizing: border-box; }
+
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
@@ -26,21 +27,25 @@
       background: radial-gradient(circle at top, #1e3f5d 0, var(--bg-main) 45%, #b3cde5 100%);
       color: var(--text-main);
     }
+
     .container {
       max-width: 1200px;
       margin: 0 auto;
       padding: 20px 16px 40px;
     }
+
     h1 {
       margin: 0 0 12px;
       font-size: 26px;
       letter-spacing: 0.04em;
     }
+
     .subtitle {
       margin: 0 0 20px;
       font-size: 13px;
       color: var(--text-muted);
     }
+
     .card {
       background: var(--bg-card);
       color: var(--text-main);
@@ -50,24 +55,28 @@
       margin-bottom: 16px;
       border: 1px solid rgba(255,255,255,0.08);
     }
+
     .card-header {
       display: flex;
       align-items: baseline;
       justify-content: space-between;
       margin-bottom: 8px;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
+
     .card-title {
       margin: 0;
       font-size: 18px;
       letter-spacing: 0.02em;
     }
+
     .card-subtitle {
       margin: 0;
       font-size: 12px;
       color: #2e7d32;
     }
+
     .pill-title {
       display: inline-block;
       padding: 2px 10px;
@@ -79,6 +88,7 @@
       letter-spacing: 0.08em;
       margin-bottom: 6px;
     }
+
     label {
       display: block;
       margin-bottom: 4px;
@@ -86,6 +96,7 @@
       font-weight: 500;
       color: #e3f2fd;
     }
+
     input, select, textarea {
       padding: 7px 9px;
       margin-bottom: 8px;
@@ -94,12 +105,15 @@
       font-size: 13px;
       width: 100%;
     }
-    textarea { min-height: 70px; resize: vertical; }
+
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--accent-dark);
       box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.35);
     }
+
+    textarea { min-height: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
     button {
       padding: 7px 11px;
       border-radius: 999px;
@@ -115,9 +129,14 @@
       align-items: center;
       gap: 4px;
     }
+
     button.btn-secondary { background: #345a77; }
     button.btn-danger { background: var(--danger); }
-    button[disabled] { opacity: 0.5; cursor: default; }
+
+    button[disabled] {
+      opacity: 0.5;
+      cursor: default;
+    }
 
     .btn-small { font-size: 12px; padding: 5px 9px; }
 
@@ -126,9 +145,12 @@
       min-height: 16px;
       margin-top: 4px;
     }
+
     .status.error { color: #b00020; }
     .status.ok { color: #ffb300; }
-    .small { font-size: 12px; color: #2e7d32; }
+
+    .small { font-size: 12px; color: #b8d7ff; }
+    .small-green { font-size: 12px; color: #2e7d32; }
 
     table {
       width: 100%;
@@ -140,22 +162,24 @@
       border-radius: 10px;
       overflow: hidden;
     }
+
     th, td {
       border: 1px solid #2a4358;
       padding: 6px;
       text-align: left;
       vertical-align: top;
     }
+
     th { background: #17405f; font-weight: 600; }
 
     .pill {
       display: inline-block;
-      padding: 2px 6px;
+      padding: 2px 8px;
       border-radius: 999px;
       background: var(--accent-soft);
       font-size: 11px;
       margin-right: 4px;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
       color: var(--text-main);
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
@@ -165,7 +189,62 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
-    @media (max-width: 900px) { .two-column { grid-template-columns: 1fr; } }
+
+    @media (max-width: 900px) {
+      .two-column { grid-template-columns: 1fr; }
+      table { min-width: 0; }
+    }
+
+    .section-divider {
+      height: 1px;
+      margin: 10px 0 12px;
+      background: linear-gradient(to right, rgba(255,255,255,0.12), rgba(0,0,0,0));
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .topbar-left, .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .home-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .home-grid { grid-template-columns: 1fr; }
+    }
+
+    .home-btn {
+      width: 100%;
+      justify-content: center;
+      padding: 16px 14px;
+      font-size: 14px;
+      border-radius: 14px;
+      background: #17405f;
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.16);
+    }
+
+    .home-btn:hover { filter: brightness(1.05); }
+
+    #deviceContextBar { display: none; margin-bottom: 14px; }
+    #deviceContextBar.active { display: block; }
 
     .device-label-big {
       font-size: 14px;
@@ -173,129 +252,54 @@
       margin-bottom: 4px;
       color: #ECFEFF;
     }
+
     .device-label-value {
       font-size: 13px;
       color: #e3f2fd;
     }
-    .section-divider {
-      height: 1px;
-      margin: 10px 0 12px;
-      background: linear-gradient(to right, rgba(0,0,0,0.05), rgba(0,0,0,0));
+
+    .view-mode input[readonly],
+    .view-mode textarea[readonly],
+    .view-mode select[disabled] {
+      background: var(--whitebox);
     }
 
-    .import-export-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: flex-end;
-    }
-    .import-export-row > div { flex: 1 1 260px; }
-
-    .toggle-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin: 6px 0 8px;
-    }
-    .toggle-row input[type="checkbox"] {
-      width: auto;
-      margin: 0;
-      transform: translateY(1px);
-    }
-
-    .check-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 6px 10px;
-      margin: 6px 0 8px;
-    }
-    @media (max-width: 900px) { .check-grid { grid-template-columns: 1fr; } }
-
-    .check-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
+    .whitebox {
+      background: var(--whitebox);
+      color: #122b3a;
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,0.12);
+      margin: 8px 0 10px;
     }
-    .check-item input[type="checkbox"] { width: auto; margin: 0; }
-    .check-item label { margin: 0; font-weight: 500; }
 
-    code { color: #E3F2FD; }
+    .whitebox .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .whitebox code { font-size: 12px; }
+
+    .inline-actions {
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-top: 6px;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
-    <h1>Geata Admin Panel</h1>
-    <p class="subtitle">Configure gates, users, schedules, notifications, and audit logs. Admin endpoints require a valid admin API key.</p>
 
-    <!-- Admin Authentication -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Security</div>
-          <h2 class="card-title">Admin Authentication</h2>
-        </div>
-      </div>
-      <label for="apiKeyInput">Admin API Key</label>
-      <input id="apiKeyInput" type="text" placeholder="Enter admin API key" />
-      <button id="setApiKeyBtn">Set Key</button>
-      <div id="apiKeyStatus" class="status"></div>
-      <p class="small">
-        This key must match <code>ADMIN_API_KEY</code> on the backend (Render / local Node).
-      </p>
+    <div id="homeHeader">
+      <h1>Geata Admin Panel</h1>
+      <p class="subtitle">Home → choose a section. All admin actions require a valid Admin API key.</p>
     </div>
 
-    <!-- Devices (list + add) -->
-    <div class="card">
+    <!-- DEVICE CONTEXT BAR: only for Select Devices & Users page -->
+    <div id="deviceContextBar" class="card">
       <div class="card-header">
         <div>
-          <div class="pill-title">Gates</div>
-          <h2 class="card-title">Devices</h2>
-          <p class="card-subtitle">List and register gate controllers.</p>
-        </div>
-        <button id="refreshDevicesBtn" class="btn-secondary btn-small">Refresh</button>
-      </div>
-
-      <div id="devicesStatus" class="status"></div>
-
-      <table id="devicesTable">
-        <thead>
-          <tr>
-            <th>Device ID</th>
-            <th>Name</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <div class="section-divider"></div>
-
-      <h3 style="margin-top: 6px; font-size: 15px;">Add Device</h3>
-      <div class="two-column">
-        <div>
-          <label for="newDeviceId">Device ID</label>
-          <input id="newDeviceId" type="text" placeholder="e.g. gate1" />
-        </div>
-        <div>
-          <label for="newDeviceName">Name</label>
-          <input id="newDeviceName" type="text" placeholder="e.g. Warehouse Gate" />
-        </div>
-      </div>
-      <button id="addDeviceBtn">Add Device</button>
-      <div id="addDeviceStatus" class="status"></div>
-    </div>
-
-    <!-- Select Device + Users on selected device -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Per Gate</div>
-          <h2 class="card-title">Select Device & Users</h2>
-          <p class="card-subtitle">Choose a gate to manage its local users.</p>
+          <div class="pill-title">Device Context</div>
+          <h2 class="card-title">Select Device (for this page only)</h2>
+          <p class="card-subtitle">Used by “Select Devices & Users” only (other pages have their own selectors).</p>
         </div>
       </div>
 
@@ -303,2140 +307,2374 @@
       <select id="selectedDeviceSelect">
         <option value="">-- Select a device --</option>
       </select>
+
       <div class="device-label-big">
         Current Device:
         <span id="selectedDeviceText" class="device-label-value">None selected</span>
       </div>
-
-      <div class="section-divider"></div>
-
-      <h3 style="margin-top: 4px; font-size: 15px;">Users on Selected Device</h3>
-      <div id="deviceUsersStatus" class="status"></div>
-
-      <table id="deviceUsersTable">
-        <thead>
-          <tr>
-            <th>User ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Role</th>
-            <th>Schedule</th>
-            <th>Remove</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </div>
 
-    <!-- NEW: Email Notifications -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Alerts</div>
-          <h2 class="card-title">Email Notifications</h2>
-          <p class="card-subtitle">Choose who gets emailed for events on the selected gate.</p>
-        </div>
-        <div>
-          <button id="refreshNotificationsBtn" class="btn-secondary btn-small">Refresh</button>
-        </div>
-      </div>
-
-      <div class="device-label-big">
-        Select Device:
-        <span id="selectedDeviceTextNotify" class="device-label-value">None selected</span>
-      </div>
-
-      <label for="notifyUserSelect">User</label>
-      <select id="notifyUserSelect">
-        <option value="">-- Select a user on this device --</option>
-      </select>
-
-      <p class="small">
-        Tip: choose <code>*</code> to receive all events for this device.
-      </p>
-
-      <div id="notifyEventsWrap" class="check-grid"></div>
-
-      <button id="saveNotificationsBtn">Save Notifications</button>
-      <div id="notifyStatus" class="status"></div>
-
-      <div class="section-divider"></div>
-      <h3 style="margin-top: 4px; font-size: 15px;">Current subscriptions (enabled)</h3>
-
-      <table id="notifyTable">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Email</th>
-            <th>Event Types</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- NEW: Device I/O + Alarm Settings -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">I/O + Alarms</div>
-          <h2 class="card-title">Device Settings</h2>
-          <p class="card-subtitle">Per gate configuration for Aux1 mode, forced/ajar/tamper thresholds and recipients.</p>
-        </div>
-        <div>
-          <button id="loadDeviceSettingsBtn" class="btn-secondary btn-small">Load</button>
-        </div>
-      </div>
-
-      <div class="device-label-big">
-        Select Device:
-        <span id="selectedDeviceTextSettings" class="device-label-value">None selected</span>
-      </div>
-
-      <div class="two-column">
-        <div>
-          <label for="aux1ModeSelect">Aux 1 Mode</label>
-          <select id="aux1ModeSelect">
-            <option value="relay">Option 1: Relay On/Off (RLA ON/OFF)</option>
-            <option value="contact">Option 2: Opened/Closed (Input 2 door monitor)</option>
-          </select>
-          <p class="small">
-            Relay mode: app shows RLA ON persistent, OFF for 3s after off. <br/>
-            Contact mode: app shows Opened/Closed from Input 2 (3s).
-          </p>
-        </div>
-        <div>
-          <label for="supervisorEmailInput">Supervisor Email</label>
-          <input id="supervisorEmailInput" type="email" placeholder="supervisor@example.com" />
-          <label for="engineerEmailInput">Engineer Email</label>
-          <input id="engineerEmailInput" type="email" placeholder="engineer@example.com" />
-          <p class="small">
-            These are used by backend rules for forced/ajar/tamper/engineer-mode notifications.
-          </p>
-        </div>
-      </div>
-
-      <div class="section-divider"></div>
-
-      <h3 style="margin-top: 4px; font-size: 15px;">Forced + Ajar thresholds</h3>
-      <div class="two-column">
-        <div>
-          <label for="gateAjarWarnInput">Gate Ajar Warn After (HH:MM)</label>
-          <input id="gateAjarWarnInput" type="text" placeholder="e.g. 00:02 (2 minutes)" />
-          <label for="gateAjarEmailInput">Gate Ajar Email After (HH:MM)</label>
-          <input id="gateAjarEmailInput" type="text" placeholder="e.g. 00:05 (5 minutes)" />
-          <p class="small">
-            Backend should warn in app, then email user + supervisor if still open past Email After.
-          </p>
-        </div>
-
-        <div>
-          <label for="engineerModeMaxInput">Engineer Mode Max Duration (HH:MM)</label>
-          <input id="engineerModeMaxInput" type="text" placeholder="e.g. 00:30 (30 minutes)" />
-          <div class="toggle-row">
-            <input id="emailOnEngineerModeEnable" type="checkbox" />
-            <label for="emailOnEngineerModeEnable">Email supervisor + engineer when Engineer Mode activated</label>
-          </div>
-          <div class="toggle-row">
-            <input id="emailOnEngineerModeTimeoutEnable" type="checkbox" />
-            <label for="emailOnEngineerModeTimeoutEnable">Email again if Engineer Mode exceeds max duration</label>
+    <!-- HOME -->
+    <section id="screen-home" class="screen active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Home</div>
+            <h2 class="card-title">Admin Sections</h2>
+            <p class="card-subtitle">Each section opens on its own page.</p>
           </div>
         </div>
+
+        <div class="home-grid">
+          <button class="home-btn" data-nav="screen-auth">Admin Authentication</button>
+          <button class="home-btn" data-nav="screen-devices">Devices</button>
+          <button class="home-btn" data-nav="screen-device-users">Select Devices & Users</button>
+          <button class="home-btn" data-nav="screen-device-settings">Device Settings</button>
+          <button class="home-btn" data-nav="screen-io">Device I/O Test (Engineer)</button>
+          <button class="home-btn" data-nav="screen-directory">User Lookup (All Users)</button>
+          <button class="home-btn" data-nav="screen-edit-user">Edit User Details</button>
+          <button class="home-btn" data-nav="screen-attach-user">Add User to Device</button>
+          <button class="home-btn" data-nav="screen-csv">Import/Export</button>
+          <button class="home-btn" data-nav="screen-schedules">Schedules</button>
+          <button class="home-btn" data-nav="screen-emails">Email Notifications</button>
+          <button class="home-btn" data-nav="screen-reports">Reports/Audit Trail</button>
+          <button class="home-btn" data-nav="screen-logs">Logs</button>
+          <button class="home-btn" data-nav="screen-events">Recent Events</button>
+        </div>
+
+        <div class="section-divider"></div>
+        <div class="small-green">
+          Suggested flow: Admin Authentication → Devices → Select Devices & Users → Email Notifications.
+        </div>
       </div>
+    </section>
 
-      <div class="section-divider"></div>
-
-      <h3 style="margin-top: 4px; font-size: 15px;">Tamper behavior (Input 3)</h3>
-      <div class="toggle-row">
-        <input id="tamperEmailSupervisorEnable" type="checkbox" />
-        <label for="tamperEmailSupervisorEnable">Email supervisor on tamper</label>
-      </div>
-      <div class="toggle-row">
-        <input id="tamperEmailEngineerEnable" type="checkbox" />
-        <label for="tamperEmailEngineerEnable">Email engineer on tamper</label>
-      </div>
-      <div class="toggle-row">
-        <input id="tamperRelay3Enable" type="checkbox" />
-        <label for="tamperRelay3Enable">In normal mode, switch Relay 3 ON when tamper opens (local siren)</label>
-      </div>
-
-      <div class="section-divider"></div>
-
-      <h3 style="margin-top: 4px; font-size: 15px;">Forced rules (email + app)</h3>
-      <div class="toggle-row">
-        <input id="forcedGateEnable" type="checkbox" />
-        <label for="forcedGateEnable">Forced Gate detection (Input 1 opens without valid OPEN command)</label>
-      </div>
-      <div class="toggle-row">
-        <input id="forcedDoorEnable" type="checkbox" />
-        <label for="forcedDoorEnable">Forced Door detection (Input 2 opens without valid OPEN command)</label>
-      </div>
-      <p class="small">
-        Backend should email supervisor with last user + time since last command (hh:mm) and trigger flashing app message.
-      </p>
-
-      <button id="saveDeviceSettingsBtn">Save Device Settings</button>
-      <div id="deviceSettingsStatus" class="status"></div>
-
-      <p class="small">
-        Note: this UI calls <code>GET /devices/:id/settings</code> and <code>PUT /devices/:id/settings</code>.
-        Add those endpoints in the backend to persist these values.
-      </p>
-    </div>
-
-    <!-- Add / Attach User to Device -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Per Gate</div>
-          <h2 class="card-title">Add / Attach User to Device</h2>
-          <p class="card-subtitle">Create new users or attach existing ones to the selected gate.</p>
+    <!-- AUTH -->
+    <section id="screen-auth" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
         </div>
       </div>
 
-      <div class="device-label-big">
-        Select Device:
-        <span id="selectedDeviceTextAttach" class="device-label-value">None selected</span>
-      </div>
-
-      <p class="small">
-        Option 1: enter phone/email to create or reuse a user.<br />
-        Option 2: paste an existing <strong>User ID</strong> to attach that user directly.
-      </p>
-
-      <div class="two-column">
-        <div>
-          <label for="userNameInput">Name</label>
-          <input id="userNameInput" type="text" placeholder="User name" />
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Security</div>
+            <h2 class="card-title">Admin Authentication</h2>
+          </div>
         </div>
-        <div>
-          <label for="userEmailInput">Email</label>
-          <input id="userEmailInput" type="email" placeholder="user@example.com" />
+
+        <label for="apiKeyInput">Admin API Key</label>
+        <input id="apiKeyInput" type="text" placeholder="Enter admin API key" />
+        <button id="setApiKeyBtn">Save Key</button>
+        <button id="clearApiKeyBtn" class="btn-secondary btn-small">Clear</button>
+        <div id="apiKeyStatus" class="status"></div>
+
+        <div class="small">
+          Stored locally in your browser for convenience (does not affect server env vars).
         </div>
       </div>
+    </section>
 
-      <div class="two-column">
-        <div>
-          <label for="userPhoneInput">Phone</label>
-          <input id="userPhoneInput" type="tel" placeholder="0861234567 or +353861234567" />
+    <!-- DEVICES -->
+    <section id="screen-devices" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
         </div>
-        <div>
-          <label for="userPasswordInput">Password</label>
-          <input id="userPasswordInput" type="password" placeholder="Set/overwrite password (optional)" />
-        </div>
-      </div>
-
-      <div class="two-column">
-        <div>
-          <label for="userRoleSelect">Role</label>
-          <select id="userRoleSelect">
-            <option value="operator">operator</option>
-            <option value="admin">admin</option>
-          </select>
-        </div>
-        <div>
-          <label for="existingUserIdInput">Existing User ID (optional)</label>
-          <input id="existingUserIdInput" type="text" placeholder="e.g. u_1765..." />
+        <div class="topbar-right">
+          <button id="refreshDevicesBtn" class="btn-secondary btn-small">Refresh</button>
         </div>
       </div>
 
-      <label for="attachUserScheduleSelect">Schedule</label>
-      <select id="attachUserScheduleSelect">
-        <option value="">24/7 (no schedule)</option>
-      </select>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Gates</div>
+            <h2 class="card-title">Devices</h2>
+            <p class="card-subtitle">List and register gate controllers.</p>
+          </div>
+        </div>
 
-      <button id="attachUserBtn">Create/Reuse + Attach</button>
-      <div id="attachUserStatus" class="status"></div>
-    </div>
+        <div id="devicesStatus" class="status"></div>
 
-    <!-- Bulk Import & Bulk Export -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Data</div>
-          <h2 class="card-title">Bulk Import / Export (CSV)</h2>
-          <p class="card-subtitle">Import users from CSV or export them for backup/migration.</p>
+        <table id="devicesTable">
+          <thead>
+            <tr>
+              <th>Device ID</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="section-divider"></div>
+
+        <h3 style="margin-top: 6px; font-size: 15px;">Add Device</h3>
+        <div class="two-column">
+          <div>
+            <label for="newDeviceId">Device ID</label>
+            <input id="newDeviceId" type="text" placeholder="e.g. gate1" />
+          </div>
+          <div>
+            <label for="newDeviceName">Name</label>
+            <input id="newDeviceName" type="text" placeholder="e.g. Warehouse Gate" />
+          </div>
+        </div>
+
+        <button id="addDeviceBtn">Save</button>
+        <div id="addDeviceStatus" class="status"></div>
+
+        <div class="small">
+          After saving, the Add Device form resets for the next entry.
+        </div>
+      </div>
+    </section>
+
+    <!-- SELECT DEVICES & USERS -->
+    <section id="screen-device-users" class="screen" data-show-context="true">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+        </div>
+        <div class="topbar-right">
+          <button id="refreshDeviceUsersBtn" class="btn-secondary btn-small">Refresh</button>
         </div>
       </div>
 
-      <div class="device-label-big">
-        Select Device:
-        <span id="selectedDeviceTextCsv" class="device-label-value">None selected</span>
-      </div>
-
-      <div class="import-export-row">
-        <div>
-          <h3 style="margin: 4px 0 6px; font-size: 14px;">Bulk Import from CSV</h3>
-          <p class="small">
-            CSV columns (header row required): <code>name,email,phone,role</code>.<br />
-            <code>role</code> can be <code>admin</code> or <code>operator</code> (default is operator).
-          </p>
-          <input type="file" id="csvFileInput" accept=".csv,text/csv" />
-          <button id="importCsvBtn" class="btn-secondary btn-small">Import CSV for Selected Device</button>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Per Gate</div>
+            <h2 class="card-title">Users on Selected Device</h2>
+            <p class="card-subtitle">Choose a gate in the Device Context bar, then manage users on that gate.</p>
+          </div>
         </div>
 
-        <div>
-          <h3 style="margin: 4px 0 6px; font-size: 14px;">Bulk Export to CSV</h3>
-          <p class="small">
-            Download CSV of users currently attached to the selected gate, or all users/gates.
-          </p>
-          <button id="exportCsvDeviceBtn" class="btn-secondary btn-small">
-            Export Users on Selected Device
-          </button>
-          <button id="exportAllCsvBtn" class="btn-secondary btn-small">
-            Export All Users &amp; Gates
-          </button>
+        <div class="device-label-big">
+          Current Device:
+          <span id="selectedDeviceTextUsers" class="device-label-value">None selected</span>
+        </div>
+
+        <div id="deviceUsersStatus" class="status"></div>
+
+        <table id="deviceUsersTable">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Schedule / Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="small">
+          “Edit” opens the Edit User Details page (shows enrolled devices + email subscriptions link).
         </div>
       </div>
+    </section>
 
-      <div id="csvImportStatus" class="status"></div>
-    </div>
-
-    <!-- Device I/O Test -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Hardware</div>
-          <h2 class="card-title">Device I/O Test</h2>
-          <p class="card-subtitle">Exercise relays and simulate basic behaviour before hardware arrives.</p>
+    <!-- DEVICE SETTINGS -->
+    <section id="screen-device-settings" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
         </div>
-      </div>
-
-      <div class="device-label-big">
-        Select Device:
-        <span id="selectedDeviceTextIo" class="device-label-value">None selected</span>
-      </div>
-
-      <p class="small">
-        AUX1 and AUX2 test pulses create commands with no user attached (admin test).
-      </p>
-      <button id="aux1Btn">Test AUX1 Pulse</button>
-      <button id="aux2Btn">Test AUX2 Pulse</button>
-      <div id="auxStatus" class="status"></div>
-
-      <div class="section-divider"></div>
-
-      <h3 style="margin-top: 4px; font-size: 15px;">Simulate Gate Inputs</h3>
-      <p class="small">
-        Simulate gate state changes: open, closed, forced open, or gate ajar / open too long.
-      </p>
-      <button id="simGateOpenedBtn" class="btn-small">Sim Gate Opened</button>
-      <button id="simGateClosedBtn" class="btn-small">Sim Gate Closed</button>
-      <button id="simGateForcedBtn" class="btn-small">Sim Forced Open</button>
-      <button id="simGateAjarBtn" class="btn-small">Sim Gate Ajar / Open Too Long</button>
-      <div id="simStatus" class="status"></div>
-    </div>
-
-    <!-- Recent Events for Selected Device -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Monitoring</div>
-          <h2 class="card-title">Recent Events for Selected Device</h2>
-          <p class="card-subtitle">Live view of commands and alerts for the chosen gate.</p>
-        </div>
-        <button id="refreshDeviceEventsBtn" class="btn-secondary btn-small">Refresh Events</button>
-      </div>
-
-      <div class="device-label-big">
-        Select Device:
-        <span id="selectedDeviceTextEvents" class="device-label-value">None selected</span>
-      </div>
-
-      <table id="deviceEventsTable">
-        <thead>
-          <tr>
-            <th>Time (UTC)</th>
-            <th>Event</th>
-            <th>User</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- User Lookup (All Users) -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Directory</div>
-          <h2 class="card-title">User Lookup (All Users)</h2>
-          <p class="card-subtitle">Search, inspect and manage users across all gates.</p>
+        <div class="topbar-right">
+          <button id="deviceSettingsEditBtn" class="btn-secondary btn-small">Edit</button>
+          <button id="deviceSettingsSaveBtn" class="btn-small" disabled>Save</button>
         </div>
       </div>
 
-      <label for="userSearchInput">Search</label>
-      <input id="userSearchInput" type="text" placeholder="Search by name, email, or phone" />
-      <button id="searchUsersBtn">Search</button>
-      <button id="showAllUsersBtn" class="btn-secondary btn-small">Show All</button>
-      <div id="userSearchStatus" class="status"></div>
+      <div id="deviceSettingsCard" class="card view-mode">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Config</div>
+            <h2 class="card-title">Device Settings</h2>
+            <p class="card-subtitle">This page has its own device selector (independent of Select Devices & Users).</p>
+          </div>
+        </div>
 
-      <div class="device-label-big">
-        Attach to Device:
-        <span id="selectedDeviceTextDirectory" class="device-label-value">None selected</span>
+        <label for="deviceSettingsSelect">Select Device</label>
+        <select id="deviceSettingsSelect">
+          <option value="">-- Select a device --</option>
+        </select>
+
+        <button id="deviceSettingsLoadBtn" class="btn-secondary btn-small">Load</button>
+        <div id="deviceSettingsStatus" class="status"></div>
+
+        <label for="deviceSettingsJson">Settings JSON</label>
+        <textarea id="deviceSettingsJson" readonly placeholder="Click Load, then Edit to change..."></textarea>
+
+        <div class="small">
+          Uses backend endpoints: <code>GET/PUT /devices/:deviceId/settings</code>.
+        </div>
       </div>
-      <button id="attachSelectedUsersBtn" class="btn-secondary btn-small">
-        Attach Selected Users to Device
-      </button>
+    </section>
 
-      <table id="globalUsersTable">
-        <thead>
-          <tr>
-            <th>Select</th>
-            <th>User ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Devices (gate(role))</th>
-            <th>Edit</th>
-            <th>Delete User</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- Edit User Details (global) -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Directory</div>
-          <h2 class="card-title">Edit User Details (global)</h2>
-          <p class="card-subtitle">Changes apply to the user across all gates.</p>
+    <!-- DEVICE I/O TEST (Engineer) -->
+    <section id="screen-io" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
         </div>
       </div>
 
-      <p id="editUserTarget" class="small"></p>
-
-      <div class="two-column">
-        <div>
-          <label for="editUserName">Name</label>
-          <input id="editUserName" type="text" />
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Engineer</div>
+            <h2 class="card-title">Device I/O Test</h2>
+            <p class="card-subtitle">Admin/Engineer use. Choose device + user for subscription test.</p>
+          </div>
         </div>
-        <div>
-          <label for="editUserEmail">Email</label>
-          <input id="editUserEmail" type="email" />
+
+        <div class="two-column">
+          <div>
+            <label for="ioDeviceSelect">Select Device</label>
+            <select id="ioDeviceSelect">
+              <option value="">-- Select a device --</option>
+            </select>
+          </div>
+          <div>
+            <label for="ioUserSelect">Select Enrolled User</label>
+            <select id="ioUserSelect">
+              <option value="">-- Select a user --</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="ioLoadSubsBtn" class="btn-secondary btn-small">Email Link (View/Set Subscriptions)</button>
+        <div id="ioStatus" class="status"></div>
+
+        <div class="section-divider"></div>
+
+        <h3 style="margin: 4px 0 6px; font-size: 15px;">Email Subscriptions (for selected Device + User)</h3>
+        <label for="ioEventTypesInput">Event Types (comma-separated)</label>
+        <input id="ioEventTypesInput" type="text" placeholder="e.g. GATE_FORCED_OPEN,TAMPER_OPENED" />
+        <button id="ioSaveSubsBtn" class="btn-small">Save</button>
+
+        <div class="small">
+          Uses backend: <code>GET /devices/:deviceId/notifications</code> and <code>PUT /devices/:deviceId/users/:userId/notifications</code>.
+        </div>
+
+        <div class="section-divider"></div>
+
+        <h3 style="margin: 4px 0 6px; font-size: 15px;">Outputs</h3>
+        <button id="ioGateOpenBtn">Gate Open (try)</button>
+        <button id="ioAux1PulseBtn" class="btn-secondary btn-small">AUX1 Pulse (1s)</button>
+        <button id="ioOutput3PulseBtn" class="btn-secondary btn-small">Output 3 Pulse (2s)</button>
+        <div id="ioOutputStatus" class="status"></div>
+
+        <div class="small">
+          Gate Open tries <code>POST /devices/:deviceId/open</code>. AUX pulses use <code>/aux1-test</code> and <code>/aux2-test</code>.
+          If your backend uses different paths, tell me the exact endpoints and I’ll wire them.
+        </div>
+
+        <div class="section-divider"></div>
+
+        <h3 style="margin: 4px 0 6px; font-size: 15px;">Simulate Gate Events (to trigger emails if subscribed)</h3>
+        <button id="simOpenRequestedBtn" class="btn-small">Sim OPEN_REQUESTED</button>
+        <button id="simGateOpenedBtn" class="btn-small">Sim GATE_OPENED</button>
+        <button id="simGateClosedBtn" class="btn-small">Sim GATE_CLOSED</button>
+        <button id="simForcedBtn" class="btn-small">Sim GATE_FORCED_OPEN</button>
+        <button id="simDoorForcedBtn" class="btn-small">Sim DOOR_FORCED_OPEN</button>
+        <button id="simAjarBtn" class="btn-small">Sim GATE_OPEN_TOO_LONG</button>
+        <button id="simTamperBtn" class="btn-small">Sim TAMPER_OPENED (+Output3 2s)</button>
+        <div id="ioSimStatus" class="status"></div>
+
+        <div class="small">
+          Uses <code>POST /devices/:deviceId/simulate-event</code>.
+        </div>
+      </div>
+    </section>
+
+    <!-- USER LOOKUP (All) -->
+    <section id="screen-directory" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
         </div>
       </div>
 
-      <div class="two-column">
-        <div>
-          <label for="editUserPhone">Phone</label>
-          <input id="editUserPhone" type="tel" />
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Directory</div>
+            <h2 class="card-title">User Lookup (All Users)</h2>
+            <p class="card-subtitle">Search by name, email, phone, or UID. Not restricted to any gate.</p>
+          </div>
         </div>
-        <div>
-          <label for="editUserPassword">Password</label>
-          <input id="editUserPassword" type="password" placeholder="Leave blank to keep existing" />
+
+        <label for="userSearchInput">Search</label>
+        <input id="userSearchInput" type="text" placeholder="name / email / phone / uid (e.g. u_1765...)" />
+        <button id="searchUsersBtn">Search</button>
+        <button id="showAllUsersBtn" class="btn-secondary btn-small">Show All</button>
+        <div id="userSearchStatus" class="status"></div>
+
+        <div class="section-divider"></div>
+
+        <label for="directoryDeviceSelect">Attach selected users to device</label>
+        <select id="directoryDeviceSelect">
+          <option value="">-- Select a device --</option>
+        </select>
+        <button id="attachSelectedUsersBtn" class="btn-secondary btn-small">Attach Selected Users</button>
+
+        <table id="globalUsersTable">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>User ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Devices (gate(role))</th>
+              <th>Edit</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="small">
+          Edit jumps to Edit User Details (shows enrolled devices + subscription link).
+        </div>
+      </div>
+    </section>
+
+    <!-- EDIT USER DETAILS -->
+    <section id="screen-edit-user" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+        </div>
+        <div class="topbar-right">
+          <button id="editUserEnableBtn" class="btn-secondary btn-small">Edit</button>
+          <button id="editUserSaveTopBtn" class="btn-small" disabled>Save</button>
         </div>
       </div>
 
-      <button id="saveUserChangesBtn">Save Changes</button>
-      <div id="editUserStatus" class="status"></div>
-    </div>
-
-    <!-- Schedules -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Time Control</div>
-          <h2 class="card-title">Schedules (Time Templates)</h2>
-          <p class="card-subtitle">Define named schedules with up to 6 daily time slots.</p>
+      <div id="editUserCard" class="card view-mode">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Directory</div>
+            <h2 class="card-title">Edit User Details</h2>
+            <p class="card-subtitle">Shows user ID and enrolled devices. Includes Email Notifications link.</p>
+          </div>
         </div>
-        <button id="refreshSchedulesBtn" class="btn-secondary btn-small">Refresh</button>
+
+        <div class="whitebox">
+          <div class="row">
+            <div><strong>User ID:</strong></div>
+            <code id="editUserIdBox">(none)</code>
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="editUserName">Name</label>
+            <input id="editUserName" type="text" disabled />
+          </div>
+          <div>
+            <label for="editUserEmail">Email</label>
+            <input id="editUserEmail" type="email" disabled />
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="editUserPhone">Phone</label>
+            <input id="editUserPhone" type="tel" disabled />
+          </div>
+          <div>
+            <label for="editUserPassword">Password</label>
+            <input id="editUserPassword" type="password" placeholder="Leave blank to keep existing" disabled />
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="device-label-big">Enrolled Devices</div>
+        <div id="editUserDevicesPills"></div>
+
+        <div class="section-divider"></div>
+
+        <label for="editUserEmailDeviceSelect">Email Notifications: choose one of this user’s gates</label>
+        <select id="editUserEmailDeviceSelect">
+          <option value="">-- Select one of the user’s devices --</option>
+        </select>
+        <button id="openEmailNotificationsBtn" class="btn-secondary btn-small">Open Email Notifications for this User</button>
+
+        <div id="editUserStatus" class="status"></div>
       </div>
+    </section>
 
-      <div id="scheduleStatus" class="status"></div>
-
-      <table id="schedulesTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Slots</th>
-            <th>Edit</th>
-            <th>Delete</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <div class="section-divider"></div>
-
-      <h3 id="scheduleFormTitle" style="margin-top: 4px; font-size: 15px;">Create / Edit Schedule</h3>
-
-      <label for="scheduleNameInput">Schedule Name</label>
-      <input id="scheduleNameInput" type="text" placeholder="e.g. Weekdays 9–5" />
-
-      <label for="scheduleDescInput">Description (optional)</label>
-      <input id="scheduleDescInput" type="text" placeholder="Short description" />
-
-      <p class="small">
-        Days: use <code>0–6</code> for Sun–Sat. You can enter ranges like <code>1-5</code> for Mon–Fri,
-        or lists like <code>1,2,3,4,5</code>. Blank days = all days.
-      </p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Slot</th>
-            <th>Days (0–6)</th>
-            <th>Start (HH:MM)</th>
-            <th>End (HH:MM)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td><input id="slot1Days" type="text" placeholder="1-5" /></td>
-            <td><input id="slot1Start" type="time" /></td>
-            <td><input id="slot1End" type="time" /></td>
-          </tr>
-          <tr>
-            <td>2</td>
-            <td><input id="slot2Days" type="text" placeholder="1-5" /></td>
-            <td><input id="slot2Start" type="time" /></td>
-            <td><input id="slot2End" type="time" /></td>
-          </tr>
-          <tr>
-            <td>3</td>
-            <td><input id="slot3Days" type="text" placeholder="1-5" /></td>
-            <td><input id="slot3Start" type="time" /></td>
-            <td><input id="slot3End" type="time" /></td>
-          </tr>
-          <tr>
-            <td>4</td>
-            <td><input id="slot4Days" type="text" placeholder="1-5" /></td>
-            <td><input id="slot4Start" type="time" /></td>
-            <td><input id="slot4End" type="time" /></td>
-          </tr>
-          <tr>
-            <td>5</td>
-            <td><input id="slot5Days" type="text" placeholder="1-5" /></td>
-            <td><input id="slot5Start" type="time" /></td>
-            <td><input id="slot5End" type="time" /></td>
-          </tr>
-          <tr>
-            <td>6</td>
-            <td><input id="slot6Days" type="text" placeholder="1-5" /></td>
-            <td><input id="slot6Start" type="time" /></td>
-            <td><input id="slot6End" type="time" /></td>
-          </tr>
-        </tbody>
-      </table>
-
-      <button id="saveScheduleBtn">Save Schedule</button>
-      <button id="resetScheduleFormBtn" class="btn-secondary btn-small">Reset Form</button>
-    </div>
-
-    <!-- Reports / Audit Trail -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Audit</div>
-          <h2 class="card-title">Reports / Audit Trail</h2>
-          <p class="card-subtitle">Generate reports of gate events by device, user and date range.</p>
+    <!-- ADD USER TO DEVICE -->
+    <section id="screen-attach-user" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
         </div>
       </div>
 
-      <div class="two-column">
-        <div>
-          <label for="reportDeviceSelect" style="font-size: 14px;">Select Device</label>
-          <select id="reportDeviceSelect">
-            <option value="">-- Any device --</option>
-          </select>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Per Gate</div>
+            <h2 class="card-title">Add User to Device</h2>
+            <p class="card-subtitle">Device is selectable here (not restricted to Select Devices & Users).</p>
+          </div>
         </div>
-        <div>
-          <label for="reportUserIdInput" style="font-size: 14px;">Select User ID (optional)</label>
-          <input id="reportUserIdInput" type="text" placeholder="Paste User ID, e.g. u_..." />
+
+        <label for="attachDeviceSelect">Select Device</label>
+        <select id="attachDeviceSelect">
+          <option value="">-- Select a device --</option>
+        </select>
+
+        <p class="small">
+          Option 1: enter phone/email to create or reuse a user.<br />
+          Option 2: paste an existing <strong>User ID</strong> to attach.
+        </p>
+
+        <div class="two-column">
+          <div>
+            <label for="userNameInput">Name</label>
+            <input id="userNameInput" type="text" placeholder="User name" />
+          </div>
+          <div>
+            <label for="userEmailInput">Email</label>
+            <input id="userEmailInput" type="email" placeholder="user@example.com" />
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="userPhoneInput">Phone</label>
+            <input id="userPhoneInput" type="tel" placeholder="0861234567 or +353861234567" />
+          </div>
+          <div>
+            <label for="userPasswordInput">Password</label>
+            <input id="userPasswordInput" type="password" placeholder="Set/overwrite password (optional)" />
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="userRoleSelect">Role</label>
+            <select id="userRoleSelect">
+              <option value="operator">operator</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <div>
+            <label for="existingUserIdInput">Existing User ID (optional)</label>
+            <input id="existingUserIdInput" type="text" placeholder="e.g. u_1765..." />
+          </div>
+        </div>
+
+        <label for="attachUserScheduleSelect">Schedule</label>
+        <select id="attachUserScheduleSelect">
+          <option value="">24/7 (no schedule)</option>
+        </select>
+
+        <button id="attachUserBtn">Save</button>
+        <div id="attachUserStatus" class="status"></div>
+
+        <div class="small">
+          After saving, the form resets for the next entry.
+        </div>
+      </div>
+    </section>
+
+    <!-- IMPORT/EXPORT -->
+    <section id="screen-csv" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
         </div>
       </div>
 
-      <div class="two-column">
-        <div>
-          <label for="reportFromDate">From date</label>
-          <input id="reportFromDate" type="date" />
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Data</div>
+            <h2 class="card-title">Import / Export (CSV)</h2>
+            <p class="card-subtitle">Choose device here (independent).</p>
+          </div>
         </div>
-        <div>
-          <label for="reportToDate">To date</label>
-          <input id="reportToDate" type="date" />
+
+        <label for="csvDeviceSelect">Select Device</label>
+        <select id="csvDeviceSelect">
+          <option value="">-- Select a device --</option>
+        </select>
+
+        <div class="section-divider"></div>
+
+        <div class="two-column">
+          <div>
+            <h3 style="margin: 4px 0 6px; font-size: 14px;">Bulk Import from CSV</h3>
+            <p class="small">
+              CSV columns: <code>name,email,phone,role</code>.
+            </p>
+            <input type="file" id="csvFileInput" accept=".csv,text/csv" />
+            <button id="importCsvBtn" class="btn-secondary btn-small">Save (Import)</button>
+          </div>
+
+          <div>
+            <h3 style="margin: 4px 0 6px; font-size: 14px;">Export to CSV</h3>
+            <button id="exportCsvDeviceBtn" class="btn-secondary btn-small">Export Users on Selected Device</button>
+            <button id="exportAllCsvBtn" class="btn-secondary btn-small">Export All Users &amp; Gates</button>
+          </div>
+        </div>
+
+        <div id="csvImportStatus" class="status"></div>
+      </div>
+    </section>
+
+    <!-- SCHEDULES -->
+    <section id="screen-schedules" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+        </div>
+        <div class="topbar-right">
+          <button id="refreshSchedulesBtn" class="btn-secondary btn-small">Refresh</button>
+          <button id="scheduleEnableBtn" class="btn-secondary btn-small">Edit</button>
+          <button id="scheduleSaveTopBtn" class="btn-small" disabled>Save</button>
         </div>
       </div>
 
-      <button id="runReportBtn">Run Report</button>
-      <button id="downloadReportCsvBtn" class="btn-secondary btn-small">Download CSV</button>
-      <div id="reportStatus" class="status"></div>
-
-      <table id="reportEventsTable">
-        <thead>
-          <tr>
-            <th>Time (UTC)</th>
-            <th>Device</th>
-            <th>User</th>
-            <th>Event</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <div class="section-divider"></div>
-
-      <!-- NEW: Purge logs -->
-      <h3 style="margin-top: 4px; font-size: 15px;">Purge Logs</h3>
-      <p class="small">
-        Purge device_events older than a chosen number of days (admin action). Requires backend endpoint <code>POST /admin/purge-events</code>.
-      </p>
-      <div class="two-column">
-        <div>
-          <label for="purgeOlderThanDays">Delete events older than (days)</label>
-          <input id="purgeOlderThanDays" type="number" min="1" value="90" />
+      <div id="scheduleCard" class="card view-mode">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Time</div>
+            <h2 class="card-title">Schedules</h2>
+            <p class="card-subtitle">Create/edit a schedule, then assign it to users per gate.</p>
+          </div>
         </div>
-        <div>
-          <label>&nbsp;</label>
-          <button id="purgeEventsBtn" class="btn-danger">Purge</button>
+
+        <div id="scheduleStatus" class="status"></div>
+
+        <table id="schedulesTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Slots</th>
+              <th>Edit</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="section-divider"></div>
+
+        <h3 id="scheduleFormTitle" style="margin-top: 4px; font-size: 15px;">Create / Edit Schedule</h3>
+
+        <label for="scheduleNameInput">Schedule Name</label>
+        <input id="scheduleNameInput" type="text" placeholder="e.g. Weekdays 9–5" disabled />
+
+        <label for="scheduleDescInput">Description (optional)</label>
+        <input id="scheduleDescInput" type="text" placeholder="Short description" disabled />
+
+        <p class="small">
+          Days: 0–6 for Sun–Sat. Use ranges <code>1-5</code> or lists <code>1,2,3</code>. Blank days = all days.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Slot</th>
+              <th>Days (0–6)</th>
+              <th>Start</th>
+              <th>End</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td><td><input id="slot1Days" type="text" disabled /></td><td><input id="slot1Start" type="time" disabled /></td><td><input id="slot1End" type="time" disabled /></td>
+            </tr>
+            <tr>
+              <td>2</td><td><input id="slot2Days" type="text" disabled /></td><td><input id="slot2Start" type="time" disabled /></td><td><input id="slot2End" type="time" disabled /></td>
+            </tr>
+            <tr>
+              <td>3</td><td><input id="slot3Days" type="text" disabled /></td><td><input id="slot3Start" type="time" disabled /></td><td><input id="slot3End" type="time" disabled /></td>
+            </tr>
+            <tr>
+              <td>4</td><td><input id="slot4Days" type="text" disabled /></td><td><input id="slot4Start" type="time" disabled /></td><td><input id="slot4End" type="time" disabled /></td>
+            </tr>
+            <tr>
+              <td>5</td><td><input id="slot5Days" type="text" disabled /></td><td><input id="slot5Start" type="time" disabled /></td><td><input id="slot5End" type="time" disabled /></td>
+            </tr>
+            <tr>
+              <td>6</td><td><input id="slot6Days" type="text" disabled /></td><td><input id="slot6Start" type="time" disabled /></td><td><input id="slot6End" type="time" disabled /></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <button id="resetScheduleFormBtn" class="btn-secondary btn-small">Reset Form</button>
+
+        <div class="small">
+          After Save, the form resets for the next schedule.
         </div>
       </div>
-      <div id="purgeStatus" class="status"></div>
-    </div>
+    </section>
+
+    <!-- EMAIL NOTIFICATIONS -->
+    <section id="screen-emails" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+        </div>
+        <div class="topbar-right">
+          <button id="emailRefreshBtn" class="btn-secondary btn-small">Refresh</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Emails</div>
+            <h2 class="card-title">Email Notifications</h2>
+            <p class="card-subtitle">Not restricted to Select Devices & Users. Pick a user + one of their devices.</p>
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="emailUserSelect">Select User</label>
+            <select id="emailUserSelect">
+              <option value="">-- Select a user --</option>
+            </select>
+          </div>
+          <div>
+            <label for="emailDeviceSelect">Select Device</label>
+            <select id="emailDeviceSelect">
+              <option value="">-- Select a device --</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="emailLoadBtn" class="btn-secondary btn-small">Load</button>
+        <div id="emailStatus" class="status"></div>
+
+        <div class="section-divider"></div>
+
+        <h3 style="margin: 4px 0 6px; font-size: 15px;">Subscriptions for Selected User + Device</h3>
+        <label for="emailEventTypesInput">Event Types (comma-separated)</label>
+        <input id="emailEventTypesInput" type="text" placeholder="e.g. GATE_FORCED_OPEN,GATE_OPEN_TOO_LONG,TAMPER_OPENED" />
+        <button id="emailSaveBtn" class="btn-small">Save</button>
+
+        <div class="small">
+          If user/device aren’t compatible (user not enrolled on device), the backend may refuse.
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="screen-reports" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Audit</div>
+            <h2 class="card-title">Reports / Audit Trail</h2>
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="reportDeviceSelect">Device</label>
+            <select id="reportDeviceSelect">
+              <option value="">-- Any device --</option>
+            </select>
+          </div>
+          <div>
+            <label for="reportUserIdInput">User ID (optional)</label>
+            <input id="reportUserIdInput" type="text" placeholder="u_..." />
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="reportFromDate">From date</label>
+            <input id="reportFromDate" type="date" />
+          </div>
+          <div>
+            <label for="reportToDate">To date</label>
+            <input id="reportToDate" type="date" />
+          </div>
+        </div>
+
+        <button id="runReportBtn">Run</button>
+        <button id="downloadReportCsvBtn" class="btn-secondary btn-small">Download CSV</button>
+        <div id="reportStatus" class="status"></div>
+
+        <table id="reportEventsTable">
+          <thead>
+            <tr>
+              <th>Time (UTC)</th>
+              <th>Device</th>
+              <th>User</th>
+              <th>Event</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LOGS -->
+    <section id="screen-logs" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+        </div>
+        <div class="topbar-right">
+          <button id="logsReloadBtn" class="btn-secondary btn-small">Refresh</button>
+          <button id="logsEditBtn" class="btn-secondary btn-small">Edit</button>
+          <button id="logsSaveBtn" class="btn-small" disabled>Save</button>
+        </div>
+      </div>
+
+      <div id="logsCard" class="card view-mode">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Logging</div>
+            <h2 class="card-title">Logs</h2>
+            <p class="card-subtitle">Tick to include/exclude from logging for each event type.</p>
+          </div>
+        </div>
+
+        <div id="logsStatus" class="status"></div>
+
+        <div class="whitebox">
+          <div class="small" style="color:#1c3b4f;">
+            This page calls <code>GET/PUT /log-settings</code>.
+            If your backend uses a different endpoint, tell me and I’ll wire it.
+          </div>
+        </div>
+
+        <div id="logEventList"></div>
+      </div>
+    </section>
+
+    <!-- RECENT EVENTS -->
+    <section id="screen-events" class="screen">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn-secondary btn-small" data-back>← Back</button>
+          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+        </div>
+        <div class="topbar-right">
+          <button id="eventsRefreshBtn" class="btn-secondary btn-small">Refresh</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Monitoring</div>
+            <h2 class="card-title">Recent Events</h2>
+            <p class="card-subtitle">Shows logged events (up to latest limit). Purge button requires backend support.</p>
+          </div>
+        </div>
+
+        <div class="two-column">
+          <div>
+            <label for="eventsDeviceFilterSelect">Device (optional filter)</label>
+            <select id="eventsDeviceFilterSelect">
+              <option value="">-- Any device --</option>
+            </select>
+          </div>
+          <div>
+            <label for="eventsLimitInput">Limit</label>
+            <input id="eventsLimitInput" type="number" min="10" max="5000" value="200" />
+          </div>
+        </div>
+
+        <div class="inline-actions">
+          <button id="eventsLoadBtn" class="btn-secondary btn-small">Load</button>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="two-column">
+          <div>
+            <label for="purgeDaysInput">Purge events older than (days)</label>
+            <input id="purgeDaysInput" type="number" min="1" max="3650" value="90" />
+          </div>
+          <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;">
+            <button id="purgeBtn" class="btn-danger btn-small">Purge</button>
+            <div class="small">Calls <code>POST /events/purge</code> if implemented.</div>
+          </div>
+        </div>
+
+        <div id="eventsStatus" class="status"></div>
+
+        <table id="recentEventsTable">
+          <thead>
+            <tr>
+              <th>Time (UTC)</th>
+              <th>Device</th>
+              <th>User</th>
+              <th>Event</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
 
   </div>
 
-<script>
-  let apiKey = "";
-  let selectedDeviceId = "";
-  let allSchedules = [];
-  let editingUserId = null;
-  let editingScheduleId = null;
-  let deviceEventsPollTimer = null;
+  <script>
+    // ------------------------------
+    // Global state
+    // ------------------------------
+    let apiKey = localStorage.getItem("geata_admin_api_key") || "";
+    let selectedDeviceId = localStorage.getItem("geata_admin_selected_device") || "";
+    let allDevices = [];
+    let allUsers = [];
+    let allSchedules = [];
 
-  function setStatus(el, msg, isError) {
-    if (!el) return;
-    el.textContent = msg || "";
-    el.className = "status" + (isError ? " error" : " ok");
-  }
+    let editingUserId = null;
+    let editingUserDevices = []; // array of {deviceId, role}
+    let preselectEmail = { userId: null, deviceId: null };
 
-  function getHeadersJson() {
-    const headers = { "Content-Type": "application/json" };
-    if (apiKey) headers["x-api-key"] = apiKey;
-    return headers;
-  }
+    // Log types (adjust if your backend supports more)
+    const LOGGABLE_EVENTS = [
+      "OPEN_REQUESTED",
+      "AUX1_REQUESTED",
+      "AUX2_REQUESTED",
+      "CMD_COMPLETED",
+      "GATE_OPENED",
+      "GATE_CLOSED",
+      "GATE_FORCED_OPEN",
+      "DOOR_FORCED_OPEN",
+      "GATE_OPEN_TOO_LONG",
+      "TAMPER_OPENED",
+      "ENGINEER_MODE_ON",
+      "ENGINEER_MODE_OFF",
+      "ENGINEER_MODE_TIMEOUT"
+    ];
 
-  async function fetchJson(url, opts) {
-    const res = await fetch(url, opts);
-    const data = await res.json().catch(() => ({}));
-    return { res, data };
-  }
+    // ------------------------------
+    // Helpers
+    // ------------------------------
+    function $(id) { return document.getElementById(id); }
 
-  function dayName(d) {
-    return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d] || "?";
-  }
-
-  function describeSlots(slots) {
-    if (!slots || slots.length === 0) return "No slots (no access)";
-    return slots.map(function (s) {
-      var days = Array.isArray(s.daysOfWeek) ? s.daysOfWeek : [];
-      var dayStr = days.length ? days.map(dayName).join(",") : "All days";
-      return dayStr + " " + (s.start || "") + "-" + (s.end || "");
-    }).join(" | ");
-  }
-
-  function parseDaysString(str) {
-    var result = [];
-    var s = (str || "").trim();
-    if (!s) return [];
-    var parts = s.split(",");
-    parts.forEach(function (part) {
-      var t = part.trim();
-      if (!t) return;
-      if (t.indexOf("-") !== -1) {
-        var ab = t.split("-");
-        var a = parseInt(ab[0].trim(), 10);
-        var b = parseInt(ab[1].trim(), 10);
-        if (!isNaN(a) && !isNaN(b)) {
-          var step = a <= b ? 1 : -1;
-          for (var d = a; step > 0 ? d <= b : d >= b; d += step) {
-            if (d >= 0 && d <= 6 && result.indexOf(d) === -1) result.push(d);
-          }
-        }
-      } else {
-        var n = parseInt(t, 10);
-        if (!isNaN(n) && n >= 0 && n <= 6 && result.indexOf(n) === -1) result.push(n);
+    function setStatus(el, msg, isError, autoClearMs = 20000) {
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = "status" + (isError ? " error" : " ok");
+      if (!isError && msg) {
+        const token = Date.now().toString();
+        el.dataset._token = token;
+        setTimeout(() => {
+          if (el.dataset._token === token) el.textContent = "";
+        }, autoClearMs);
       }
-    });
-    result.sort(function (a,b) { return a - b; });
-    return result;
-  }
-
-  function updateSelectedDeviceLabels(selectedDeviceSelect) {
-    var labelText = "None selected";
-    if (selectedDeviceSelect) {
-      var opt = selectedDeviceSelect.options[selectedDeviceSelect.selectedIndex];
-      if (opt && opt.value) labelText = opt.textContent;
     }
-    [
-      "selectedDeviceText",
-      "selectedDeviceTextAttach",
-      "selectedDeviceTextCsv",
-      "selectedDeviceTextIo",
-      "selectedDeviceTextEvents",
-      "selectedDeviceTextDirectory",
-      "selectedDeviceTextNotify",
-      "selectedDeviceTextSettings"
-    ].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.textContent = labelText;
-    });
-  }
 
-  function startDeviceEventsPolling(selectedDeviceSelect) {
-    if (deviceEventsPollTimer) clearInterval(deviceEventsPollTimer);
-    if (!selectedDeviceId) return;
-    deviceEventsPollTimer = setInterval(function () {
-      loadDeviceEvents(selectedDeviceId);
-    }, 5000);
-    updateSelectedDeviceLabels(selectedDeviceSelect);
-  }
-
-  function stopDeviceEventsPolling() {
-    if (deviceEventsPollTimer) {
-      clearInterval(deviceEventsPollTimer);
-      deviceEventsPollTimer = null;
+    function headersJson() {
+      const h = { "Content-Type": "application/json" };
+      if (apiKey) h["x-api-key"] = apiKey;
+      return h;
     }
-  }
 
-  // Duration parse: "HH:MM" -> seconds
-  function parseHHMMToSeconds(s) {
-    const t = String(s || "").trim();
-    if (!t) return null;
-    const m = t.match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) return null;
-    const hh = parseInt(m[1], 10);
-    const mm = parseInt(m[2], 10);
-    if (isNaN(hh) || isNaN(mm)) return null;
-    return hh * 3600 + mm * 60;
-  }
-
-  function secondsToHHMM(sec) {
-    if (sec == null || isNaN(sec)) return "";
-    sec = Math.max(0, Number(sec));
-    const hh = Math.floor(sec / 3600);
-    const mm = Math.floor((sec % 3600) / 60);
-    const pad = n => (n < 10 ? "0" + n : "" + n);
-    return pad(hh) + ":" + pad(mm);
-  }
-
-  // ===== Notifications =====
-  const EVENT_TYPES = [
-    "*",
-    "OPEN_REQUESTED",
-    "AUX1_REQUESTED",
-    "AUX2_REQUESTED",
-    "CMD_COMPLETED",
-    "GATE_OPENED",
-    "GATE_CLOSED",
-    "GATE_FORCED_OPEN",
-    "GATE_OPEN_TOO_LONG",
-    "DOOR_FORCED_OPEN",
-    "TAMPER_OPENED",
-    "ENGINEER_MODE_ON",
-    "ENGINEER_MODE_TIMEOUT",
-    "ENGINEER_MODE_OFF"
-  ];
-
-  function buildNotifyCheckboxes() {
-    var wrap = document.getElementById("notifyEventsWrap");
-    if (!wrap) return;
-    wrap.innerHTML = "";
-    EVENT_TYPES.forEach(function (ev) {
-      var row = document.createElement("div");
-      row.className = "check-item";
-      var cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.dataset.ev = ev;
-      cb.id = "ev_" + ev;
-
-      var lab = document.createElement("label");
-      lab.htmlFor = cb.id;
-      lab.textContent = ev;
-
-      row.appendChild(cb);
-      row.appendChild(lab);
-      wrap.appendChild(row);
-    });
-  }
-
-  function getSelectedEventTypes() {
-    var wrap = document.getElementById("notifyEventsWrap");
-    if (!wrap) return [];
-    var cbs = wrap.querySelectorAll("input[type=checkbox]:checked");
-    return Array.prototype.map.call(cbs, function (cb) { return cb.dataset.ev; });
-  }
-
-  async function loadDeviceNotifications(deviceId) {
-    var tbody = document.querySelector("#notifyTable tbody");
-    var status = document.getElementById("notifyStatus");
-    if (!tbody || !status) return;
-    tbody.innerHTML = "";
-    setStatus(status, "Loading notifications...", false);
-
-    try {
-      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/notifications", {
-        method: "GET",
-        headers: getHeadersJson()
+    async function apiJson(path, opts = {}) {
+      const res = await fetch(path, {
+        method: opts.method || "GET",
+        headers: opts.headers || headersJson(),
+        body: opts.body
       });
+      const text = await res.text().catch(() => "");
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+      if (!res.ok) {
+        const msg = (data && data.error) ? data.error : (typeof data === "string" ? data : ("HTTP " + res.status));
+        const err = new Error(msg);
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    }
 
-      if (!out.res.ok) {
-        setStatus(status, (out.data && out.data.error) ? out.data.error : ("HTTP " + out.res.status), true);
+    function fillDeviceSelect(selectEl, includeBlank = true, blankText = "-- Select a device --") {
+      if (!selectEl) return;
+      const current = selectEl.value;
+      selectEl.innerHTML = "";
+      if (includeBlank) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = blankText;
+        selectEl.appendChild(opt);
+      }
+      allDevices.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.id;
+        opt.textContent = `${d.id} – ${d.name}`;
+        selectEl.appendChild(opt);
+      });
+      if (current && allDevices.some(d => d.id === current)) selectEl.value = current;
+    }
+
+    function fillUserSelect(selectEl, users = null, includeBlank = true, blankText = "-- Select a user --") {
+      if (!selectEl) return;
+      const current = selectEl.value;
+      const list = users || allUsers;
+      selectEl.innerHTML = "";
+      if (includeBlank) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = blankText;
+        selectEl.appendChild(opt);
+      }
+      list.forEach(u => {
+        const label = `${u.name || "(no name)"} ${u.email ? "· " + u.email : ""} ${u.phone ? "· " + u.phone : ""} [${u.id}]`;
+        const opt = document.createElement("option");
+        opt.value = u.id;
+        opt.textContent = label;
+        selectEl.appendChild(opt);
+      });
+      if (current && list.some(u => u.id === current)) selectEl.value = current;
+    }
+
+    function describeUserDevices(devices) {
+      if (!devices || !devices.length) return [];
+      return devices.map(d => ({ deviceId: d.deviceId, role: d.role || "operator" }));
+    }
+
+    function updateDeviceContextLabels() {
+      const selectedDeviceSelect = $("selectedDeviceSelect");
+      const txt = $("selectedDeviceText");
+      const txt2 = $("selectedDeviceTextUsers");
+      let label = "None selected";
+      if (selectedDeviceSelect && selectedDeviceSelect.value) {
+        const opt = selectedDeviceSelect.options[selectedDeviceSelect.selectedIndex];
+        if (opt) label = opt.textContent;
+      }
+      if (txt) txt.textContent = label;
+      if (txt2) txt2.textContent = label;
+    }
+
+    // ------------------------------
+    // Screen navigation
+    // ------------------------------
+    const navStack = ["screen-home"];
+
+    function showScreen(screenId, pushHistory = true) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      const el = $(screenId);
+      if (el) el.classList.add("active");
+
+      $("homeHeader").style.display = (screenId === "screen-home") ? "block" : "none";
+
+      // Device context bar only for screen-device-users
+      const needsContext = el && el.getAttribute("data-show-context") === "true";
+      $("deviceContextBar").classList.toggle("active", !!needsContext);
+
+      if (pushHistory) navStack.push(screenId);
+
+      // screen-specific refresh hooks
+      if (screenId === "screen-emails" && preselectEmail.userId) {
+        // apply once, then clear
+        $("emailUserSelect").value = preselectEmail.userId;
+        onEmailUserChanged();
+        if (preselectEmail.deviceId) $("emailDeviceSelect").value = preselectEmail.deviceId;
+        preselectEmail = { userId: null, deviceId: null };
+      }
+    }
+
+    function goBack() {
+      if (navStack.length <= 1) {
+        showScreen("screen-home", true);
         return;
       }
+      navStack.pop();
+      const prev = navStack[navStack.length - 1] || "screen-home";
+      showScreen(prev, false);
+    }
 
-      (out.data || []).forEach(function (row) {
-        var tr = document.createElement("tr");
-        var tdName = document.createElement("td");
-        var tdEmail = document.createElement("td");
-        var tdTypes = document.createElement("td");
-        tdName.textContent = row.name || row.userId || "";
-        tdEmail.textContent = row.email || "";
-        tdTypes.textContent = (row.eventTypes || []).join(", ");
-        tr.appendChild(tdName);
-        tr.appendChild(tdEmail);
-        tr.appendChild(tdTypes);
+    function goHome() {
+      navStack.length = 0;
+      navStack.push("screen-home");
+      showScreen("screen-home", false);
+    }
+
+    // ------------------------------
+    // Data loading
+    // ------------------------------
+    async function loadDevices() {
+      const devicesStatus = $("devicesStatus");
+      try {
+        const data = await apiJson("/devices");
+        allDevices = Array.isArray(data) ? data : [];
+        // fill all device selects
+        fillDeviceSelect($("selectedDeviceSelect"), true, "-- Select a device --");
+        fillDeviceSelect($("deviceSettingsSelect"));
+        fillDeviceSelect($("ioDeviceSelect"));
+        fillDeviceSelect($("directoryDeviceSelect"));
+        fillDeviceSelect($("attachDeviceSelect"));
+        fillDeviceSelect($("csvDeviceSelect"));
+        fillDeviceSelect($("reportDeviceSelect"), true, "-- Any device --");
+        fillDeviceSelect($("emailDeviceSelect"));
+        fillDeviceSelect($("eventsDeviceFilterSelect"), true, "-- Any device --");
+
+        // restore device context selection
+        if (selectedDeviceId && allDevices.some(d => d.id === selectedDeviceId)) {
+          $("selectedDeviceSelect").value = selectedDeviceId;
+        } else {
+          selectedDeviceId = $("selectedDeviceSelect").value || "";
+        }
+        updateDeviceContextLabels();
+
+        if (devicesStatus) setStatus(devicesStatus, `Loaded ${allDevices.length} devices`, false);
+      } catch (e) {
+        if (devicesStatus) setStatus(devicesStatus, "Error loading devices: " + e.message, true);
+      }
+    }
+
+    async function loadUsers(query = null) {
+      const status = $("userSearchStatus");
+      try {
+        const url = query ? ("/users?q=" + encodeURIComponent(query)) : "/users";
+        const data = await apiJson(url);
+        allUsers = Array.isArray(data) ? data : [];
+        // fill user selects used elsewhere
+        fillUserSelect($("ioUserSelect"));
+        fillUserSelect($("emailUserSelect"));
+        if (status && !query) setStatus(status, `Loaded ${allUsers.length} users`, false);
+      } catch (e) {
+        if (status && !query) setStatus(status, "Error loading users: " + e.message, true);
+      }
+    }
+
+    async function loadSchedules() {
+      const scheduleStatus = $("scheduleStatus");
+      try {
+        const data = await apiJson("/schedules");
+        allSchedules = Array.isArray(data) ? data : [];
+        rebuildAttachUserScheduleOptions();
+        rebuildDeviceUserScheduleSelects();
+        if (scheduleStatus) setStatus(scheduleStatus, `Loaded ${allSchedules.length} schedules`, false);
+      } catch (e) {
+        if (scheduleStatus) setStatus(scheduleStatus, "Error loading schedules: " + e.message, true);
+      }
+    }
+
+    // ------------------------------
+    // AUTH
+    // ------------------------------
+    function initAuthUI() {
+      $("apiKeyInput").value = apiKey || "";
+      $("setApiKeyBtn").addEventListener("click", () => {
+        apiKey = $("apiKeyInput").value.trim();
+        localStorage.setItem("geata_admin_api_key", apiKey);
+        setStatus($("apiKeyStatus"), apiKey ? "API key saved" : "API key cleared", false);
+      });
+      $("clearApiKeyBtn").addEventListener("click", () => {
+        apiKey = "";
+        $("apiKeyInput").value = "";
+        localStorage.removeItem("geata_admin_api_key");
+        setStatus($("apiKeyStatus"), "API key cleared", false);
+      });
+    }
+
+    // ------------------------------
+    // DEVICES
+    // ------------------------------
+    async function renderDevicesTable() {
+      const tbody = document.querySelector("#devicesTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      allDevices.forEach(d => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${d.id}</td><td>${d.name || ""}</td>`;
         tbody.appendChild(tr);
       });
-
-      setStatus(status, "Loaded " + (out.data ? out.data.length : 0) + " subscriptions", false);
-    } catch (err) {
-      console.error(err);
-      setStatus(status, "Error loading notifications", true);
     }
-  }
 
-  async function saveUserNotifications(deviceId, userId, eventTypes) {
-    var status = document.getElementById("notifyStatus");
-    setStatus(status, "Saving notifications...", false);
-
-    try {
-      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId) + "/notifications", {
-        method: "PUT",
-        headers: getHeadersJson(),
-        body: JSON.stringify({ eventTypes: eventTypes })
+    function initDevicesUI() {
+      $("refreshDevicesBtn").addEventListener("click", async () => {
+        await loadDevices();
+        await renderDevicesTable();
       });
 
-      if (!out.res.ok) {
-        setStatus(status, (out.data && out.data.error) ? out.data.error : ("HTTP " + out.res.status), true);
-        return;
-      }
-
-      setStatus(status, "Saved", false);
-      await loadDeviceNotifications(deviceId);
-    } catch (err) {
-      console.error(err);
-      setStatus(status, "Error saving notifications", true);
-    }
-  }
-
-  // ===== Device Settings (expects backend endpoints) =====
-  async function loadDeviceSettings(deviceId) {
-    var st = document.getElementById("deviceSettingsStatus");
-    setStatus(st, "Loading device settings...", false);
-
-    try {
-      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/settings", {
-        method: "GET",
-        headers: getHeadersJson()
-      });
-
-      if (!out.res.ok) {
-        setStatus(st, (out.data && out.data.error) ? out.data.error : ("Not implemented (HTTP " + out.res.status + ")"), true);
-        return;
-      }
-
-      var s = out.data || {};
-
-      document.getElementById("aux1ModeSelect").value = s.aux1Mode || "relay";
-      document.getElementById("supervisorEmailInput").value = s.supervisorEmail || "";
-      document.getElementById("engineerEmailInput").value = s.engineerEmail || "";
-
-      document.getElementById("gateAjarWarnInput").value = secondsToHHMM(s.gateAjarWarnSec);
-      document.getElementById("gateAjarEmailInput").value = secondsToHHMM(s.gateAjarEmailSec);
-      document.getElementById("engineerModeMaxInput").value = secondsToHHMM(s.engineerModeMaxSec);
-
-      document.getElementById("emailOnEngineerModeEnable").checked = !!s.emailOnEngineerModeEnable;
-      document.getElementById("emailOnEngineerModeTimeoutEnable").checked = !!s.emailOnEngineerModeTimeoutEnable;
-
-      document.getElementById("tamperEmailSupervisorEnable").checked = !!s.tamperEmailSupervisorEnable;
-      document.getElementById("tamperEmailEngineerEnable").checked = !!s.tamperEmailEngineerEnable;
-      document.getElementById("tamperRelay3Enable").checked = !!s.tamperRelay3Enable;
-
-      document.getElementById("forcedGateEnable").checked = !!s.forcedGateEnable;
-      document.getElementById("forcedDoorEnable").checked = !!s.forcedDoorEnable;
-
-      setStatus(st, "Loaded settings", false);
-    } catch (err) {
-      console.error(err);
-      setStatus(st, "Error loading settings", true);
-    }
-  }
-
-  async function saveDeviceSettings(deviceId) {
-    var st = document.getElementById("deviceSettingsStatus");
-
-    const payload = {
-      aux1Mode: document.getElementById("aux1ModeSelect").value,
-      supervisorEmail: document.getElementById("supervisorEmailInput").value.trim(),
-      engineerEmail: document.getElementById("engineerEmailInput").value.trim(),
-
-      gateAjarWarnSec: parseHHMMToSeconds(document.getElementById("gateAjarWarnInput").value),
-      gateAjarEmailSec: parseHHMMToSeconds(document.getElementById("gateAjarEmailInput").value),
-      engineerModeMaxSec: parseHHMMToSeconds(document.getElementById("engineerModeMaxInput").value),
-
-      emailOnEngineerModeEnable: document.getElementById("emailOnEngineerModeEnable").checked,
-      emailOnEngineerModeTimeoutEnable: document.getElementById("emailOnEngineerModeTimeoutEnable").checked,
-
-      tamperEmailSupervisorEnable: document.getElementById("tamperEmailSupervisorEnable").checked,
-      tamperEmailEngineerEnable: document.getElementById("tamperEmailEngineerEnable").checked,
-      tamperRelay3Enable: document.getElementById("tamperRelay3Enable").checked,
-
-      forcedGateEnable: document.getElementById("forcedGateEnable").checked,
-      forcedDoorEnable: document.getElementById("forcedDoorEnable").checked
-    };
-
-    // Basic validation for HH:MM fields
-    const bad =
-      (document.getElementById("gateAjarWarnInput").value.trim() && payload.gateAjarWarnSec == null) ||
-      (document.getElementById("gateAjarEmailInput").value.trim() && payload.gateAjarEmailSec == null) ||
-      (document.getElementById("engineerModeMaxInput").value.trim() && payload.engineerModeMaxSec == null);
-
-    if (bad) {
-      setStatus(st, "Invalid time format. Use HH:MM (e.g. 00:05).", true);
-      return;
-    }
-
-    setStatus(st, "Saving device settings...", false);
-
-    try {
-      var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/settings", {
-        method: "PUT",
-        headers: getHeadersJson(),
-        body: JSON.stringify(payload)
-      });
-
-      if (!out.res.ok) {
-        setStatus(st, (out.data && out.data.error) ? out.data.error : ("Not implemented (HTTP " + out.res.status + ")"), true);
-        return;
-      }
-
-      setStatus(st, "Saved settings", false);
-    } catch (err) {
-      console.error(err);
-      setStatus(st, "Error saving settings", true);
-    }
-  }
-
-  // ===== Purge logs (expects backend endpoint) =====
-  async function purgeEventsOlderThan(days) {
-    var st = document.getElementById("purgeStatus");
-    if (!days || days < 1) {
-      setStatus(st, "Enter a valid number of days", true);
-      return;
-    }
-    if (!window.confirm("Permanently delete events older than " + days + " days?")) return;
-
-    setStatus(st, "Purging...", false);
-
-    try {
-      var out = await fetchJson("/admin/purge-events", {
-        method: "POST",
-        headers: getHeadersJson(),
-        body: JSON.stringify({ olderThanDays: days })
-      });
-
-      if (!out.res.ok) {
-        setStatus(st, (out.data && out.data.error) ? out.data.error : ("Not implemented (HTTP " + out.res.status + ")"), true);
-        return;
-      }
-
-      setStatus(st, "Purge complete", false);
-    } catch (err) {
-      console.error(err);
-      setStatus(st, "Error purging events", true);
-    }
-  }
-
-  // ===== Existing page logic =====
-  window.addEventListener("load", function () {
-    buildNotifyCheckboxes();
-
-    var apiKeyInput = document.getElementById("apiKeyInput");
-    var setApiKeyBtn = document.getElementById("setApiKeyBtn");
-    var apiKeyStatus = document.getElementById("apiKeyStatus");
-
-    var refreshDevicesBtn = document.getElementById("refreshDevicesBtn");
-    var devicesTableBody = document.querySelector("#devicesTable tbody");
-    var devicesStatus = document.getElementById("devicesStatus");
-    var newDeviceIdInput = document.getElementById("newDeviceId");
-    var newDeviceNameInput = document.getElementById("newDeviceName");
-    var addDeviceBtn = document.getElementById("addDeviceBtn");
-    var addDeviceStatus = document.getElementById("addDeviceStatus");
-    var selectedDeviceSelect = document.getElementById("selectedDeviceSelect");
-
-    var deviceUsersTableBody = document.querySelector("#deviceUsersTable tbody");
-    var deviceUsersStatus = document.getElementById("deviceUsersStatus");
-
-    var userNameInput = document.getElementById("userNameInput");
-    var userEmailInput = document.getElementById("userEmailInput");
-    var userPhoneInput = document.getElementById("userPhoneInput");
-    var userPasswordInput = document.getElementById("userPasswordInput");
-    var userRoleSelect = document.getElementById("userRoleSelect");
-    var existingUserIdInput = document.getElementById("existingUserIdInput");
-    var attachUserScheduleSelect = document.getElementById("attachUserScheduleSelect");
-    var attachUserBtn = document.getElementById("attachUserBtn");
-    var attachUserStatus = document.getElementById("attachUserStatus");
-
-    var csvFileInput = document.getElementById("csvFileInput");
-    var importCsvBtn = document.getElementById("importCsvBtn");
-    var exportCsvDeviceBtn = document.getElementById("exportCsvDeviceBtn");
-    var exportAllCsvBtn = document.getElementById("exportAllCsvBtn");
-    var csvImportStatus = document.getElementById("csvImportStatus");
-
-    var aux1Btn = document.getElementById("aux1Btn");
-    var aux2Btn = document.getElementById("aux2Btn");
-    var auxStatus = document.getElementById("auxStatus");
-
-    var simGateOpenedBtn = document.getElementById("simGateOpenedBtn");
-    var simGateClosedBtn = document.getElementById("simGateClosedBtn");
-    var simGateForcedBtn = document.getElementById("simGateForcedBtn");
-    var simGateAjarBtn = document.getElementById("simGateAjarBtn");
-    var simStatus = document.getElementById("simStatus");
-
-    var deviceEventsTableBody = document.querySelector("#deviceEventsTable tbody");
-    var refreshDeviceEventsBtn = document.getElementById("refreshDeviceEventsBtn");
-
-    var userSearchInput = document.getElementById("userSearchInput");
-    var searchUsersBtn = document.getElementById("searchUsersBtn");
-    var showAllUsersBtn = document.getElementById("showAllUsersBtn");
-    var userSearchStatus = document.getElementById("userSearchStatus");
-    var globalUsersTableBody = document.querySelector("#globalUsersTable tbody");
-    var attachSelectedUsersBtn = document.getElementById("attachSelectedUsersBtn");
-
-    var editUserTarget = document.getElementById("editUserTarget");
-    var editUserName = document.getElementById("editUserName");
-    var editUserEmail = document.getElementById("editUserEmail");
-    var editUserPhone = document.getElementById("editUserPhone");
-    var editUserPassword = document.getElementById("editUserPassword");
-    var saveUserChangesBtn = document.getElementById("saveUserChangesBtn");
-    var editUserStatus = document.getElementById("editUserStatus");
-
-    var schedulesTableBody = document.querySelector("#schedulesTable tbody");
-    var refreshSchedulesBtn = document.getElementById("refreshSchedulesBtn");
-    var scheduleStatus = document.getElementById("scheduleStatus");
-    var scheduleFormTitle = document.getElementById("scheduleFormTitle");
-    var scheduleNameInput = document.getElementById("scheduleNameInput");
-    var scheduleDescInput = document.getElementById("scheduleDescInput");
-    var saveScheduleBtn = document.getElementById("saveScheduleBtn");
-    var resetScheduleFormBtn = document.getElementById("resetScheduleFormBtn");
-
-    var reportDeviceSelect = document.getElementById("reportDeviceSelect");
-    var reportUserIdInput = document.getElementById("reportUserIdInput");
-    var reportFromDate = document.getElementById("reportFromDate");
-    var reportToDate = document.getElementById("reportToDate");
-    var runReportBtn = document.getElementById("runReportBtn");
-    var downloadReportCsvBtn = document.getElementById("downloadReportCsvBtn");
-    var reportStatus = document.getElementById("reportStatus");
-    var reportEventsTableBody = document.querySelector("#reportEventsTable tbody");
-
-    var notifyUserSelect = document.getElementById("notifyUserSelect");
-    var refreshNotificationsBtn = document.getElementById("refreshNotificationsBtn");
-    var saveNotificationsBtn = document.getElementById("saveNotificationsBtn");
-
-    var loadDeviceSettingsBtn = document.getElementById("loadDeviceSettingsBtn");
-    var saveDeviceSettingsBtn = document.getElementById("saveDeviceSettingsBtn");
-
-    var purgeEventsBtn = document.getElementById("purgeEventsBtn");
-    var purgeOlderThanDays = document.getElementById("purgeOlderThanDays");
-    var purgeStatus = document.getElementById("purgeStatus");
-
-    var slotInputs = [];
-    for (var i = 1; i <= 6; i++) {
-      slotInputs.push({
-        days:  document.getElementById("slot" + i + "Days"),
-        start: document.getElementById("slot" + i + "Start"),
-        end:   document.getElementById("slot" + i + "End")
-      });
-    }
-
-    // --- Admin key handler with auto-refresh ---
-    if (setApiKeyBtn) {
-      setApiKeyBtn.addEventListener("click", function () {
-        apiKey = apiKeyInput.value.trim();
-        const hasKey = !!apiKey;
-
-        setStatus(apiKeyStatus, hasKey ? "API key set" : "API key cleared", false);
-
-        // Clear previous errors from panels
-        setStatus(devicesStatus, "", false);
-        setStatus(deviceUsersStatus, "", false);
-        setStatus(csvImportStatus, "", false);
-        setStatus(auxStatus, "", false);
-        setStatus(simStatus, "", false);
-        setStatus(userSearchStatus, "", false);
-        setStatus(editUserStatus, "", false);
-        setStatus(scheduleStatus, "", false);
-        setStatus(reportStatus, "", false);
-        setStatus(document.getElementById("notifyStatus"), "", false);
-        setStatus(document.getElementById("deviceSettingsStatus"), "", false);
-        setStatus(purgeStatus, "", false);
-
-        if (hasKey) {
-          loadDevices();
-          loadUsers(null);
-          loadSchedules();
-
-          if (selectedDeviceId) {
-            loadDeviceUsers(selectedDeviceId);
-            loadDeviceEvents(selectedDeviceId);
-            loadDeviceNotifications(selectedDeviceId);
-          }
+      $("addDeviceBtn").addEventListener("click", async () => {
+        const id = $("newDeviceId").value.trim();
+        const name = $("newDeviceName").value.trim();
+        if (!id || !name) {
+          setStatus($("addDeviceStatus"), "Device ID and Name are required", true);
+          return;
+        }
+        try {
+          await apiJson("/devices", { method: "POST", body: JSON.stringify({ id, name }) });
+          setStatus($("addDeviceStatus"), "Saved device", false);
+          // reset form for next entry
+          $("newDeviceId").value = "";
+          $("newDeviceName").value = "";
+          await loadDevices();
+          await renderDevicesTable();
+        } catch (e) {
+          setStatus($("addDeviceStatus"), "Error: " + e.message, true);
         }
       });
     }
 
-    // ---- Devices ----
+    // ------------------------------
+    // SELECT DEVICES & USERS
+    // ------------------------------
     function rebuildAttachUserScheduleOptions() {
-      var sel = attachUserScheduleSelect;
+      const sel = $("attachUserScheduleSelect");
       if (!sel) return;
-      var currentValue = sel.value;
+      const current = sel.value;
       sel.innerHTML = "";
-      var defOpt = document.createElement("option");
-      defOpt.value = "";
-      defOpt.textContent = "24/7 (no schedule)";
-      sel.appendChild(defOpt);
-      allSchedules.forEach(function (s) {
-        var opt = document.createElement("option");
+      const def = document.createElement("option");
+      def.value = "";
+      def.textContent = "24/7 (no schedule)";
+      sel.appendChild(def);
+      allSchedules.forEach(s => {
+        const opt = document.createElement("option");
         opt.value = String(s.id);
         opt.textContent = s.name;
         sel.appendChild(opt);
       });
-      if (currentValue && allSchedules.some(function (s) { return String(s.id) === currentValue; })) {
-        sel.value = currentValue;
-      }
+      if (current && allSchedules.some(s => String(s.id) === current)) sel.value = current;
     }
 
-    async function loadDevices() {
-      if (!devicesTableBody || !devicesStatus || !selectedDeviceSelect) return;
-      devicesTableBody.innerHTML = "";
-      selectedDeviceSelect.innerHTML = '<option value="">-- Select a device --</option>';
-      if (reportDeviceSelect) reportDeviceSelect.innerHTML = '<option value="">-- Any device --</option>';
-      setStatus(devicesStatus, "Loading devices...", false);
-
-      try {
-        var out = await fetchJson("/devices", { method: "GET", headers: getHeadersJson() });
-        if (!out.res.ok) {
-          setStatus(devicesStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-
-        (out.data || []).forEach(function (d) {
-          var tr = document.createElement("tr");
-          var tdId = document.createElement("td");
-          var tdName = document.createElement("td");
-          tdId.textContent = d.id;
-          tdName.textContent = d.name;
-          tr.appendChild(tdId);
-          tr.appendChild(tdName);
-          devicesTableBody.appendChild(tr);
-
-          var opt = document.createElement("option");
-          opt.value = d.id;
-          opt.textContent = d.id + " – " + d.name;
-          selectedDeviceSelect.appendChild(opt);
-
-          if (reportDeviceSelect) {
-            var opt2 = document.createElement("option");
-            opt2.value = d.id;
-            opt2.textContent = d.id + " – " + d.name;
-            reportDeviceSelect.appendChild(opt2);
-          }
-        });
-
-        updateSelectedDeviceLabels(selectedDeviceSelect);
-        setStatus(devicesStatus, "Loaded " + (out.data ? out.data.length : 0) + " devices", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(devicesStatus, "Error loading devices", true);
-      }
-    }
-
-    if (refreshDevicesBtn) refreshDevicesBtn.addEventListener("click", function () { loadDevices(); });
-
-    if (addDeviceBtn) {
-      addDeviceBtn.addEventListener("click", async function () {
-        var id = newDeviceIdInput.value.trim();
-        var name = newDeviceNameInput.value.trim();
-        if (!id || !name) {
-          setStatus(addDeviceStatus, "Device ID and Name are required", true);
-          return;
-        }
-        setStatus(addDeviceStatus, "Creating device...", false);
-        try {
-          var out = await fetchJson("/devices", {
-            method: "POST",
-            headers: getHeadersJson(),
-            body: JSON.stringify({ id: id, name: name })
-          });
-          if (!out.res.ok) {
-            setStatus(addDeviceStatus, out.data.error || ("HTTP " + out.res.status), true);
-            return;
-          }
-          setStatus(addDeviceStatus, "Device created", false);
-          newDeviceIdInput.value = "";
-          newDeviceNameInput.value = "";
-          await loadDevices();
-        } catch (err) {
-          console.error(err);
-          setStatus(addDeviceStatus, "Error creating device", true);
-        }
-      });
-    }
-
-    if (selectedDeviceSelect) {
-      selectedDeviceSelect.addEventListener("change", function () {
-        selectedDeviceId = selectedDeviceSelect.value;
-
-        if (deviceUsersTableBody) deviceUsersTableBody.innerHTML = "";
-        if (deviceEventsTableBody) deviceEventsTableBody.innerHTML = "";
-
-        setStatus(deviceUsersStatus, "", false);
-        setStatus(auxStatus, "", false);
-        setStatus(simStatus, "", false);
-
-        updateSelectedDeviceLabels(selectedDeviceSelect);
-
-        if (selectedDeviceId) {
-          loadDeviceUsers(selectedDeviceId);
-          loadDeviceEvents(selectedDeviceId);
-          loadDeviceNotifications(selectedDeviceId);
-          startDeviceEventsPolling(selectedDeviceSelect);
-        } else {
-          stopDeviceEventsPolling();
-        }
-      });
+    function rebuildDeviceUserScheduleSelects() {
+      // no-op: selects are built per row when loading device users
     }
 
     async function loadDeviceUsers(deviceId) {
-      if (!deviceUsersTableBody || !deviceUsersStatus) return;
-      deviceUsersTableBody.innerHTML = "";
-      setStatus(deviceUsersStatus, "Loading users...", false);
+      const tbody = document.querySelector("#deviceUsersTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      if (!deviceId) {
+        setStatus($("deviceUsersStatus"), "Select a device in the Device Context bar", true);
+        return;
+      }
+
+      setStatus($("deviceUsersStatus"), "Loading users...", false);
 
       try {
-        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users", {
-          method: "GET",
-          headers: getHeadersJson()
-        });
+        const users = await apiJson(`/devices/${encodeURIComponent(deviceId)}/users`);
+        (users || []).forEach(u => {
+          const tr = document.createElement("tr");
 
-        if (!out.res.ok) {
-          setStatus(deviceUsersStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-
-        // Populate notification user dropdown from device users
-        if (notifyUserSelect) {
-          notifyUserSelect.innerHTML = '<option value="">-- Select a user on this device --</option>';
-          (out.data || []).forEach(function (u) {
-            var opt = document.createElement("option");
-            opt.value = u.userId;
-            opt.textContent = (u.name || u.userId) + (u.email ? (" <" + u.email + ">") : "");
-            notifyUserSelect.appendChild(opt);
-          });
-        }
-
-        (out.data || []).forEach(function (u) {
-          var tr = document.createElement("tr");
-          var tdId = document.createElement("td");
-          var tdName = document.createElement("td");
-          var tdEmail = document.createElement("td");
-          var tdPhone = document.createElement("td");
-          var tdRole = document.createElement("td");
-          var tdSchedule = document.createElement("td");
-          var tdRemove = document.createElement("td");
-
-          tdId.textContent = u.userId;
-          tdName.textContent = u.name || "";
-          tdEmail.textContent = u.email || "";
-          tdPhone.textContent = u.phone || "";
-          tdRole.textContent = u.role || "";
-
-          var sel = document.createElement("select");
-          var defOpt = document.createElement("option");
-          defOpt.value = "";
-          defOpt.textContent = "24/7 (no schedule)";
-          sel.appendChild(defOpt);
-
-          allSchedules.forEach(function (s) {
-            var opt = document.createElement("option");
+          const scheduleSelect = document.createElement("select");
+          const def = document.createElement("option");
+          def.value = "";
+          def.textContent = "24/7 (no schedule)";
+          scheduleSelect.appendChild(def);
+          allSchedules.forEach(s => {
+            const opt = document.createElement("option");
             opt.value = String(s.id);
             opt.textContent = s.name;
-            sel.appendChild(opt);
+            scheduleSelect.appendChild(opt);
+          });
+          if (u.scheduleId) scheduleSelect.value = String(u.scheduleId);
+
+          const btnSave = document.createElement("button");
+          btnSave.textContent = "Save";
+          btnSave.className = "btn-small";
+
+          const btnEdit = document.createElement("button");
+          btnEdit.textContent = "Edit";
+          btnEdit.className = "btn-secondary btn-small";
+
+          const btnRemove = document.createElement("button");
+          btnRemove.textContent = "Remove";
+          btnRemove.className = "btn-danger btn-small";
+
+          const scheduleCell = document.createElement("td");
+          scheduleCell.appendChild(scheduleSelect);
+
+          const actions = document.createElement("div");
+          actions.className = "inline-actions";
+          actions.appendChild(btnSave);
+          actions.appendChild(btnEdit);
+          actions.appendChild(btnRemove);
+          scheduleCell.appendChild(actions);
+
+          btnSave.addEventListener("click", async () => {
+            try {
+              const scheduleId = scheduleSelect.value || null;
+              await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(u.userId)}/schedule-assignment`, {
+                method: "PUT",
+                body: JSON.stringify({ scheduleId })
+              });
+              setStatus($("deviceUsersStatus"), "Saved schedule for user", false);
+            } catch (e) {
+              setStatus($("deviceUsersStatus"), "Error saving schedule: " + e.message, true);
+            }
           });
 
-          if (u.scheduleId) sel.value = String(u.scheduleId);
-
-          var saveBtn = document.createElement("button");
-          saveBtn.textContent = "Save";
-          saveBtn.className = "btn-small";
-          saveBtn.style.marginLeft = "6px";
-          saveBtn.addEventListener("click", function () {
-            var chosen = sel.value || null;
-            assignScheduleToUser(deviceId, u.userId, chosen);
+          btnEdit.addEventListener("click", async () => {
+            await openEditUser(u.userId);
+            showScreen("screen-edit-user");
           });
 
-          tdSchedule.appendChild(sel);
-          tdSchedule.appendChild(saveBtn);
-
-          var removeBtn = document.createElement("button");
-          removeBtn.textContent = "Remove";
-          removeBtn.className = "btn-danger btn-small";
-          removeBtn.addEventListener("click", function () {
-            removeUserFromDevice(deviceId, u.userId);
+          btnRemove.addEventListener("click", async () => {
+            if (!confirm(`Remove user ${u.userId} from device ${deviceId}?`)) return;
+            try {
+              await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(u.userId)}`, { method: "DELETE" });
+              setStatus($("deviceUsersStatus"), "Removed user from device", false);
+              await loadDeviceUsers(deviceId);
+            } catch (e) {
+              setStatus($("deviceUsersStatus"), "Error removing user: " + e.message, true);
+            }
           });
-          tdRemove.appendChild(removeBtn);
 
-          tr.appendChild(tdId);
-          tr.appendChild(tdName);
-          tr.appendChild(tdEmail);
-          tr.appendChild(tdPhone);
-          tr.appendChild(tdRole);
-          tr.appendChild(tdSchedule);
-          tr.appendChild(tdRemove);
-          deviceUsersTableBody.appendChild(tr);
+          tr.innerHTML = `
+            <td>${u.userId}</td>
+            <td>${u.name || ""}</td>
+            <td>${u.email || ""}</td>
+            <td>${u.phone || ""}</td>
+            <td>${u.role || ""}</td>
+          `;
+          tr.appendChild(scheduleCell);
+          tbody.appendChild(tr);
         });
 
-        setStatus(deviceUsersStatus, "Loaded " + (out.data ? out.data.length : 0) + " users for device", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(deviceUsersStatus, "Error loading device users", true);
+        setStatus($("deviceUsersStatus"), `Loaded ${users.length} users for device`, false);
+      } catch (e) {
+        setStatus($("deviceUsersStatus"), "Error: " + e.message, true);
       }
     }
 
-    async function removeUserFromDevice(deviceId, userId) {
-      if (!window.confirm("Remove user " + userId + " from device " + deviceId + "?")) return;
+    function initDeviceUsersUI() {
+      $("selectedDeviceSelect").addEventListener("change", async () => {
+        selectedDeviceId = $("selectedDeviceSelect").value || "";
+        localStorage.setItem("geata_admin_selected_device", selectedDeviceId);
+        updateDeviceContextLabels();
+        await loadDeviceUsers(selectedDeviceId);
+      });
+
+      $("refreshDeviceUsersBtn").addEventListener("click", async () => {
+        await loadDeviceUsers(selectedDeviceId);
+      });
+    }
+
+    // ------------------------------
+    // EDIT USER DETAILS
+    // ------------------------------
+    async function fetchUserById(userId) {
+      // Try /users/:id first, then fallback to /users?q=
       try {
-        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId), {
-          method: "DELETE",
-          headers: getHeadersJson()
-        });
-        if (!out.res.ok) {
-          setStatus(deviceUsersStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-        setStatus(deviceUsersStatus, "Removed user " + userId + " from device", false);
-        await loadDeviceUsers(deviceId);
-      } catch (err) {
-        console.error(err);
-        setStatus(deviceUsersStatus, "Error removing user", true);
+        return await apiJson(`/users/${encodeURIComponent(userId)}`);
+      } catch (e) {
+        const list = await apiJson(`/users?q=${encodeURIComponent(userId)}`);
+        if (Array.isArray(list)) return list.find(u => u.id === userId) || list[0] || null;
+        return null;
       }
     }
 
-    async function assignScheduleToUser(deviceId, userId, scheduleId) {
-      setStatus(deviceUsersStatus, "Saving schedule...", false);
+    async function openEditUser(userId) {
+      editingUserId = userId;
+      $("editUserIdBox").textContent = userId || "(none)";
+      $("editUserEmailDeviceSelect").innerHTML = `<option value="">-- Select one of the user’s devices --</option>`;
+      $("editUserDevicesPills").innerHTML = "";
+
       try {
-        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/users/" + encodeURIComponent(userId) + "/schedule-assignment", {
-          method: "PUT",
-          headers: getHeadersJson(),
-          body: JSON.stringify({ scheduleId: scheduleId })
-        });
-        if (!out.res.ok) {
-          setStatus(deviceUsersStatus, out.data.error || ("HTTP " + out.res.status), true);
+        const u = await fetchUserById(userId);
+        if (!u) {
+          setStatus($("editUserStatus"), "User not found", true);
           return;
         }
-        setStatus(deviceUsersStatus, "Schedule updated", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(deviceUsersStatus, "Error saving schedule", true);
-      }
-    }
 
-    if (attachUserBtn) {
-      attachUserBtn.addEventListener("click", async function () {
-        if (!selectedDeviceId) {
-          setStatus(attachUserStatus, "Select a device first", true);
-          return;
-        }
-        var name = userNameInput.value.trim();
-        var email = userEmailInput.value.trim();
-        var phone = userPhoneInput.value.trim();
-        var password = userPasswordInput.value;
-        var role = userRoleSelect.value || "operator";
-        var scheduleId = attachUserScheduleSelect.value || null;
-        var existingUserId = existingUserIdInput.value.trim();
+        $("editUserName").value = u.name || "";
+        $("editUserEmail").value = u.email || "";
+        $("editUserPhone").value = u.phone || "";
+        $("editUserPassword").value = "";
 
-        var body;
-        if (existingUserId) {
-          body = { userId: existingUserId, role: role };
+        editingUserDevices = describeUserDevices(u.devices || []);
+        if (editingUserDevices.length) {
+          editingUserDevices.forEach(d => {
+            const pill = document.createElement("span");
+            pill.className = "pill";
+            pill.textContent = `${d.deviceId} (${d.role})`;
+            $("editUserDevicesPills").appendChild(pill);
+
+            const opt = document.createElement("option");
+            opt.value = d.deviceId;
+            opt.textContent = d.deviceId;
+            $("editUserEmailDeviceSelect").appendChild(opt);
+          });
         } else {
-          if (!email && !phone) {
-            setStatus(attachUserStatus, "At least email or phone is required (or provide a User ID)", true);
-            return;
-          }
-          body = { name: name, email: email, phone: phone, password: password, role: role };
+          $("editUserDevicesPills").innerHTML = `<span class="small">No enrolled devices</span>`;
         }
 
-        setStatus(attachUserStatus, "Attaching user...", false);
+        setEditUserEditing(false);
+        setStatus($("editUserStatus"), "User loaded. Click Edit to modify.", false);
+      } catch (e) {
+        setStatus($("editUserStatus"), "Error loading user: " + e.message, true);
+      }
+    }
+
+    function setEditUserEditing(enabled) {
+      $("editUserName").disabled = !enabled;
+      $("editUserEmail").disabled = !enabled;
+      $("editUserPhone").disabled = !enabled;
+      $("editUserPassword").disabled = !enabled;
+      $("editUserSaveTopBtn").disabled = !enabled || !editingUserId;
+    }
+
+    function initEditUserUI() {
+      $("editUserEnableBtn").addEventListener("click", () => {
+        if (!editingUserId) {
+          setStatus($("editUserStatus"), "Pick a user first (User Lookup → Edit)", true);
+          return;
+        }
+        const enable = $("editUserName").disabled;
+        setEditUserEditing(enable);
+        setStatus($("editUserStatus"), enable ? "Edit enabled. Click Save." : "Edit disabled.", false);
+      });
+
+      $("editUserSaveTopBtn").addEventListener("click", async () => {
+        if (!editingUserId) return;
         try {
-          var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
-            method: "POST",
-            headers: getHeadersJson(),
-            body: JSON.stringify(body)
+          await apiJson(`/users/${encodeURIComponent(editingUserId)}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              name: $("editUserName").value.trim(),
+              email: $("editUserEmail").value.trim(),
+              phone: $("editUserPhone").value.trim(),
+              password: $("editUserPassword").value || ""
+            })
           });
-          if (!out.res.ok) {
-            setStatus(attachUserStatus, out.data.error || ("HTTP " + out.res.status), true);
-            return;
+          $("editUserPassword").value = "";
+          setEditUserEditing(false);
+          setStatus($("editUserStatus"), "Saved user changes", false);
+
+          // refresh global users cache for dropdowns
+          await loadUsers(null);
+        } catch (e) {
+          setStatus($("editUserStatus"), "Error saving user: " + e.message, true);
+        }
+      });
+
+      $("openEmailNotificationsBtn").addEventListener("click", () => {
+        if (!editingUserId) return;
+        const deviceId = $("editUserEmailDeviceSelect").value || "";
+        preselectEmail = { userId: editingUserId, deviceId };
+        showScreen("screen-emails");
+      });
+    }
+
+    // ------------------------------
+    // USER LOOKUP
+    // ------------------------------
+    async function renderUserLookupTable(users) {
+      const tbody = document.querySelector("#globalUsersTable tbody");
+      tbody.innerHTML = "";
+      users.forEach(u => {
+        const tr = document.createElement("tr");
+        const devicesTd = document.createElement("td");
+        if (u.devices && u.devices.length) {
+          u.devices.forEach(d => {
+            const pill = document.createElement("span");
+            pill.className = "pill";
+            pill.textContent = `${d.deviceId}(${d.role || "operator"})`;
+            devicesTd.appendChild(pill);
+          });
+        }
+
+        const tdSelect = document.createElement("td");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "userAttachCheckbox";
+        cb.dataset.userId = u.id;
+        tdSelect.appendChild(cb);
+
+        const tdEdit = document.createElement("td");
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.className = "btn-small";
+        editBtn.addEventListener("click", async () => {
+          await openEditUser(u.id);
+          showScreen("screen-edit-user");
+        });
+        tdEdit.appendChild(editBtn);
+
+        const tdDel = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.className = "btn-danger btn-small";
+        delBtn.addEventListener("click", async () => {
+          if (!confirm(`Delete user ${u.id} from all devices?`)) return;
+          try {
+            await apiJson(`/users/${encodeURIComponent(u.id)}`, { method: "DELETE" });
+            setStatus($("userSearchStatus"), "Deleted user", false);
+            await loadUsers(null);
+            await renderUserLookupTable(allUsers);
+          } catch (e) {
+            setStatus($("userSearchStatus"), "Error deleting user: " + e.message, true);
           }
-          var attachedUserId = out.data.userId || (out.data.user && out.data.user.id);
-          if (attachedUserId && scheduleId) {
-            await assignScheduleToUser(selectedDeviceId, attachedUserId, scheduleId);
+        });
+        tdDel.appendChild(delBtn);
+
+        tr.appendChild(tdSelect);
+        tr.innerHTML += `
+          <td>${u.id}</td>
+          <td>${u.name || ""}</td>
+          <td>${u.email || ""}</td>
+          <td>${u.phone || ""}</td>
+        `;
+        tr.appendChild(devicesTd);
+        tr.appendChild(tdEdit);
+        tr.appendChild(tdDel);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function initUserLookupUI() {
+      $("searchUsersBtn").addEventListener("click", async () => {
+        const q = $("userSearchInput").value.trim();
+        try {
+          const list = await apiJson(q ? `/users?q=${encodeURIComponent(q)}` : "/users");
+          setStatus($("userSearchStatus"), `Found ${list.length} users`, false);
+          await renderUserLookupTable(list);
+        } catch (e) {
+          setStatus($("userSearchStatus"), "Search error: " + e.message, true);
+        }
+      });
+
+      $("showAllUsersBtn").addEventListener("click", async () => {
+        $("userSearchInput").value = "";
+        await loadUsers(null);
+        setStatus($("userSearchStatus"), `Loaded ${allUsers.length} users`, false);
+        await renderUserLookupTable(allUsers);
+      });
+
+      $("attachSelectedUsersBtn").addEventListener("click", async () => {
+        const deviceId = $("directoryDeviceSelect").value;
+        if (!deviceId) {
+          setStatus($("userSearchStatus"), "Select a device first", true);
+          return;
+        }
+        const checked = document.querySelectorAll(".userAttachCheckbox:checked");
+        if (!checked.length) {
+          setStatus($("userSearchStatus"), "No users selected", true);
+          return;
+        }
+        const userIds = Array.from(checked).map(cb => cb.dataset.userId);
+
+        try {
+          for (const uid of userIds) {
+            await apiJson(`/devices/${encodeURIComponent(deviceId)}/users`, {
+              method: "POST",
+              body: JSON.stringify({ userId: uid, role: "operator" })
+            });
           }
-          setStatus(attachUserStatus, "User attached to device", false);
-          existingUserIdInput.value = "";
-          await loadDeviceUsers(selectedDeviceId);
-        } catch (err) {
-          console.error(err);
-          setStatus(attachUserStatus, "Error attaching user", true);
+          setStatus($("userSearchStatus"), `Attached ${userIds.length} users to ${deviceId}`, false);
+          checked.forEach(cb => cb.checked = false);
+
+          // refresh caches
+          await loadUsers(null);
+          await renderUserLookupTable(allUsers);
+        } catch (e) {
+          setStatus($("userSearchStatus"), "Attach error: " + e.message, true);
         }
       });
     }
 
-    // ---- CSV parsing / import / export ----
-    function parseCsv(text) {
-      var lines = text
-        .split(/\r?\n/)
-        .map(function (l) { return l.trim(); })
-        .filter(function (l) { return l.length > 0; });
+    // ------------------------------
+    // ADD USER TO DEVICE
+    // ------------------------------
+    function initAttachUserUI() {
+      $("attachUserBtn").addEventListener("click", async () => {
+        const deviceId = $("attachDeviceSelect").value;
+        if (!deviceId) {
+          setStatus($("attachUserStatus"), "Select a device first", true);
+          return;
+        }
 
-      if (lines.length === 0) return [];
-      var header = lines[0].split(",").map(function (h) { return h.trim().toLowerCase(); });
-      var nameIdx  = header.indexOf("name");
-      var emailIdx = header.indexOf("email");
-      var phoneIdx = header.indexOf("phone");
-      var roleIdx  = header.indexOf("role");
-      var rows = [];
-      for (var i = 1; i < lines.length; i++) {
-        var parts = lines[i].split(",").map(function (p) { return p.trim(); });
-        var row = {
-          name:  nameIdx  >= 0 ? (parts[nameIdx]  || "") : "",
-          email: emailIdx >= 0 ? (parts[emailIdx] || "") : "",
-          phone: phoneIdx >= 0 ? (parts[phoneIdx] || "") : "",
-          role:  roleIdx  >= 0 ? (parts[roleIdx]  || "") : ""
-        };
-        rows.push(row);
+        const existingUserId = $("existingUserIdInput").value.trim();
+        const name = $("userNameInput").value.trim();
+        const email = $("userEmailInput").value.trim();
+        const phone = $("userPhoneInput").value.trim();
+        const password = $("userPasswordInput").value;
+        const role = $("userRoleSelect").value || "operator";
+        const scheduleId = $("attachUserScheduleSelect").value || null;
+
+        let body;
+        if (existingUserId) {
+          body = { userId: existingUserId, role };
+        } else {
+          if (!email && !phone) {
+            setStatus($("attachUserStatus"), "Email or phone is required (or provide a User ID)", true);
+            return;
+          }
+          body = { name, email, phone, password, role };
+        }
+
+        try {
+          const data = await apiJson(`/devices/${encodeURIComponent(deviceId)}/users`, {
+            method: "POST",
+            body: JSON.stringify(body)
+          });
+
+          const attachedUserId = data.userId || (data.user && data.user.id) || existingUserId;
+          if (attachedUserId && scheduleId) {
+            await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(attachedUserId)}/schedule-assignment`, {
+              method: "PUT",
+              body: JSON.stringify({ scheduleId })
+            });
+          }
+
+          setStatus($("attachUserStatus"), "Saved user + attached to device", false);
+
+          // Reset form for next instance
+          $("userNameInput").value = "";
+          $("userEmailInput").value = "";
+          $("userPhoneInput").value = "";
+          $("userPasswordInput").value = "";
+          $("existingUserIdInput").value = "";
+          $("userRoleSelect").value = "operator";
+          $("attachUserScheduleSelect").value = "";
+
+          // Refresh caches
+          await loadUsers(null);
+        } catch (e) {
+          setStatus($("attachUserStatus"), "Error: " + e.message, true);
+        }
+      });
+    }
+
+    // ------------------------------
+    // IMPORT/EXPORT
+    // ------------------------------
+    function parseCsv(text) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return [];
+      const header = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const idx = (name) => header.indexOf(name);
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(",").map(p => p.trim());
+        rows.push({
+          name:  idx("name")  >= 0 ? (parts[idx("name")]  || "") : "",
+          email: idx("email") >= 0 ? (parts[idx("email")] || "") : "",
+          phone: idx("phone") >= 0 ? (parts[idx("phone")] || "") : "",
+          role:  idx("role")  >= 0 ? (parts[idx("role")]  || "") : ""
+        });
       }
       return rows;
     }
 
-    if (importCsvBtn) {
-      importCsvBtn.addEventListener("click", function () {
-        if (!selectedDeviceId) {
-          setStatus(csvImportStatus, "Select a device first", true);
+    function initCsvUI() {
+      $("importCsvBtn").addEventListener("click", () => {
+        const deviceId = $("csvDeviceSelect").value;
+        if (!deviceId) {
+          setStatus($("csvImportStatus"), "Select a device first", true);
           return;
         }
-        var file = csvFileInput.files[0];
+        const file = $("csvFileInput").files[0];
         if (!file) {
-          setStatus(csvImportStatus, "Choose a CSV file first", true);
+          setStatus($("csvImportStatus"), "Choose a CSV file", true);
           return;
         }
-        setStatus(csvImportStatus, "Reading CSV...", false);
-        var reader = new FileReader();
-        reader.onload = async function (e) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
           try {
-            var text = e.target.result;
-            var rows = parseCsv(text);
-            if (rows.length === 0) {
-              setStatus(csvImportStatus, "No data rows found in CSV", true);
+            const rows = parseCsv(e.target.result);
+            if (!rows.length) {
+              setStatus($("csvImportStatus"), "No rows found in CSV", true);
               return;
             }
-            setStatus(csvImportStatus, "Importing " + rows.length + " rows...", false);
-            var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/import", {
+            await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/import`, {
               method: "POST",
-              headers: getHeadersJson(),
-              body: JSON.stringify({ rows: rows })
+              body: JSON.stringify({ rows })
             });
-            if (!out.res.ok) {
-              setStatus(csvImportStatus, out.data.error || ("HTTP " + out.res.status), true);
-              return;
-            }
-            setStatus(csvImportStatus,
-              "Created " + out.data.created.length + " users, reused " + out.data.reused.length,
-              false
-            );
-            await loadDeviceUsers(selectedDeviceId);
+            setStatus($("csvImportStatus"), `Imported ${rows.length} rows`, false);
+
+            // reset file input for next import
+            $("csvFileInput").value = "";
           } catch (err) {
-            console.error(err);
-            setStatus(csvImportStatus, "Error importing CSV", true);
+            setStatus($("csvImportStatus"), "Import error: " + err.message, true);
           }
         };
         reader.readAsText(file);
       });
-    }
 
-    if (exportCsvDeviceBtn) {
-      exportCsvDeviceBtn.addEventListener("click", async function () {
-        if (!selectedDeviceId) {
-          setStatus(csvImportStatus, "Select a device first", true);
+      $("exportCsvDeviceBtn").addEventListener("click", async () => {
+        const deviceId = $("csvDeviceSelect").value;
+        if (!deviceId) {
+          setStatus($("csvImportStatus"), "Select a device first", true);
           return;
         }
-        setStatus(csvImportStatus, "Preparing device CSV...", false);
         try {
-          var res = await fetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/users/export", {
-            method: "GET",
-            headers: getHeadersJson()
-          });
-          if (!res.ok) {
-            var txt = await res.text();
-            setStatus(csvImportStatus, "Error exporting CSV: " + txt, true);
-            return;
-          }
-          var blob = await res.blob();
-          var url = window.URL.createObjectURL(blob);
-          var a = document.createElement("a");
+          const res = await fetch(`/devices/${encodeURIComponent(deviceId)}/users/export`, { headers: headersJson() });
+          if (!res.ok) throw new Error(await res.text());
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
           a.href = url;
-          a.download = "device-" + selectedDeviceId + "-users.csv";
+          a.download = `device-${deviceId}-users.csv`;
           document.body.appendChild(a);
           a.click();
           a.remove();
-          window.URL.revokeObjectURL(url);
-          setStatus(csvImportStatus, "Device CSV downloaded", false);
-        } catch (err) {
-          console.error(err);
-          setStatus(csvImportStatus, "Error exporting CSV", true);
+          URL.revokeObjectURL(url);
+          setStatus($("csvImportStatus"), "Downloaded device CSV", false);
+        } catch (e) {
+          setStatus($("csvImportStatus"), "Export error: " + e.message, true);
         }
       });
-    }
 
-    if (exportAllCsvBtn) {
-      exportAllCsvBtn.addEventListener("click", async function () {
-        setStatus(csvImportStatus, "Preparing global CSV...", false);
+      $("exportAllCsvBtn").addEventListener("click", async () => {
         try {
-          var res = await fetch("/users/export-csv", {
-            method: "GET",
-            headers: getHeadersJson()
-          });
-          if (!res.ok) {
-            var txt = await res.text();
-            setStatus(csvImportStatus, "Error exporting CSV: " + txt, true);
-            return;
-          }
-          var blob = await res.blob();
-          var url = window.URL.createObjectURL(blob);
-          var a = document.createElement("a");
+          const res = await fetch("/users/export-csv", { headers: headersJson() });
+          if (!res.ok) throw new Error(await res.text());
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
           a.href = url;
           a.download = "geata-users-devices.csv";
           document.body.appendChild(a);
           a.click();
           a.remove();
-          window.URL.revokeObjectURL(url);
-          setStatus(csvImportStatus, "Global CSV downloaded", false);
-        } catch (err) {
-          console.error(err);
-          setStatus(csvImportStatus, "Error exporting global CSV", true);
+          URL.revokeObjectURL(url);
+          setStatus($("csvImportStatus"), "Downloaded global CSV", false);
+        } catch (e) {
+          setStatus($("csvImportStatus"), "Export error: " + e.message, true);
         }
       });
     }
 
-    // ---- AUX test + simulate events ----
-    async function callAux(which) {
-      if (!selectedDeviceId) {
-        setStatus(auxStatus, "Select a device first", true);
-        return;
-      }
-      var path = (which === "aux1") ? "aux1-test" : "aux2-test";
-      setStatus(auxStatus, "Triggering " + which.toUpperCase() + " (admin test)...", false);
-      try {
-        var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/" + path, {
-          method: "POST",
-          headers: getHeadersJson(),
-          body: JSON.stringify({ durationMs: 1000 })
-        });
-        if (!out.res.ok) {
-          setStatus(auxStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-        setStatus(auxStatus, which.toUpperCase() + " command queued (id: " + out.data.id + ")", false);
-        await loadDeviceEvents(selectedDeviceId);
-      } catch (err) {
-        console.error(err);
-        setStatus(auxStatus, "Error sending AUX command", true);
-      }
+    // ------------------------------
+    // SCHEDULES
+    // ------------------------------
+    function dayName(d) { return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d] || "?"; }
+
+    function describeSlots(slots) {
+      if (!slots || slots.length === 0) return "No slots";
+      return slots.map(s => {
+        const days = Array.isArray(s.daysOfWeek) ? s.daysOfWeek : [];
+        const dayStr = days.length ? days.map(dayName).join(",") : "All days";
+        return `${dayStr} ${s.start || ""}-${s.end || ""}`;
+      }).join(" | ");
     }
 
-    if (aux1Btn) aux1Btn.addEventListener("click", function () { callAux("aux1"); });
-    if (aux2Btn) aux2Btn.addEventListener("click", function () { callAux("aux2"); });
-
-    async function simulateEvent(type) {
-      if (!selectedDeviceId) {
-        setStatus(simStatus, "Select a device first", true);
-        return;
-      }
-      setStatus(simStatus, "Simulating " + type + "...", false);
-      try {
-        var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/simulate-event", {
-          method: "POST",
-          headers: getHeadersJson(),
-          body: JSON.stringify({ type: type })
-        });
-        if (!out.res.ok) {
-          setStatus(simStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-        setStatus(simStatus, "Event simulated", false);
-        await loadDeviceEvents(selectedDeviceId);
-      } catch (err) {
-        console.error(err);
-        setStatus(simStatus, "Error simulating event", true);
-      }
-    }
-
-    if (simGateOpenedBtn) simGateOpenedBtn.addEventListener("click", function () { simulateEvent("GATE_OPENED"); });
-    if (simGateClosedBtn) simGateClosedBtn.addEventListener("click", function () { simulateEvent("GATE_CLOSED"); });
-    if (simGateForcedBtn) simGateForcedBtn.addEventListener("click", function () { simulateEvent("GATE_FORCED_OPEN"); });
-    if (simGateAjarBtn)   simGateAjarBtn.addEventListener("click", function () { simulateEvent("GATE_OPEN_TOO_LONG"); });
-
-    async function loadDeviceEvents(deviceId) {
-      if (!deviceEventsTableBody) return;
-      deviceEventsTableBody.innerHTML = "";
-      try {
-        var out = await fetchJson("/devices/" + encodeURIComponent(deviceId) + "/events?limit=20", {
-          method: "GET",
-          headers: getHeadersJson()
-        });
-        if (!out.res.ok) return;
-
-        (out.data || []).forEach(function (ev) {
-          var tr = document.createElement("tr");
-          var tdTime = document.createElement("td");
-          var tdEvent = document.createElement("td");
-          var tdUser = document.createElement("td");
-          var tdDetails = document.createElement("td");
-          tdTime.textContent = ev.at || "";
-          tdEvent.textContent = ev.event_type || "";
-          var bits = [];
-          if (ev.user_name) bits.push(ev.user_name);
-          if (ev.user_phone) bits.push(ev.user_phone);
-          if (ev.user_id) bits.push("[" + ev.user_id + "]");
-          tdUser.textContent = bits.join(" | ");
-          tdDetails.textContent = ev.details || "";
-          tr.appendChild(tdTime);
-          tr.appendChild(tdEvent);
-          tr.appendChild(tdUser);
-          tr.appendChild(tdDetails);
-          deviceEventsTableBody.appendChild(tr);
-        });
-      } catch (err) { console.error(err); }
-    }
-
-    if (refreshDeviceEventsBtn) {
-      refreshDeviceEventsBtn.addEventListener("click", function () {
-        if (selectedDeviceId) loadDeviceEvents(selectedDeviceId);
-      });
-    }
-
-    // ---- Notifications buttons ----
-    if (refreshNotificationsBtn) {
-      refreshNotificationsBtn.addEventListener("click", function () {
-        if (!selectedDeviceId) return setStatus(document.getElementById("notifyStatus"), "Select a device first", true);
-        loadDeviceNotifications(selectedDeviceId);
-      });
-    }
-
-    if (saveNotificationsBtn) {
-      saveNotificationsBtn.addEventListener("click", function () {
-        if (!selectedDeviceId) return setStatus(document.getElementById("notifyStatus"), "Select a device first", true);
-        var uid = notifyUserSelect && notifyUserSelect.value;
-        if (!uid) return setStatus(document.getElementById("notifyStatus"), "Select a user first", true);
-        saveUserNotifications(selectedDeviceId, uid, getSelectedEventTypes());
-      });
-    }
-
-    // ---- Device settings buttons ----
-    if (loadDeviceSettingsBtn) {
-      loadDeviceSettingsBtn.addEventListener("click", function () {
-        if (!selectedDeviceId) return setStatus(document.getElementById("deviceSettingsStatus"), "Select a device first", true);
-        loadDeviceSettings(selectedDeviceId);
-      });
-    }
-
-    if (saveDeviceSettingsBtn) {
-      saveDeviceSettingsBtn.addEventListener("click", function () {
-        if (!selectedDeviceId) return setStatus(document.getElementById("deviceSettingsStatus"), "Select a device first", true);
-        saveDeviceSettings(selectedDeviceId);
-      });
-    }
-
-    // ---- Purge events ----
-    if (purgeEventsBtn) {
-      purgeEventsBtn.addEventListener("click", function () {
-        var days = Number(purgeOlderThanDays.value || 0);
-        purgeEventsOlderThan(days);
-      });
-    }
-
-    // ---- Global users (directory) ----
-    async function loadUsers(query) {
-      if (!globalUsersTableBody || !userSearchStatus) return;
-      globalUsersTableBody.innerHTML = "";
-      setStatus(userSearchStatus, "Loading users...", false);
-      try {
-        var url = query ? ("/users?q=" + encodeURIComponent(query)) : "/users";
-        var out = await fetchJson(url, { method: "GET", headers: getHeadersJson() });
-        if (!out.res.ok) {
-          setStatus(userSearchStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-
-        (out.data || []).forEach(function (u) {
-          var tr = document.createElement("tr");
-
-          var tdSelect = document.createElement("td");
-          var cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.className = "userAttachCheckbox";
-          cb.dataset.userId = u.id;
-          tdSelect.appendChild(cb);
-
-          var tdId = document.createElement("td");
-          var tdName = document.createElement("td");
-          var tdEmail = document.createElement("td");
-          var tdPhone = document.createElement("td");
-          var tdDevices = document.createElement("td");
-          var tdEdit = document.createElement("td");
-          var tdDelete = document.createElement("td");
-
-          tdId.textContent = u.id;
-          tdName.textContent = u.name || "";
-          tdEmail.textContent = u.email || "";
-          tdPhone.textContent = u.phone || "";
-
-          if (u.devices && u.devices.length > 0) {
-            u.devices.forEach(function (d) {
-              var span = document.createElement("span");
-              span.className = "pill";
-              span.textContent = d.deviceId + "(" + (d.role || "operator") + ")";
-              tdDevices.appendChild(span);
-            });
+    function parseDaysString(str) {
+      const result = [];
+      const s = (str || "").trim();
+      if (!s) return [];
+      const parts = s.split(",");
+      parts.forEach(part => {
+        const t = part.trim();
+        if (!t) return;
+        if (t.includes("-")) {
+          const [aS, bS] = t.split("-");
+          const a = parseInt(aS.trim(), 10);
+          const b = parseInt(bS.trim(), 10);
+          if (Number.isFinite(a) && Number.isFinite(b)) {
+            const step = a <= b ? 1 : -1;
+            for (let d = a; step > 0 ? d <= b : d >= b; d += step) {
+              if (d >= 0 && d <= 6 && !result.includes(d)) result.push(d);
+            }
           }
-
-          var editBtn = document.createElement("button");
-          editBtn.textContent = "Edit";
-          editBtn.className = "btn-small";
-          editBtn.addEventListener("click", function () { startEditUser(u); });
-          tdEdit.appendChild(editBtn);
-
-          var delBtn = document.createElement("button");
-          delBtn.textContent = "Delete";
-          delBtn.className = "btn-danger btn-small";
-          delBtn.addEventListener("click", function () { deleteUser(u.id); });
-          tdDelete.appendChild(delBtn);
-
-          tr.appendChild(tdSelect);
-          tr.appendChild(tdId);
-          tr.appendChild(tdName);
-          tr.appendChild(tdEmail);
-          tr.appendChild(tdPhone);
-          tr.appendChild(tdDevices);
-          tr.appendChild(tdEdit);
-          tr.appendChild(tdDelete);
-          globalUsersTableBody.appendChild(tr);
-        });
-
-        setStatus(userSearchStatus, "Loaded " + (out.data ? out.data.length : 0) + " users", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(userSearchStatus, "Error loading users", true);
-      }
-    }
-
-    if (attachSelectedUsersBtn) {
-      attachSelectedUsersBtn.addEventListener("click", async function () {
-        if (!selectedDeviceId) {
-          setStatus(userSearchStatus, 'Select a device first in "Select Device & Users".', true);
-          return;
-        }
-        var checkboxes = globalUsersTableBody.querySelectorAll("input.userAttachCheckbox:checked");
-        if (!checkboxes.length) {
-          setStatus(userSearchStatus, "No users selected to attach", true);
-          return;
-        }
-
-        var userIds = Array.prototype.map.call(checkboxes, function (cb) { return cb.dataset.userId; });
-        setStatus(userSearchStatus, "Attaching " + userIds.length + " users to " + selectedDeviceId + "...", false);
-
-        try {
-          for (var i = 0; i < userIds.length; i++) {
-            var userId = userIds[i];
-            var out = await fetchJson("/devices/" + encodeURIComponent(selectedDeviceId) + "/users", {
-              method: "POST",
-              headers: getHeadersJson(),
-              body: JSON.stringify({ userId: userId, role: "operator" })
-            });
-            if (!out.res.ok) console.warn("Failed to attach user", userId, out.data);
-          }
-
-          setStatus(userSearchStatus, "Attached " + userIds.length + " users to " + selectedDeviceId, false);
-          Array.prototype.forEach.call(checkboxes, function (cb) { cb.checked = false; });
-
-          if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
-        } catch (err) {
-          console.error(err);
-          setStatus(userSearchStatus, "Error attaching selected users", true);
+        } else {
+          const n = parseInt(t, 10);
+          if (Number.isFinite(n) && n >= 0 && n <= 6 && !result.includes(n)) result.push(n);
         }
       });
+      result.sort((x,y) => x-y);
+      return result;
     }
 
-    if (searchUsersBtn) searchUsersBtn.addEventListener("click", function () {
-      var q = userSearchInput.value.trim();
-      loadUsers(q || null);
-    });
+    let editingScheduleId = null;
 
-    if (showAllUsersBtn) showAllUsersBtn.addEventListener("click", function () {
-      userSearchInput.value = "";
-      loadUsers(null);
-    });
-
-    function startEditUser(u) {
-      editingUserId = u.id;
-      editUserTarget.textContent = "Editing user " + u.id;
-      editUserName.value = u.name || "";
-      editUserEmail.value = u.email || "";
-      editUserPhone.value = u.phone || "";
-      editUserPassword.value = "";
-      setStatus(editUserStatus, "", false);
-    }
-
-    async function deleteUser(userId) {
-      if (!window.confirm("Delete user " + userId + " from all devices?")) return;
-      try {
-        var out = await fetchJson("/users/" + encodeURIComponent(userId), {
-          method: "DELETE",
-          headers: getHeadersJson()
-        });
-        if (!out.res.ok) {
-          window.alert("Error deleting user: " + (out.data.error || ("HTTP " + out.res.status)));
-          return;
-        }
-        window.alert("User deleted");
-        if (editingUserId === userId) {
-          editingUserId = null;
-          editUserTarget.textContent = "";
-          editUserName.value = "";
-          editUserEmail.value = "";
-          editUserPhone.value = "";
-          editUserPassword.value = "";
-        }
-        await loadUsers(userSearchInput.value.trim() || null);
-        if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
-      } catch (err) {
-        console.error(err);
-        window.alert("Error deleting user");
+    function setScheduleEditing(enabled) {
+      $("scheduleNameInput").disabled = !enabled;
+      $("scheduleDescInput").disabled = !enabled;
+      for (let i=1;i<=6;i++) {
+        $(`slot${i}Days`).disabled = !enabled;
+        $(`slot${i}Start`).disabled = !enabled;
+        $(`slot${i}End`).disabled = !enabled;
       }
+      $("scheduleSaveTopBtn").disabled = !enabled;
     }
 
-    if (saveUserChangesBtn) {
-      saveUserChangesBtn.addEventListener("click", async function () {
-        if (!editingUserId) {
-          setStatus(editUserStatus, "No user selected for editing", true);
-          return;
-        }
-        var name = editUserName.value.trim();
-        var email = editUserEmail.value.trim();
-        var phone = editUserPhone.value.trim();
-        var password = editUserPassword.value;
-        setStatus(editUserStatus, "Saving changes...", false);
-        try {
-          var out = await fetchJson("/users/" + encodeURIComponent(editingUserId), {
-            method: "PUT",
-            headers: getHeadersJson(),
-            body: JSON.stringify({ name: name, email: email, phone: phone, password: password })
-          });
-          if (!out.res.ok) {
-            setStatus(editUserStatus, out.data.error || ("HTTP " + out.res.status), true);
-            return;
-          }
-          setStatus(editUserStatus, "User updated", false);
-          editUserPassword.value = "";
-          await loadUsers(userSearchInput.value.trim() || null);
-          if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
-        } catch (err) {
-          console.error(err);
-          setStatus(editUserStatus, "Error saving user changes", true);
-        }
-      });
-    }
-
-    // ---- Schedules ----
     function resetScheduleForm() {
       editingScheduleId = null;
-      scheduleFormTitle.textContent = "Create / Edit Schedule";
-      scheduleNameInput.value = "";
-      scheduleDescInput.value = "";
-      slotInputs.forEach(function (s) {
-        s.days.value = "";
-        s.start.value = "";
-        s.end.value = "";
-      });
-      setStatus(scheduleStatus, "", false);
+      $("scheduleFormTitle").textContent = "Create / Edit Schedule";
+      $("scheduleNameInput").value = "";
+      $("scheduleDescInput").value = "";
+      for (let i=1;i<=6;i++) {
+        $(`slot${i}Days`).value = "";
+        $(`slot${i}Start`).value = "";
+        $(`slot${i}End`).value = "";
+      }
+      setScheduleEditing(false);
     }
 
     function readSlotsFromForm() {
-      var slots = [];
-      slotInputs.forEach(function (s) {
-        var daysStr = s.days.value.trim();
-        var start = s.start.value;
-        var end = s.end.value;
-        if (!daysStr && !start && !end) return;
-        if (!start || !end) return;
-        var days = parseDaysString(daysStr);
-        slots.push({ daysOfWeek: days, start: start, end: end });
-      });
+      const slots = [];
+      for (let i=1;i<=6;i++) {
+        const daysStr = $(`slot${i}Days`).value.trim();
+        const start = $(`slot${i}Start`).value;
+        const end = $(`slot${i}End`).value;
+        if (!daysStr && !start && !end) continue;
+        if (!start || !end) continue;
+        slots.push({ daysOfWeek: parseDaysString(daysStr), start, end });
+      }
       return slots;
     }
 
-    function fillSlotsFormFromSchedule(sched) {
-      slotInputs.forEach(function (s) {
-        s.days.value = "";
-        s.start.value = "";
-        s.end.value = "";
-      });
-      if (!sched || !sched.slots) return;
-      var slots = sched.slots;
-      for (var i = 0; i < slots.length && i < slotInputs.length; i++) {
-        var sl = slots[i];
-        var days = Array.isArray(sl.daysOfWeek) ? sl.daysOfWeek : [];
-        slotInputs[i].days.value = days.join(",");
-        slotInputs[i].start.value = sl.start || "";
-        slotInputs[i].end.value = sl.end || "";
+    function fillSlotsFormFromSchedule(s) {
+      for (let i=1;i<=6;i++) {
+        $(`slot${i}Days`).value = "";
+        $(`slot${i}Start`).value = "";
+        $(`slot${i}End`).value = "";
+      }
+      const slots = s.slots || [];
+      for (let i=0; i<slots.length && i<6; i++) {
+        const sl = slots[i];
+        $(`slot${i+1}Days`).value = (sl.daysOfWeek || []).join(",");
+        $(`slot${i+1}Start`).value = sl.start || "";
+        $(`slot${i+1}End`).value = sl.end || "";
       }
     }
 
-    async function loadSchedules() {
-      if (!schedulesTableBody || !scheduleStatus) return;
-      schedulesTableBody.innerHTML = "";
-      setStatus(scheduleStatus, "Loading schedules...", false);
-      try {
-        var out = await fetchJson("/schedules", { method: "GET", headers: getHeadersJson() });
-        if (!out.res.ok) {
-          setStatus(scheduleStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-        allSchedules = out.data || [];
-        rebuildAttachUserScheduleOptions();
+    async function renderSchedules() {
+      const tbody = document.querySelector("#schedulesTable tbody");
+      tbody.innerHTML = "";
+      allSchedules.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.name}</td>
+          <td>${describeSlots(s.slots || [])}</td>
+          <td></td>
+          <td></td>
+        `;
+        const tdEdit = tr.children[3];
+        const tdDel = tr.children[4];
 
-        (out.data || []).forEach(function (s) {
-          var tr = document.createElement("tr");
-          var tdId = document.createElement("td");
-          var tdName = document.createElement("td");
-          var tdSlots = document.createElement("td");
-          var tdEdit = document.createElement("td");
-          var tdDelete = document.createElement("td");
-          tdId.textContent = s.id;
-          tdName.textContent = s.name;
-          tdSlots.textContent = describeSlots(s.slots || []);
-          var editBtn = document.createElement("button");
-          editBtn.textContent = "Edit";
-          editBtn.className = "btn-small";
-          editBtn.addEventListener("click", function () {
-            editingScheduleId = s.id;
-            scheduleFormTitle.textContent = "Editing schedule " + s.id;
-            scheduleNameInput.value = s.name || "";
-            scheduleDescInput.value = s.description || "";
-            fillSlotsFormFromSchedule(s);
-            setStatus(scheduleStatus, "Editing schedule " + s.id, false);
-          });
-          tdEdit.appendChild(editBtn);
-
-          var delBtn = document.createElement("button");
-          delBtn.textContent = "Delete";
-          delBtn.className = "btn-danger btn-small";
-          delBtn.addEventListener("click", async function () {
-            if (!window.confirm('Delete schedule "' + s.name + '"?')) return;
-            try {
-              var out2 = await fetchJson("/schedules/" + s.id, {
-                method: "DELETE",
-                headers: getHeadersJson()
-              });
-              if (!out2.res.ok) {
-                window.alert("Error deleting schedule: " + (out2.data.error || ("HTTP " + out2.res.status)));
-                return;
-              }
-              resetScheduleForm();
-              await loadSchedules();
-              if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
-            } catch (err) {
-              console.error(err);
-              window.alert("Error deleting schedule");
-            }
-          });
-          tdDelete.appendChild(delBtn);
-
-          tr.appendChild(tdId);
-          tr.appendChild(tdName);
-          tr.appendChild(tdSlots);
-          tr.appendChild(tdEdit);
-          tr.appendChild(tdDelete);
-          schedulesTableBody.appendChild(tr);
+        const btnEdit = document.createElement("button");
+        btnEdit.textContent = "Edit";
+        btnEdit.className = "btn-small";
+        btnEdit.addEventListener("click", () => {
+          editingScheduleId = s.id;
+          $("scheduleFormTitle").textContent = `Editing schedule ${s.id}`;
+          $("scheduleNameInput").value = s.name || "";
+          $("scheduleDescInput").value = s.description || "";
+          fillSlotsFormFromSchedule(s);
+          setScheduleEditing(true);
+          setStatus($("scheduleStatus"), "Edit enabled. Adjust and Save.", false);
         });
+        tdEdit.appendChild(btnEdit);
 
-        setStatus(scheduleStatus, "Loaded " + (out.data ? out.data.length : 0) + " schedules", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(scheduleStatus, "Error loading schedules", true);
-      }
+        const btnDel = document.createElement("button");
+        btnDel.textContent = "Delete";
+        btnDel.className = "btn-danger btn-small";
+        btnDel.addEventListener("click", async () => {
+          if (!confirm(`Delete schedule "${s.name}"?`)) return;
+          try {
+            await apiJson(`/schedules/${encodeURIComponent(s.id)}`, { method: "DELETE" });
+            setStatus($("scheduleStatus"), "Deleted schedule", false);
+            resetScheduleForm();
+            await loadSchedules();
+            await renderSchedules();
+          } catch (e) {
+            setStatus($("scheduleStatus"), "Delete error: " + e.message, true);
+          }
+        });
+        tdDel.appendChild(btnDel);
+
+        tbody.appendChild(tr);
+      });
     }
 
-    if (refreshSchedulesBtn) refreshSchedulesBtn.addEventListener("click", function () { loadSchedules(); });
-    if (resetScheduleFormBtn) resetScheduleFormBtn.addEventListener("click", function () { resetScheduleForm(); });
+    function initSchedulesUI() {
+      $("refreshSchedulesBtn").addEventListener("click", async () => {
+        await loadSchedules();
+        await renderSchedules();
+      });
 
-    if (saveScheduleBtn) {
-      saveScheduleBtn.addEventListener("click", async function () {
-        var name = scheduleNameInput.value.trim();
-        var description = scheduleDescInput.value.trim();
-        var slots = readSlotsFromForm();
+      $("scheduleEnableBtn").addEventListener("click", () => {
+        const enable = $("scheduleNameInput").disabled;
+        setScheduleEditing(enable);
+        setStatus($("scheduleStatus"), enable ? "Edit enabled." : "Edit disabled.", false);
+      });
+
+      $("scheduleSaveTopBtn").addEventListener("click", async () => {
+        const name = $("scheduleNameInput").value.trim();
         if (!name) {
-          setStatus(scheduleStatus, "Schedule name is required", true);
+          setStatus($("scheduleStatus"), "Schedule name required", true);
           return;
         }
-        if (slots.length === 0) {
-          if (!window.confirm("No slots defined. This schedule will give NO access. Continue?")) return;
-        }
-        var payload = { name: name, description: description, slots: slots };
+        const payload = {
+          name,
+          description: $("scheduleDescInput").value.trim(),
+          slots: readSlotsFromForm()
+        };
+
         try {
           if (editingScheduleId) {
-            setStatus(scheduleStatus, "Updating schedule...", false);
-            var out = await fetchJson("/schedules/" + editingScheduleId, {
-              method: "PUT",
-              headers: getHeadersJson(),
-              body: JSON.stringify(payload)
-            });
-            if (!out.res.ok) {
-              setStatus(scheduleStatus, out.data.error || ("HTTP " + out.res.status), true);
-              return;
-            }
+            await apiJson(`/schedules/${encodeURIComponent(editingScheduleId)}`, { method: "PUT", body: JSON.stringify(payload) });
           } else {
-            setStatus(scheduleStatus, "Creating schedule...", false);
-            var out2 = await fetchJson("/schedules", {
-              method: "POST",
-              headers: getHeadersJson(),
-              body: JSON.stringify(payload)
-            });
-            if (!out2.res.ok) {
-              setStatus(scheduleStatus, out2.data.error || ("HTTP " + out2.res.status), true);
-              return;
-            }
+            await apiJson("/schedules", { method: "POST", body: JSON.stringify(payload) });
           }
+          setStatus($("scheduleStatus"), "Saved schedule", false);
+
+          // reset form for next instance
           resetScheduleForm();
+
           await loadSchedules();
-          if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
-        } catch (err) {
-          console.error(err);
-          setStatus(scheduleStatus, "Error saving schedule", true);
+          await renderSchedules();
+        } catch (e) {
+          setStatus($("scheduleStatus"), "Save error: " + e.message, true);
+        }
+      });
+
+      $("resetScheduleFormBtn").addEventListener("click", resetScheduleForm);
+    }
+
+    // ------------------------------
+    // DEVICE SETTINGS
+    // ------------------------------
+    let deviceSettingsEditing = false;
+
+    function setDeviceSettingsEditing(enabled) {
+      deviceSettingsEditing = enabled;
+      $("deviceSettingsJson").readOnly = !enabled;
+      $("deviceSettingsSaveBtn").disabled = !enabled;
+    }
+
+    function initDeviceSettingsUI() {
+      $("deviceSettingsEditBtn").addEventListener("click", () => {
+        const enable = !deviceSettingsEditing;
+        setDeviceSettingsEditing(enable);
+        setStatus($("deviceSettingsStatus"), enable ? "Edit enabled. Save when done." : "Edit disabled.", false);
+      });
+
+      $("deviceSettingsLoadBtn").addEventListener("click", async () => {
+        const deviceId = $("deviceSettingsSelect").value;
+        if (!deviceId) {
+          setStatus($("deviceSettingsStatus"), "Select a device first", true);
+          return;
+        }
+        try {
+          const data = await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`);
+          $("deviceSettingsJson").value = JSON.stringify(data, null, 2);
+          setDeviceSettingsEditing(false);
+          setStatus($("deviceSettingsStatus"), "Loaded device settings", false);
+        } catch (e) {
+          setStatus($("deviceSettingsStatus"), "Load error: " + e.message, true);
+        }
+      });
+
+      $("deviceSettingsSaveBtn").addEventListener("click", async () => {
+        const deviceId = $("deviceSettingsSelect").value;
+        if (!deviceId) {
+          setStatus($("deviceSettingsStatus"), "Select a device first", true);
+          return;
+        }
+        try {
+          const parsed = JSON.parse($("deviceSettingsJson").value || "{}");
+          await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`, {
+            method: "PUT",
+            body: JSON.stringify(parsed)
+          });
+          setDeviceSettingsEditing(false);
+          setStatus($("deviceSettingsStatus"), "Saved device settings", false);
+        } catch (e) {
+          setStatus($("deviceSettingsStatus"), "Save error: " + e.message, true);
         }
       });
     }
 
-    // ---- Reports / audit ----
+    // ------------------------------
+    // EMAIL NOTIFICATIONS (filter by user + device)
+    // ------------------------------
+    function onEmailUserChanged() {
+      const userId = $("emailUserSelect").value;
+      const user = allUsers.find(u => u.id === userId);
+      if (!user) {
+        fillDeviceSelect($("emailDeviceSelect"));
+        return;
+      }
+      // Filter device list to user enrolled devices
+      const enrolled = (user.devices || []).map(d => d.deviceId);
+      const sel = $("emailDeviceSelect");
+      const current = sel.value;
+      sel.innerHTML = `<option value="">-- Select a device --</option>`;
+      enrolled.forEach(devId => {
+        const d = allDevices.find(x => x.id === devId);
+        const opt = document.createElement("option");
+        opt.value = devId;
+        opt.textContent = d ? `${d.id} – ${d.name}` : devId;
+        sel.appendChild(opt);
+      });
+      if (current && enrolled.includes(current)) sel.value = current;
+    }
+
+    async function loadSubscriptionsFor(userId, deviceId, statusEl, inputEl) {
+      const subs = await apiJson(`/devices/${encodeURIComponent(deviceId)}/notifications`);
+      const row = (subs || []).find(r => r.userId === userId);
+      const list = row ? (row.eventTypes || []) : [];
+      inputEl.value = list.join(",");
+      setStatus(statusEl, "Loaded subscriptions", false);
+    }
+
+    function normEventList(str) {
+      return (str || "").split(",").map(s => s.trim()).filter(Boolean);
+    }
+
+    function initEmailUI() {
+      $("emailUserSelect").addEventListener("change", onEmailUserChanged);
+
+      $("emailLoadBtn").addEventListener("click", async () => {
+        const userId = $("emailUserSelect").value;
+        const deviceId = $("emailDeviceSelect").value;
+        if (!userId || !deviceId) {
+          setStatus($("emailStatus"), "Select both User and Device", true);
+          return;
+        }
+        try {
+          await loadSubscriptionsFor(userId, deviceId, $("emailStatus"), $("emailEventTypesInput"));
+        } catch (e) {
+          setStatus($("emailStatus"), "Load error: " + e.message, true);
+        }
+      });
+
+      $("emailSaveBtn").addEventListener("click", async () => {
+        const userId = $("emailUserSelect").value;
+        const deviceId = $("emailDeviceSelect").value;
+        if (!userId || !deviceId) {
+          setStatus($("emailStatus"), "Select both User and Device", true);
+          return;
+        }
+        try {
+          await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`, {
+            method: "PUT",
+            body: JSON.stringify({ eventTypes: normEventList($("emailEventTypesInput").value) })
+          });
+          setStatus($("emailStatus"), "Saved subscriptions", false);
+        } catch (e) {
+          setStatus($("emailStatus"), "Save error: " + e.message, true);
+        }
+      });
+
+      $("emailRefreshBtn").addEventListener("click", async () => {
+        await loadUsers(null);
+        fillUserSelect($("emailUserSelect"));
+        onEmailUserChanged();
+        setStatus($("emailStatus"), "Refreshed users list", false);
+      });
+    }
+
+    // ------------------------------
+    // DEVICE I/O TEST (Engineer)
+    // ------------------------------
+    async function ioLoadSubs() {
+      const deviceId = $("ioDeviceSelect").value;
+      const userId = $("ioUserSelect").value;
+      if (!deviceId || !userId) {
+        setStatus($("ioStatus"), "Select both device and user", true);
+        return;
+      }
+      try {
+        await loadSubscriptionsFor(userId, deviceId, $("ioStatus"), $("ioEventTypesInput"));
+      } catch (e) {
+        setStatus($("ioStatus"), "Load error: " + e.message, true);
+      }
+    }
+
+    async function ioSaveSubs() {
+      const deviceId = $("ioDeviceSelect").value;
+      const userId = $("ioUserSelect").value;
+      if (!deviceId || !userId) {
+        setStatus($("ioStatus"), "Select both device and user", true);
+        return;
+      }
+      try {
+        await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`, {
+          method: "PUT",
+          body: JSON.stringify({ eventTypes: normEventList($("ioEventTypesInput").value) })
+        });
+        setStatus($("ioStatus"), "Saved subscriptions", false);
+      } catch (e) {
+        setStatus($("ioStatus"), "Save error: " + e.message, true);
+      }
+    }
+
+    async function ioPulse(path, durationMs, statusEl) {
+      const deviceId = $("ioDeviceSelect").value;
+      if (!deviceId) {
+        setStatus(statusEl, "Select a device first", true);
+        return;
+      }
+      try {
+        await apiJson(`/devices/${encodeURIComponent(deviceId)}/${path}`, {
+          method: "POST",
+          body: JSON.stringify({ durationMs })
+        });
+        setStatus(statusEl, `Triggered ${path} (${durationMs}ms)`, false);
+      } catch (e) {
+        setStatus(statusEl, "Error: " + e.message, true);
+      }
+    }
+
+    async function ioGateOpenTry() {
+      const deviceId = $("ioDeviceSelect").value;
+      const userId = $("ioUserSelect").value;
+      if (!deviceId) { setStatus($("ioOutputStatus"), "Select a device", true); return; }
+      try {
+        await apiJson(`/devices/${encodeURIComponent(deviceId)}/open`, {
+          method: "POST",
+          body: JSON.stringify({ userId: userId || null })
+        });
+        setStatus($("ioOutputStatus"), "Gate Open command sent", false);
+      } catch (e) {
+        setStatus($("ioOutputStatus"), "Gate Open failed: " + e.message, true);
+      }
+    }
+
+    async function ioSim(type, alsoPulseOutput3 = false) {
+      const deviceId = $("ioDeviceSelect").value;
+      if (!deviceId) { setStatus($("ioSimStatus"), "Select a device", true); return; }
+      try {
+        await apiJson(`/devices/${encodeURIComponent(deviceId)}/simulate-event`, {
+          method: "POST",
+          body: JSON.stringify({ type })
+        });
+        if (alsoPulseOutput3) {
+          // pulse output 3 for 2s (uses aux2-test as per earlier assumption)
+          await apiJson(`/devices/${encodeURIComponent(deviceId)}/aux2-test`, {
+            method: "POST",
+            body: JSON.stringify({ durationMs: 2000 })
+          });
+        }
+        setStatus($("ioSimStatus"), "Simulated " + type, false);
+      } catch (e) {
+        setStatus($("ioSimStatus"), "Sim error: " + e.message, true);
+      }
+    }
+
+    function initIoUI() {
+      $("ioLoadSubsBtn").addEventListener("click", ioLoadSubs);
+      $("ioSaveSubsBtn").addEventListener("click", ioSaveSubs);
+
+      $("ioGateOpenBtn").addEventListener("click", ioGateOpenTry);
+      $("ioAux1PulseBtn").addEventListener("click", () => ioPulse("aux1-test", 1000, $("ioOutputStatus")));
+      $("ioOutput3PulseBtn").addEventListener("click", () => ioPulse("aux2-test", 2000, $("ioOutputStatus")));
+
+      $("simOpenRequestedBtn").addEventListener("click", () => ioSim("OPEN_REQUESTED"));
+      $("simGateOpenedBtn").addEventListener("click", () => ioSim("GATE_OPENED"));
+      $("simGateClosedBtn").addEventListener("click", () => ioSim("GATE_CLOSED"));
+      $("simForcedBtn").addEventListener("click", () => ioSim("GATE_FORCED_OPEN"));
+      $("simDoorForcedBtn").addEventListener("click", () => ioSim("DOOR_FORCED_OPEN"));
+      $("simAjarBtn").addEventListener("click", () => ioSim("GATE_OPEN_TOO_LONG"));
+      $("simTamperBtn").addEventListener("click", () => ioSim("TAMPER_OPENED", true));
+    }
+
+    // ------------------------------
+    // REPORTS
+    // ------------------------------
     function buildReportQueryParams() {
-      var params = [];
-      if (reportDeviceSelect && reportDeviceSelect.value) params.push("deviceId=" + encodeURIComponent(reportDeviceSelect.value));
-      if (reportUserIdInput && reportUserIdInput.value.trim()) params.push("userId=" + encodeURIComponent(reportUserIdInput.value.trim()));
-      if (reportFromDate && reportFromDate.value) params.push("from=" + encodeURIComponent(reportFromDate.value + "T00:00:00"));
-      if (reportToDate && reportToDate.value) params.push("to=" + encodeURIComponent(reportToDate.value + "T23:59:59"));
+      const params = [];
+      const deviceId = $("reportDeviceSelect").value;
+      const userId = $("reportUserIdInput").value.trim();
+      if (deviceId) params.push("deviceId=" + encodeURIComponent(deviceId));
+      if (userId) params.push("userId=" + encodeURIComponent(userId));
+      if ($("reportFromDate").value) params.push("from=" + encodeURIComponent($("reportFromDate").value + "T00:00:00"));
+      if ($("reportToDate").value) params.push("to=" + encodeURIComponent($("reportToDate").value + "T23:59:59"));
       params.push("limit=1000");
       return params.join("&");
     }
 
     async function runReport() {
-      if (!reportEventsTableBody || !reportStatus) return;
-      reportEventsTableBody.innerHTML = "";
-      var qs = buildReportQueryParams();
-      setStatus(reportStatus, "Loading report...", false);
+      const tbody = document.querySelector("#reportEventsTable tbody");
+      tbody.innerHTML = "";
+      setStatus($("reportStatus"), "Loading report...", false);
       try {
-        var out = await fetchJson("/events" + (qs ? ("?" + qs) : ""), {
-          method: "GET",
-          headers: getHeadersJson()
+        const qs = buildReportQueryParams();
+        const data = await apiJson("/events?" + qs);
+        (data || []).forEach(ev => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${ev.at || ""}</td>
+            <td>${(ev.device_id || "")}${ev.device_name ? " – " + ev.device_name : ""}</td>
+            <td>${[ev.user_name, ev.user_phone, ev.user_id ? "[" + ev.user_id + "]" : ""].filter(Boolean).join(" | ")}</td>
+            <td>${ev.event_type || ""}</td>
+            <td>${ev.details || ""}</td>
+          `;
+          tbody.appendChild(tr);
         });
-        if (!out.res.ok) {
-          setStatus(reportStatus, out.data.error || ("HTTP " + out.res.status), true);
-          return;
-        }
-
-        (out.data || []).forEach(function (ev) {
-          var tr = document.createElement("tr");
-          var tdTime = document.createElement("td");
-          var tdDevice = document.createElement("td");
-          var tdUser = document.createElement("td");
-          var tdEvent = document.createElement("td");
-          var tdDetails = document.createElement("td");
-          tdTime.textContent = ev.at || "";
-          tdDevice.textContent = (ev.device_id || "") + (ev.device_name ? (" – " + ev.device_name) : "");
-          var userBits = [];
-          if (ev.user_name) userBits.push(ev.user_name);
-          if (ev.user_phone) userBits.push(ev.user_phone);
-          if (ev.user_id) userBits.push("[" + ev.user_id + "]");
-          tdUser.textContent = userBits.join(" | ");
-          tdEvent.textContent = ev.event_type || "";
-          tdDetails.textContent = ev.details || "";
-          tr.appendChild(tdTime);
-          tr.appendChild(tdDevice);
-          tr.appendChild(tdUser);
-          tr.appendChild(tdEvent);
-          tr.appendChild(tdDetails);
-          reportEventsTableBody.appendChild(tr);
-        });
-
-        setStatus(reportStatus, "Report loaded: " + (out.data ? out.data.length : 0) + " events", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(reportStatus, "Error loading report", true);
+        setStatus($("reportStatus"), "Report loaded: " + (data ? data.length : 0) + " events", false);
+      } catch (e) {
+        setStatus($("reportStatus"), "Report error: " + e.message, true);
       }
     }
 
     async function downloadReportCsv() {
-      var qs = buildReportQueryParams();
-      setStatus(reportStatus, "Preparing CSV...", false);
       try {
-        var res = await fetch("/events" + (qs ? ("?" + qs + "&format=csv") : "?format=csv"), {
-          method: "GET",
-          headers: getHeadersJson()
-        });
-        if (!res.ok) {
-          var txt = await res.text();
-          setStatus(reportStatus, "Error downloading CSV: " + txt, true);
-          return;
-        }
-        var blob = await res.blob();
-        var url = window.URL.createObjectURL(blob);
-        var a = document.createElement("a");
+        const qs = buildReportQueryParams();
+        const res = await fetch("/events?" + qs + "&format=csv", { headers: headersJson() });
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
         a.href = url;
         a.download = "events-report.csv";
         document.body.appendChild(a);
         a.click();
         a.remove();
-        window.URL.revokeObjectURL(url);
-        setStatus(reportStatus, "CSV downloaded", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(reportStatus, "Error downloading CSV", true);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        setStatus($("reportStatus"), "CSV error: " + e.message, true);
       }
     }
 
-    if (runReportBtn) runReportBtn.addEventListener("click", function () { runReport(); });
-    if (downloadReportCsvBtn) downloadReportCsvBtn.addEventListener("click", function () { downloadReportCsv(); });
+    function initReportsUI() {
+      $("runReportBtn").addEventListener("click", runReport);
+      $("downloadReportCsvBtn").addEventListener("click", downloadReportCsv);
+    }
 
-    // ---- Initial load ----
-    loadDevices();
-    loadUsers(null);
-    loadSchedules();
-  });
-</script>
+    // ------------------------------
+    // LOGS (include/exclude event types)
+    // ------------------------------
+    let logsEditing = false;
+    let logEnabledSet = new Set(LOGGABLE_EVENTS); // default all enabled
+
+    function setLogsEditing(enabled) {
+      logsEditing = enabled;
+      $("logsSaveBtn").disabled = !enabled;
+      document.querySelectorAll("#logEventList input[type=checkbox]").forEach(cb => cb.disabled = !enabled);
+    }
+
+    function renderLogEventList() {
+      const wrap = $("logEventList");
+      wrap.innerHTML = "";
+      LOGGABLE_EVENTS.forEach(ev => {
+        const row = document.createElement("div");
+        row.className = "whitebox";
+        row.style.margin = "8px 0";
+        row.style.padding = "10px 12px";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = logEnabledSet.has(ev);
+        cb.disabled = !logsEditing;
+
+        const label = document.createElement("span");
+        label.style.marginLeft = "10px";
+        label.style.fontWeight = "600";
+        label.style.color = "#122b3a";
+        label.textContent = ev;
+
+        cb.addEventListener("change", () => {
+          if (cb.checked) logEnabledSet.add(ev);
+          else logEnabledSet.delete(ev);
+        });
+
+        row.appendChild(cb);
+        row.appendChild(label);
+        wrap.appendChild(row);
+      });
+    }
+
+    async function logsLoad() {
+      setStatus($("logsStatus"), "Loading log settings...", false);
+      try {
+        const data = await apiJson("/log-settings");
+        // accept either {enabledEvents:[...]} or {disabledEvents:[...]}
+        if (data && Array.isArray(data.enabledEvents)) {
+          logEnabledSet = new Set(data.enabledEvents);
+        } else if (data && Array.isArray(data.disabledEvents)) {
+          logEnabledSet = new Set(LOGGABLE_EVENTS.filter(x => !data.disabledEvents.includes(x)));
+        } else {
+          // fallback
+          logEnabledSet = new Set(LOGGABLE_EVENTS);
+        }
+        renderLogEventList();
+        setLogsEditing(false);
+        setStatus($("logsStatus"), "Loaded log settings", false);
+      } catch (e) {
+        // fallback: localStorage
+        const local = localStorage.getItem("geata_log_enabled_events");
+        if (local) {
+          try { logEnabledSet = new Set(JSON.parse(local)); } catch {}
+        }
+        renderLogEventList();
+        setLogsEditing(false);
+        setStatus($("logsStatus"), "Backend /log-settings not available. Using local settings.", true);
+      }
+    }
+
+    async function logsSave() {
+      try {
+        const enabledEvents = Array.from(logEnabledSet.values());
+        try {
+          await apiJson("/log-settings", { method: "PUT", body: JSON.stringify({ enabledEvents }) });
+          setStatus($("logsStatus"), "Saved log settings", false);
+        } catch {
+          localStorage.setItem("geata_log_enabled_events", JSON.stringify(enabledEvents));
+          setStatus($("logsStatus"), "Saved locally (backend endpoint not available)", false);
+        }
+        setLogsEditing(false);
+        renderLogEventList();
+      } catch (e) {
+        setStatus($("logsStatus"), "Save error: " + e.message, true);
+      }
+    }
+
+    function initLogsUI() {
+      $("logsReloadBtn").addEventListener("click", logsLoad);
+      $("logsEditBtn").addEventListener("click", () => {
+        setLogsEditing(!logsEditing);
+        setStatus($("logsStatus"), logsEditing ? "Edit enabled. Tick items then Save." : "Edit disabled.", false);
+        renderLogEventList();
+      });
+      $("logsSaveBtn").addEventListener("click", logsSave);
+    }
+
+    // ------------------------------
+    // RECENT EVENTS
+    // ------------------------------
+    async function loadRecentEvents() {
+      const tbody = document.querySelector("#recentEventsTable tbody");
+      tbody.innerHTML = "";
+      setStatus($("eventsStatus"), "Loading events...", false);
+
+      const deviceId = $("eventsDeviceFilterSelect").value;
+      const limit = Math.max(10, Math.min(5000, parseInt($("eventsLimitInput").value || "200", 10)));
+
+      const qs = new URLSearchParams();
+      if (deviceId) qs.set("deviceId", deviceId);
+      qs.set("limit", String(limit));
+
+      try {
+        const data = await apiJson("/events?" + qs.toString());
+        (data || []).forEach(ev => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${ev.at || ""}</td>
+            <td>${(ev.device_id || "")}${ev.device_name ? " – " + ev.device_name : ""}</td>
+            <td>${[ev.user_name, ev.user_phone, ev.user_id ? "[" + ev.user_id + "]" : ""].filter(Boolean).join(" | ")}</td>
+            <td>${ev.event_type || ""}</td>
+            <td>${ev.details || ""}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        setStatus($("eventsStatus"), `Loaded ${data.length} events`, false);
+      } catch (e) {
+        setStatus($("eventsStatus"), "Load error: " + e.message, true);
+      }
+    }
+
+    async function purgeEvents() {
+      const days = Math.max(1, parseInt($("purgeDaysInput").value || "90", 10));
+      if (!confirm(`Purge events older than ${days} days?`)) return;
+      try {
+        await apiJson("/events/purge", { method: "POST", body: JSON.stringify({ olderThanDays: days }) });
+        setStatus($("eventsStatus"), "Purge complete", false);
+        await loadRecentEvents();
+      } catch (e) {
+        setStatus($("eventsStatus"), "Purge failed (endpoint may not exist): " + e.message, true);
+      }
+    }
+
+    function initEventsUI() {
+      $("eventsRefreshBtn").addEventListener("click", loadRecentEvents);
+      $("eventsLoadBtn").addEventListener("click", loadRecentEvents);
+      $("purgeBtn").addEventListener("click", purgeEvents);
+    }
+
+    // ------------------------------
+    // NAV button wiring
+    // ------------------------------
+    function initNavigation() {
+      document.querySelectorAll("[data-nav]").forEach(btn => {
+        btn.addEventListener("click", () => showScreen(btn.getAttribute("data-nav")));
+      });
+      document.querySelectorAll("[data-back]").forEach(btn => {
+        btn.addEventListener("click", () => goBack());
+      });
+      document.querySelectorAll("[data-home]").forEach(btn => {
+        btn.addEventListener("click", () => goHome());
+      });
+    }
+
+    // ------------------------------
+    // Page init on load
+    // ------------------------------
+    window.addEventListener("load", async () => {
+      initNavigation();
+      initAuthUI();
+      initDevicesUI();
+      initDeviceUsersUI();
+      initDeviceSettingsUI();
+      initIoUI();
+      initUserLookupUI();
+      initEditUserUI();
+      initAttachUserUI();
+      initCsvUI();
+      initSchedulesUI();
+      initEmailUI();
+      initReportsUI();
+      initLogsUI();
+      initEventsUI();
+
+      // preload datasets
+      await loadDevices();
+      await renderDevicesTable();
+
+      await loadUsers(null);
+      await renderUserLookupTable(allUsers);
+
+      await loadSchedules();
+      await renderSchedules();
+
+      // set device context selection and load users for that device
+      if ($("selectedDeviceSelect")) {
+        $("selectedDeviceSelect").value = selectedDeviceId || "";
+        updateDeviceContextLabels();
+        if (selectedDeviceId) await loadDeviceUsers(selectedDeviceId);
+      }
+
+      // If user came straight to Edit User Details from Home without selection
+      $("editUserIdBox").textContent = "(none)";
+      $("editUserDevicesPills").innerHTML = `<span class="small">Use User Lookup → Edit to open a user here.</span>`;
+
+      // Email page: filter device list once user selected
+      onEmailUserChanged();
+
+      // Logs: load settings
+      await logsLoad();
+    });
+  </script>
 </body>
 </html>
