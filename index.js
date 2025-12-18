@@ -14,6 +14,10 @@ const nodemailer = require("nodemailer");
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+// Root -> serve admin UI
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "dev-only-admin-key";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-only-jwt-secret";
