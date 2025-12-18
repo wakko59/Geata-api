@@ -317,6 +317,14 @@
       flex-wrap:wrap;
       margin-top: 6px;
     }
+	/* IMPORTANT: stop global input{width:100%} breaking checkboxes/radios */
+	input[type="checkbox"],
+	input[type="radio"]{
+	width: auto !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	}
+
   </style>
 </head>
 
@@ -615,9 +623,9 @@
 
         <h3 style="margin: 4px 0 6px; font-size: 15px;">Email Subscriptions (for selected Device + User)</h3>
         <div class="device-label-big">Event Types</div>
-        <div id="ioEventTypesPanel"></div>
+        <div id="emailEventTypesPanel"></div>
+		<button id="emailSaveBtn" class="btn-small">Save</button>
 
-        <button id="ioSaveSubsBtn" class="btn-small">Save</button>
 
         <div class="small">
           Uses backend: <code>GET /devices/:deviceId/notifications</code> and <code>PUT /devices/:deviceId/users/:userId/notifications</code>.
@@ -1377,34 +1385,32 @@
 
     // Checkbox panel helpers
     function renderEventCheckboxPanel(containerEl, eventTypes) {
-      if (!containerEl) return;
+  if (!containerEl) return;
 
-      containerEl.innerHTML = "";
-      const wrap = document.createElement("div");
-      wrap.className = "whitebox";
+  containerEl.innerHTML = "";
 
-      (eventTypes || []).forEach(ev => {
-        const row = document.createElement("label");
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.gap = "10px";
-        row.style.margin = "6px 0";
-        row.style.color = "#122b3a";
+  const panel = document.createElement("div");
+  panel.className = "event-panel";
 
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.value = ev;
+  (eventTypes || []).forEach(ev => {
+    const row = document.createElement("label");
+    row.className = "event-row";
 
-        const txt = document.createElement("span");
-        txt.textContent = ev;
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = ev;
 
-        row.appendChild(cb);
-        row.appendChild(txt);
-        wrap.appendChild(row);
-      });
+    const txt = document.createElement("span");
+    txt.textContent = ev;
 
-      containerEl.appendChild(wrap);
-    }
+    row.appendChild(cb);
+    row.appendChild(txt);
+    panel.appendChild(row);
+  });
+
+  containerEl.appendChild(panel);
+}
+
 
     function setPanelChecked(containerEl, selectedList) {
       if (!containerEl) return;
