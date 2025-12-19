@@ -17,6 +17,17 @@
       --text-muted: #7b8a9b;
       --whitebox: rgba(255,255,255,0.95);
     }
+	#aux1ModePanel{
+  background: var(--bg-card-soft);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 8px 0 10px;
+  color: var(--text-main);
+}
+#aux1ModePanel label{ color: var(--text-main); }
+#aux1ModePanel .small{ color: rgba(245,247,250,0.85); }
+
 
     * { box-sizing: border-box; }
 	
@@ -307,6 +318,21 @@
       border: 1px solid rgba(0,0,0,0.12);
       margin: 8px 0 10px;
     }
+	/* Device Settings: make AUX panel match card */
+	#aux1ModePanel {
+	background: var(--bg-card-soft) !important;
+	color: var(--text-main) !important;
+	border: 1px solid rgba(255,255,255,0.10) !important;
+	}
+
+	#aux1ModePanel label {
+	color: var(--text-main) !important;
+	}
+
+	#aux1ModePanel .small {
+	color: rgba(245,247,250,0.85) !important;
+	}
+
 
     .whitebox .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .whitebox code { font-size: 12px; }
@@ -555,30 +581,23 @@
         <button id="deviceSettingsLoadBtn" class="btn-secondary btn-small">Load</button>
         <div id="deviceSettingsStatus" class="status"></div>
 
-        <div class="whitebox" id="aux1ModePanel">
+        <div id="aux1ModePanel">
           <div class="pill-title">AUX 1 Function</div>
 
-          <label style="margin-top:8px; color:#122b3a;">
+          <label style="margin-top:8px;">
             <input type="radio" name="aux1Mode" value="relay" />
             Relay On/Off (single gate) — AUX1 acts as a simple switch output
           </label>
 
-          <label style="margin-top:8px; color:#122b3a;">
+          <label style="margin-top:8px;">
             <input type="radio" name="aux1Mode" value="gate2" />
             Gate2 monitor (two gates) — Input 2 is used to monitor pedestrian gate status
           </label>
 
-          <div class="small" style="margin-top:8px; color:#1c3b4f;">
+          <div class="small" style="margin-top:8px;">
             “Relay On/Off” = app shows ON persistently when enabled. <br/>
             “Gate2 monitor” = app uses Input2 like Input1 (Opened/Closed/Forced/Ajar) for the second gate.
           </div>
-        </div>
-
-        <label for="deviceSettingsJson">Settings JSON</label>
-        <textarea id="deviceSettingsJson" readonly placeholder="Click Load, then Edit to change..."></textarea>
-
-        <div class="small">
-          Uses backend endpoints: <code>GET/PUT /devices/:deviceId/settings</code>.
         </div>
       </div>
     </section>
@@ -1350,24 +1369,6 @@
     function describeUserDevices(devices) {
       if (!devices || !devices.length) return [];
       return devices.map(d => ({ deviceId: d.deviceId, role: d.role || "operator" }));
-    }
-
-    function getSettingsFromTextarea() {
-      try { return JSON.parse($("deviceSettingsJson").value || "{}"); }
-      catch { return {}; }
-    }
-    function setSettingsToTextarea(obj) {
-      $("deviceSettingsJson").value = JSON.stringify(obj || {}, null, 2);
-    }
-    function setAux1ModeRadiosFromSettings(settings) {
-      const mode = (settings && settings.aux1Mode) ? String(settings.aux1Mode) : "relay";
-      document.querySelectorAll('input[name="aux1Mode"]').forEach(r => r.checked = (r.value === mode));
-    }
-    function applyAux1ModeToSettingsFromRadios() {
-      const settings = getSettingsFromTextarea();
-      const picked = document.querySelector('input[name="aux1Mode"]:checked');
-      settings.aux1Mode = picked ? picked.value : "relay";
-      setSettingsToTextarea(settings);
     }
 
     function updateDeviceContextLabels() {
@@ -2288,76 +2289,94 @@
 
       $("resetScheduleFormBtn").addEventListener("click", resetScheduleForm);
     }
+	// Device Settings state (no JSON textarea anymore)
+	let currentDeviceSettings = {};
 
-    // ------------------------------
-    // DEVICE SETTINGS
-    // ------------------------------
-    let deviceSettingsEditing = false;
+// ------------------------------
+// DEVICE SETTINGS (no JSON textarea)
+// ------------------------------
+let deviceSettingsEditing = false;
+let currentDeviceSettings = {};
 
-    function setDeviceSettingsEditing(enabled) {
-      deviceSettingsEditing = enabled;
-      $("deviceSettingsJson").readOnly = !enabled;
-      $("deviceSettingsSaveBtn").disabled = !enabled;
+function getAux1ModePicked() {
+  const picked = document.querySelector('input[name="aux1Mode"]:checked');
+  return picked ? picked.value : "relay";
+}
 
-      // disable/enable radios too
-      document.querySelectorAll('input[name="aux1Mode"]').forEach(r => r.disabled = !enabled);
+function setAux1ModeRadios(mode) {
+  const m = mode ? String(mode) : "relay";
+  document.querySelectorAll('input[name="aux1Mode"]').forEach(r => {
+    r.checked = (r.value === m);
+  });
+}
+
+function setDeviceSettingsEditing(enabled) {
+  deviceSettingsEditing = enabled;
+  $("deviceSettingsSaveBtn").disabled = !enabled;
+
+  // Enable/disable radios
+  document.querySelectorAll('input[name="aux1Mode"]').forEach(r => {
+    r.disabled = !enabled;
+  });
+}
+
+function initDeviceSettingsUI() {
+$("deviceSettingsEditBtn").addEventListener("click", () => {
+  const deviceId = $("deviceSettingsSelect").value;
+  if (!deviceId) {
+    setStatus($("deviceSettingsStatus"), "Select a device first", true);
+    return;
+  }
+  const enable = !deviceSettingsEditing;
+  setDeviceSettingsEditing(enable);
+  setStatus($("deviceSettingsStatus"), enable ? "Edit enabled. Save when done." : "Edit disabled.", false);
+});
+
+
+  $("deviceSettingsLoadBtn").addEventListener("click", async () => {
+    const deviceId = $("deviceSettingsSelect").value;
+    if (!deviceId) {
+      setStatus($("deviceSettingsStatus"), "Select a device first", true);
+      return;
     }
-
-    function initDeviceSettingsUI() {
-      $("deviceSettingsEditBtn").addEventListener("click", () => {
-        const enable = !deviceSettingsEditing;
-        setDeviceSettingsEditing(enable);
-        setStatus($("deviceSettingsStatus"), enable ? "Edit enabled. Save when done." : "Edit disabled.", false);
-      });
-
-      $("deviceSettingsLoadBtn").addEventListener("click", async () => {
-        const deviceId = $("deviceSettingsSelect").value;
-        if (!deviceId) {
-          setStatus($("deviceSettingsStatus"), "Select a device first", true);
-          return;
-        }
-        try {
-          const data = await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`);
-          setSettingsToTextarea(data);
-          setAux1ModeRadiosFromSettings(data);
-          setDeviceSettingsEditing(false);
-          setStatus($("deviceSettingsStatus"), "Loaded device settings", false);
-        } catch (e) {
-          setStatus($("deviceSettingsStatus"), "Load error: " + e.message, true);
-        }
-      });
-
-      $("deviceSettingsSaveBtn").addEventListener("click", async () => {
-        const deviceId = $("deviceSettingsSelect").value;
-        if (!deviceId) {
-          setStatus($("deviceSettingsStatus"), "Select a device first", true);
-          return;
-        }
-        try {
-          applyAux1ModeToSettingsFromRadios();
-          const parsed = JSON.parse($("deviceSettingsJson").value || "{}");
-          await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`, {
-            method: "PUT",
-            body: JSON.stringify(parsed)
-          });
-          setDeviceSettingsEditing(false);
-          setStatus($("deviceSettingsStatus"), "Saved device settings", false);
-        } catch (e) {
-          setStatus($("deviceSettingsStatus"), "Save error: " + e.message, true);
-        }
-      });
-
-      // keep JSON synced with radios (only when editing)
-      document.querySelectorAll('input[name="aux1Mode"]').forEach(r => {
-        r.addEventListener("change", () => {
-          if (!deviceSettingsEditing) return;
-          applyAux1ModeToSettingsFromRadios();
-        });
-      });
-
-      // default (locked)
+    try {
+      const data = await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`);
+      currentDeviceSettings = data && typeof data === "object" ? data : {};
+      setAux1ModeRadios(currentDeviceSettings.aux1Mode || "relay");
       setDeviceSettingsEditing(false);
+      setStatus($("deviceSettingsStatus"), "Loaded device settings", false);
+    } catch (e) {
+      setStatus($("deviceSettingsStatus"), "Load error: " + e.message, true);
     }
+  });
+
+  $("deviceSettingsSaveBtn").addEventListener("click", async () => {
+    const deviceId = $("deviceSettingsSelect").value;
+    if (!deviceId) {
+      setStatus($("deviceSettingsStatus"), "Select a device first", true);
+      return;
+    }
+    try {
+      // Update just the aux1Mode in the settings object and save the whole object back
+      currentDeviceSettings = currentDeviceSettings && typeof currentDeviceSettings === "object" ? currentDeviceSettings : {};
+      currentDeviceSettings.aux1Mode = getAux1ModePicked();
+
+      await apiJson(`/devices/${encodeURIComponent(deviceId)}/settings`, {
+        method: "PUT",
+        body: JSON.stringify(currentDeviceSettings)
+      });
+
+      setDeviceSettingsEditing(false);
+      setStatus($("deviceSettingsStatus"), "Saved device settings", false);
+    } catch (e) {
+      setStatus($("deviceSettingsStatus"), "Save error: " + e.message, true);
+    }
+  });
+
+  // default locked
+  setDeviceSettingsEditing(false);
+}
+
 
     // ------------------------------
     // SUBSCRIPTIONS (shared)
