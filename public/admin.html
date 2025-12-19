@@ -1040,13 +1040,13 @@
         <div class="two-column">
           <div>
             <label for="emailUserSelect">Select User</label>
-            <select id="emailUserSelect">
+            <select id="emailUserSelect"></select>
               <option value="">-- Select a user --</option>
             </select>
           </div>
           <div>
             <label for="emailDeviceSelect">Select Device</label>
-            <select id="emailDeviceSelect">
+            <select id="emailDeviceSelect"></select>
               <option value="">-- Select a device --</option>
             </select>
           </div>
@@ -1059,8 +1059,7 @@
 
         <div class="device-label-big">Event Types</div>
         <div id="emailEventTypesPanel"></div>
-
-        <button id="ioSaveSubsBtn" class="btn-small">Save</button>
+        <button id="emailSaveSubsBtn" class="btn-small">Save</button>
 
         <div class="small">
           Uses backend: <code>GET /devices/:deviceId/notifications</code> and <code>PUT /devices/:deviceId/users/:userId/notifications</code>.
