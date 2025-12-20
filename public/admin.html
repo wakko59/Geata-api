@@ -1016,56 +1016,59 @@
       </div>
     </section>
 
-    <!-- EMAIL NOTIFICATIONS -->
-    <section id="screen-emails" class="screen">
-      <div class="topbar">
-        <div class="topbar-left">
-          <button class="btn-secondary btn-small" data-back>← Back</button>
-          <button class="btn-secondary btn-small" data-home>🏠 Home</button>
-        </div>
-        <div class="topbar-right">
-          <button id="emailRefreshBtn" class="btn-secondary btn-small">Refresh</button>
-        </div>
+		<!-- EMAIL NOTIFICATIONS -->
+	<section id="screen-emails" class="screen">
+	<div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-secondary btn-small" data-back>← Back</button>
+      <button class="btn-secondary btn-small" data-home>🏠 Home</button>
+    </div>
+    <div class="topbar-right">
+      <button id="emailRefreshBtn" class="btn-secondary btn-small">Refresh</button>
+    </div>
+	</div>
+
+	<div class="card">
+    <div class="card-header">
+      <div>
+        <div class="pill-title">Emails</div>
+        <h2 class="card-title">Email Notifications</h2>
+        <p class="card-subtitle">Pick a user + one of their devices.</p>
       </div>
+    </div>
 
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="pill-title">Emails</div>
-            <h2 class="card-title">Email Notifications</h2>
-            <p class="card-subtitle">Pick a user + one of their devices.</p>
-          </div>
-        </div>
+<div class="two-column">
+  <div>
+    <label for="emailUserSelect">Select User</label>
+    <select id="emailUserSelect">
+      <option value="">-- Select a user --</option>
+    </select>
+  </div>
+  <div>
+    <label for="emailDeviceSelect">Select Device</label>
+    <select id="emailDeviceSelect" disabled>
+      <option value="">-- Select a device --</option>
+    </select>
+  </div>
+</div>
 
-        <div class="two-column">
-          <div>
-            <label for="emailUserSelect">Select User</label>
-            <select id="emailUserSelect"></select>
-              <option value="">-- Select a user --</option>
-            </select>
-          </div>
-          <div>
-            <label for="emailDeviceSelect">Select Device</label>
-            <select id="emailDeviceSelect"></select>
-              <option value="">-- Select a device --</option>
-            </select>
-          </div>
-        </div>
 
-        <button id="emailLoadBtn" class="btn-secondary btn-small">Load</button>
-        <div id="emailStatus" class="status"></div>
+    <button id="emailLoadBtn" class="btn-secondary btn-small">Load</button>
+    <div id="emailStatus" class="status"></div>
 
-        <div class="section-divider"></div>
+    <div class="section-divider"></div>
 
-        <div class="device-label-big">Event Types</div>
-        <div id="emailEventTypesPanel"></div>
-        <button id="emailSaveSubsBtn" class="btn-small">Save</button>
+    <div class="device-label-big">Event Types</div>
+    <div id="emailEventTypesPanel"></div>
+    <button id="emailSaveSubsBtn" class="btn-small">Save</button>
 
-        <div class="small">
-          Uses backend: <code>GET /devices/:deviceId/notifications</code> and <code>PUT /devices/:deviceId/users/:userId/notifications</code>.
-        </div>
-      </div>
-    </section>
+    <div class="small">
+      Uses backend: <code>GET /devices/:deviceId/notifications</code> and
+      <code>PUT /devices/:deviceId/users/:userId/notifications</code>.
+    </div>
+	</div>
+	</section>
+
 
     <!-- REPORTS -->
     <section id="screen-reports" class="screen">
@@ -1241,6 +1244,24 @@
     let allDevices = [];
     let allUsers = [];
     let allSchedules = [];
+	
+	// Profiles cache (userId -> { user, devices:[...] })
+	const profilesByUserId = new Map();
+
+	async function loadUserProfile(userId, { force = false } = {}) {
+		if (!userId) return null;
+		if (!force && profilesByUserId.has(userId)) return profilesByUserId.get(userId);
+
+	const profile = await apiJson(`/profiles/users/${encodeURIComponent(userId)}`);
+	profilesByUserId.set(userId, profile);
+	return profile;
+}
+
+	function getProfileDevice(profile, deviceId) {
+	if (!profile || !Array.isArray(profile.devices)) return null;
+	return profile.devices.find(d => d.deviceId === deviceId) || null;
+}
+
 
     let editingUserId = null;
     let editingUserDevices = []; // array of {deviceId, role}
@@ -2380,83 +2401,111 @@ $("deviceSettingsEditBtn").addEventListener("click", () => {
     // ------------------------------
     // SUBSCRIPTIONS (shared)
     // ------------------------------
-    async function loadSubscriptionsFor(userId, deviceId, statusEl, panelEl) {
-      const subs = await apiJson(`/devices/${encodeURIComponent(deviceId)}/notifications`);
-      const row = (subs || []).find(r => r.userId === userId);
-      const list = row ? (row.eventTypes || []) : [];
-      setPanelChecked(panelEl, list);
-      setStatus(statusEl, "Loaded subscriptions", false);
-    }
+async function loadSubscriptionsFor(userId, deviceId, statusEl, panelEl) {
+  const profile = await loadUserProfile(userId, { force: true }); // fresh, avoids stale UI
+  const dev = getProfileDevice(profile, deviceId);
+  const list = dev?.notifications?.eventTypes || [];
+  setPanelChecked(panelEl, list);
+  setStatus(statusEl, "Loaded subscriptions (from profile)", false);
+}
+
 
     // ------------------------------
     // EMAIL NOTIFICATIONS
     // ------------------------------
-    function onEmailUserChanged() {
-      const userId = $("emailUserSelect").value;
-      const user = allUsers.find(u => u.id === userId);
-      const sel = $("emailDeviceSelect");
-      const current = sel.value;
+async function onEmailUserChanged() {
+  const userId = $("emailUserSelect").value;
+  const sel = $("emailDeviceSelect");
 
-      sel.innerHTML = `<option value="">-- Select a device --</option>`;
-      if (!user) return;
+  sel.innerHTML = `<option value="">-- Select a device --</option>`;
+  sel.disabled = true;
 
-      const enrolled = (user.devices || []).map(d => d.deviceId);
-      enrolled.forEach(devId => {
-        const d = allDevices.find(x => x.id === devId);
-        const opt = document.createElement("option");
-        opt.value = devId;
-        opt.textContent = d ? `${d.id} – ${d.name}` : devId;
-        sel.appendChild(opt);
-      });
+  // clear panel when user changes
+  setPanelChecked($("emailEventTypesPanel"), []);
+  if (!userId) return;
 
-      if (current && enrolled.includes(current)) sel.value = current;
+  try {
+    const profile = await loadUserProfile(userId, { force: true });
+
+    // populate devices from profile.devices (enrolled devices only)
+    const devices = Array.isArray(profile.devices) ? profile.devices : [];
+    devices.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d.deviceId;
+      opt.textContent = d.deviceName ? `${d.deviceId} – ${d.deviceName}` : d.deviceId;
+      sel.appendChild(opt);
+    });
+
+    sel.disabled = false;
+  } catch (e) {
+    setStatus($("emailStatus"), "Profile load error: " + e.message, true);
+  }
+}
+async function onEmailDeviceChanged() {
+  const userId = $("emailUserSelect").value;
+  const deviceId = $("emailDeviceSelect").value;
+  if (!userId || !deviceId) {
+    setPanelChecked($("emailEventTypesPanel"), []);
+    return;
+  }
+  try {
+    await loadSubscriptionsFor(userId, deviceId, $("emailStatus"), $("emailEventTypesPanel"));
+  } catch (e) {
+    setStatus($("emailStatus"), "Load error: " + e.message, true);
+  }
+}
+
+function initEmailUI() {
+  renderEventCheckboxPanel($("emailEventTypesPanel"), EMAIL_EVENT_TYPES);
+
+  $("emailUserSelect").addEventListener("change", () => {
+    onEmailUserChanged();
+  });
+
+  $("emailDeviceSelect").addEventListener("change", () => {
+    onEmailDeviceChanged();
+  });
+
+  $("emailLoadBtn").addEventListener("click", async () => {
+    // optional manual load button (device change already loads)
+    await onEmailDeviceChanged();
+  });
+
+  $("emailSaveSubsBtn").addEventListener("click", async () => {
+    const userId = $("emailUserSelect").value;
+    const deviceId = $("emailDeviceSelect").value;
+    if (!userId || !deviceId) {
+      setStatus($("emailStatus"), "Select both User and Device", true);
+      return;
     }
-
-    function initEmailUI() {
-      renderEventCheckboxPanel($("emailEventTypesPanel"), EMAIL_EVENT_TYPES);
-
-      $("emailUserSelect").addEventListener("change", onEmailUserChanged);
-
-      $("emailLoadBtn").addEventListener("click", async () => {
-        const userId = $("emailUserSelect").value;
-        const deviceId = $("emailDeviceSelect").value;
-        if (!userId || !deviceId) {
-          setStatus($("emailStatus"), "Select both User and Device", true);
-          return;
-        }
-        try {
-          await loadSubscriptionsFor(userId, deviceId, $("emailStatus"), $("emailEventTypesPanel"));
-        } catch (e) {
-          setStatus($("emailStatus"), "Load error: " + e.message, true);
-        }
+    try {
+      const eventTypes = getPanelChecked($("emailEventTypesPanel"));
+      await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`, {
+        method: "PUT",
+        body: JSON.stringify({ eventTypes })
       });
 
-      $("emailSaveBtn").addEventListener("click", async () => {
-        const userId = $("emailUserSelect").value;
-        const deviceId = $("emailDeviceSelect").value;
-        if (!userId || !deviceId) {
-          setStatus($("emailStatus"), "Select both User and Device", true);
-          return;
-        }
-        try {
-          const eventTypes = getPanelChecked($("emailEventTypesPanel"));
-          await apiJson(`/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`, {
-            method: "PUT",
-            body: JSON.stringify({ eventTypes })
-          });
-          setStatus($("emailStatus"), "Saved subscriptions", false);
-        } catch (e) {
-          setStatus($("emailStatus"), "Save error: " + e.message, true);
-        }
-      });
+      // refresh profile cache so the UI stays consistent
+      await loadUserProfile(userId, { force: true });
 
-      $("emailRefreshBtn").addEventListener("click", async () => {
-        await loadUsers(null);
-        fillUserSelect($("emailUserSelect"));
-        onEmailUserChanged();
-        setStatus($("emailStatus"), "Refreshed users list", false);
-      });
+      setStatus($("emailStatus"), "Saved subscriptions", false);
+    } catch (e) {
+      setStatus($("emailStatus"), "Save error: " + e.message, true);
     }
+  });
+
+  $("emailRefreshBtn").addEventListener("click", async () => {
+    await loadUsers(null);
+    fillUserSelect($("emailUserSelect"));
+    $("emailDeviceSelect").innerHTML = `<option value="">-- Select a device --</option>`;
+    $("emailDeviceSelect").disabled = true;
+    setPanelChecked($("emailEventTypesPanel"), []);
+    setStatus($("emailStatus"), "Refreshed users list", false);
+  });
+}
+
+
+
 
     // ------------------------------
     // DEVICE I/O TEST
