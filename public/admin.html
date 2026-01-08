@@ -232,7 +232,64 @@
           </select>
           <button id="usersLoadProfileBtn">Load Profile</button>
 		  <button id="editUserBtn" class="btn-secondary btn-small">Edit User</button>
+		  <button id="addUserBtn" class="btn-secondary btn-small">Add User</button>
           <button id="saveUserBtn" class="btn-small" disabled>Save</button>
+		  <div class="section-divider"></div>
+
+<div class="pill-title">Create New User</div>
+
+<div id="createUserPanel" class="whitebox" style="display:none;">
+  <div class="two-column">
+    <div>
+      <label for="newUserName">Name</label>
+      <input id="newUserName" type="text" placeholder="Full name" />
+    </div>
+    <div>
+      <label for="newUserEmail">Email (optional)</label>
+      <input id="newUserEmail" type="email" placeholder="user@example.com" />
+    </div>
+  </div>
+
+  <div class="two-column">
+    <div>
+      <label for="newUserPhone">Phone (optional)</label>
+      <input id="newUserPhone" type="tel" placeholder="+353861234567" />
+    </div>
+    <div>
+      <label for="newUserPassword">Password</label>
+      <input id="newUserPassword" type="password" placeholder="Required" />
+    </div>
+  </div>
+
+  <div class="two-column">
+    <div>
+      <label for="newUserAttachDevice">Attach to gate (optional)</label>
+      <select id="newUserAttachDevice">
+        <option value="">-- Don’t attach yet --</option>
+      </select>
+    </div>
+    <div>
+      <label for="newUserAttachRole">Role (if attaching)</label>
+      <select id="newUserAttachRole">
+        <option value="operator">operator</option>
+        <option value="admin">admin</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="inline-actions">
+    <button id="createUserSaveBtn" class="btn-small">Create</button>
+    <button id="createUserCancelBtn" class="btn-secondary btn-small">Cancel</button>
+  </div>
+
+  <div id="createUserStatus" class="status"></div>
+
+  <div class="small" style="margin-top:8px;color:#1c3b4f;">
+    Creates user via <code>POST /auth/register</code>. If gate selected, attaches via <code>POST /devices/:id/users</code>.
+  </div>
+</div>
+
+
 		  
 		  <div class="section-divider"></div>
 
@@ -1070,6 +1127,124 @@ function initUserCredEditor() {
 
   setUserCredEditing(false);
 }
+// =========================
+// Create User (Users screen)
+// Build: render-2026-01-08-c
+// =========================
+function showCreateUserPanel(show) {
+  const panel = document.getElementById("createUserPanel");
+  if (panel) panel.style.display = show ? "block" : "none";
+}
+
+function fillCreateUserDeviceSelect() {
+  const sel = document.getElementById("newUserAttachDevice");
+  if (!sel) return;
+
+  const current = sel.value || "";
+  sel.innerHTML = `<option value="">-- Don’t attach yet --</option>`;
+
+  (allDevices || []).forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = d.name ? `${d.id} – ${d.name}` : d.id;
+    sel.appendChild(opt);
+  });
+
+  if (current && (allDevices || []).some(d => d.id === current)) sel.value = current;
+}
+
+async function createUserAndMaybeAttach() {
+  const name = (document.getElementById("newUserName")?.value || "").trim();
+  const email = (document.getElementById("newUserEmail")?.value || "").trim();
+  const phone = (document.getElementById("newUserPhone")?.value || "").trim();
+  const password = document.getElementById("newUserPassword")?.value || "";
+
+  const attachDeviceId = document.getElementById("newUserAttachDevice")?.value || "";
+  const attachRole = document.getElementById("newUserAttachRole")?.value || "operator";
+
+  if (!password) {
+    setStatus($("createUserStatus"), "Password is required", true);
+    return;
+  }
+  if (!email && !phone) {
+    setStatus($("createUserStatus"), "Provide at least email or phone", true);
+    return;
+  }
+
+  try {
+    // Create user (public endpoint - no admin key)
+    const regRes = await fetch("/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email: email || null, phone: phone || null, password })
+    });
+
+    const regText = await regRes.text().catch(() => "");
+    let regData = null;
+    try { regData = regText ? JSON.parse(regText) : null; } catch { regData = regText; }
+
+    if (!regRes.ok) {
+      const msg = regData?.error || regText || ("HTTP " + regRes.status);
+      throw new Error("Register failed: " + msg);
+    }
+
+    const newUser = regData?.user;
+    if (!newUser?.id) throw new Error("Register succeeded but missing user id");
+
+    // Optionally attach to a gate
+    if (attachDeviceId) {
+      await apiJson(`/devices/${encodeURIComponent(attachDeviceId)}/users`, {
+        method: "POST",
+        body: JSON.stringify({ userId: newUser.id, role: attachRole })
+      });
+    }
+
+    setStatus($("createUserStatus"), `Created user ${newUser.name || ""} (${newUser.id})` + (attachDeviceId ? ` and attached to ${attachDeviceId}` : ""), false);
+
+    // Refresh admin user list + select new user
+    if (typeof loadUsers === "function") await loadUsers(null);
+    if (typeof fillUserSelect === "function") fillUserSelect($("usersSelect"));
+
+    if ($("usersSelect")) $("usersSelect").value = newUser.id;
+
+    // Clear form + close
+    document.getElementById("newUserName").value = "";
+    document.getElementById("newUserEmail").value = "";
+    document.getElementById("newUserPhone").value = "";
+    document.getElementById("newUserPassword").value = "";
+    document.getElementById("newUserAttachDevice").value = "";
+    document.getElementById("newUserAttachRole").value = "operator";
+
+    showCreateUserPanel(false);
+
+    // Load profile into UI if you have that function
+    if (typeof loadSelectedUserIntoCredForm === "function") {
+      await loadSelectedUserIntoCredForm();
+    }
+
+  } catch (e) {
+    setStatus($("createUserStatus"), e.message, true);
+  }
+}
+
+function initCreateUserUI() {
+  if (!$("addUserBtn")) return;
+
+  $("addUserBtn").addEventListener("click", () => {
+    fillCreateUserDeviceSelect();
+    showCreateUserPanel(true);
+    setStatus($("createUserStatus"), "", false);
+  });
+
+  $("createUserCancelBtn")?.addEventListener("click", () => {
+    showCreateUserPanel(false);
+  });
+
+  $("createUserSaveBtn")?.addEventListener("click", createUserAndMaybeAttach);
+
+  showCreateUserPanel(false);
+}
+
 
     // =========================
     // Gates screen
@@ -1394,6 +1569,7 @@ async function showBuildInfo() {
       initNav();
       initAuth();
       initUsers();
+	  initCreateUserUI();
 	  initUserCredEditor();
       initGates();
       initSchedules();
