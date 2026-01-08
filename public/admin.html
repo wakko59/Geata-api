@@ -5,24 +5,44 @@
   <title>Geata Admin (Profile-driven)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    :root{
-      --bg:#0b2535;
-      --bg2:#123653;
-      --ink:#f5f7fa;
-      --muted:#b8d7ff;
-      --line:rgba(255,255,255,.12);
-      --accent:#1c5e86;
-      --accent2:#345a77;
-      --danger:#d9534f;
-      --ok:#ffb300;
-      --whitebox: rgba(255,255,255,0.95);
-    }
+    :root {
+  /* shared background */
+  --bg-main: #ffe4b5;
+
+  /* card backgrounds (same as app) */
+  --bg-card: #0b2535;
+  --bg-card-soft: #123653;
+
+  /* text colours */
+  --text-main: #f5f7fa;
+  --text-muted: #b8d7ff;
+
+  /* borders/lines */
+  --line: rgba(255, 255, 255, 0.12);
+
+  /* accents */
+  --accent: #1c5e86;
+  --accent2: #345a77;
+  --accent-soft: rgba(28, 94, 134, 0.2);
+
+  /* status colours */
+  --danger: #d9534f;
+  --warn: #ffb300;
+  --ok: #2e7d32;
+
+  /* occasional white box */
+  --whitebox: rgba(255, 255, 255, 0.95);
+}
+
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-      background: radial-gradient(circle at top, #1e3f5d 0, #cfdfee 45%, #b3cde5 100%);
-      color:var(--ink);
+     /* background: radial-gradient(circle at top, #1e3f5d 0, #cfdfee 45%, #b3cde5 100%);
+	  background: radial-gradient(circle at top, #1e3f2fd 0, var(--bg-main) 45%, #b3cde5 100%);*/
+	  background: radial-gradient(circle at top, #1e3f5d 0, var(--bg-main) 45%, #b3cde5 100%);
+
+      color:var(--text-main);
     }
     .container{max-width:1200px;margin:0 auto;padding:18px 14px 40px}
     h1{margin:0 0 8px;font-size:22px;letter-spacing:.04em}
@@ -34,21 +54,22 @@
     .navbtn{
       border:1px solid var(--line);
       background:#17405f;
-      color:var(--ink);
+      color:var(--text-main);
       border-radius:999px;
       padding:8px 12px;
       font-size:13px;
       cursor:pointer;
     }
     .navbtn.active{background:var(--accent)}
-    .card{
-      background:var(--bg);
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:14px;
-      box-shadow:0 12px 30px rgba(0,0,0,.18);
-      padding:14px 14px 16px;
-      margin-bottom:12px;
-    }
+    .card {
+	  background: var(--bg-card);
+	  border: 1px solid rgba(255,255,255,0.08);
+	  border-radius: 24px;        /* match app's roundness */
+	  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+	  padding: 14px 16px 16px;    /* a bit wider, like app */
+	  margin-bottom: 12px;
+	}
+
     .card h2{margin:0 0 6px;font-size:17px}
     .pill-title{
       display:inline-block;
@@ -125,7 +146,7 @@
       border-radius:999px;
       background:rgba(28,94,134,.2);
       border:1px solid rgba(255,255,255,.3);
-      color:var(--ink);
+      color:var(--text-main);
       font-size:11px;
       margin:0 6px 6px 0;
     }
@@ -150,7 +171,7 @@
       width:16px;height:16px;margin:0;
       justify-self:start;
     }
-    .event-row span{color:var(--ink);font-size:13px;line-height:1.2}
+    .event-row span{color:var(--text-main);font-size:13px;line-height:1.2}
 
     /* prevent global width:100% breaking checkboxes/radios */
     input[type="checkbox"], input[type="radio"]{width:auto !important;margin:0 !important}
@@ -159,7 +180,7 @@
 
 <body>
   <div class="container">
-    <h1>Geata Admin Panel</h1>
+    <h1>EirGate Admin Panel</h1>
     <p class="subtitle">Profile-driven admin UI (Users → choose user → choose gate → edit schedule + email subscriptions). Gates → choose gate → manage users + settings + I/O test.</p>
 
     <div class="topnav">
@@ -1194,6 +1215,23 @@
       });
     }
 
+async function showBuildInfo() {
+  try {
+    const res = await fetch("/__build");
+    const data = await res.json();
+    const el = document.getElementById("buildInfo");
+    if (el) el.textContent = `Build: ${data.buildTag} · Node: ${data.node} · Server time: ${data.time}`;
+  } catch (_) {}
+}
+async function showBuildInfo() {
+  try {
+    const res = await fetch("/__build");
+    const data = await res.json();
+    const el = document.getElementById("buildInfo");
+    if (el) el.textContent = `Build: ${data.buildTag} · Node: ${data.node} · Server time: ${data.time}`;
+  } catch (_) {}
+}
+
     // =========================
     // Initial load
     // =========================
@@ -1204,6 +1242,8 @@
       initGates();
       initSchedules();
       initEvents();
+	  await showBuildInfo();
+
 
       // Pre-render checkbox panels
       renderEventCheckboxPanel($("usersEmailPanel"), EMAIL_EVENT_TYPES);
@@ -1228,5 +1268,7 @@
       }
     });
   </script>
+  <div class="small" id="buildInfo" style="opacity:0.8;margin-top:10px;"></div>
+
 </body>
 </html>

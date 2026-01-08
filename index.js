@@ -15,6 +15,9 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+const BUILD_TAG = process.env.BUILD_TAG || "local-dev";
+
+
 // Root -> serve admin UI
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
@@ -904,6 +907,16 @@ function requireUser(req, res, next) {
 }
 
 // ---- Routes ----
+
+// ---- Build Tag ----
+app.get("/__build", (req, res) => {
+  res.json({
+    buildTag: BUILD_TAG,
+    node: process.version,
+    time: new Date().toISOString()
+  });
+});
+
 
 // Admin test email
 app.post("/admin/test-email", requireAdminKey, asyncHandler(async (req, res) => {
