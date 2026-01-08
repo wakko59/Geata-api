@@ -981,6 +981,22 @@ app.get("/me", requireUser, asyncHandler(async (req, res) => {
   if (!user) return res.status(404).json({ error: "User not found" });
   res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone });
 }));
+app.get("/me/devices", requireUser, asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const r = await q(
+    `
+    SELECT d.id, d.name, du.role
+    FROM device_users du
+    JOIN devices d ON d.id = du.device_id
+    WHERE du.user_id = $1
+    ORDER BY d.id
+    `,
+    [userId]
+  );
+
+  res.json(r.rows);
+}));
 
 // Devices (admin-only)
 app.get("/devices", requireAdminKey, asyncHandler(async (req, res) => {
