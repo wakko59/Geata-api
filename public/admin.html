@@ -231,6 +231,45 @@
             <option value="">-- Select a user --</option>
           </select>
           <button id="usersLoadProfileBtn">Load Profile</button>
+		  <button id="editUserBtn" class="btn-secondary btn-small">Edit User</button>
+          <button id="saveUserBtn" class="btn-small" disabled>Save</button>
+		  
+		  <div class="section-divider"></div>
+
+<div class="pill-title">User Credentials</div>
+
+<div class="whitebox">
+  <div class="row">
+    <div><strong>User ID:</strong></div>
+    <code id="userCredId">(none)</code>
+  </div>
+</div>
+
+<div class="two-column">
+  <div>
+    <label for="userCredName">Name</label>
+    <input id="userCredName" type="text" disabled />
+  </div>
+  <div>
+    <label for="userCredEmail">Email</label>
+    <input id="userCredEmail" type="email" disabled />
+  </div>
+</div>
+
+<div class="two-column">
+  <div>
+    <label for="userCredPhone">Phone</label>
+    <input id="userCredPhone" type="tel" disabled />
+  </div>
+  <div>
+    <label for="userCredPassword">New Password</label>
+    <input id="userCredPassword" type="password" placeholder="Leave blank to keep existing" disabled />
+  </div>
+</div>
+
+<div id="userCredStatus" class="status"></div>
+
+
           <div id="usersProfileStatus" class="status"></div>
         </div>
 
@@ -907,6 +946,130 @@
         }
       });
     }
+// =========================
+// User credential editor (Profile-driven)
+// Build: render-2026-01-08-a
+// Uses: usersSelect, usersLoadProfileBtn
+// =========================
+let userCredEditing = false;
+let currentUserIdForCreds = null;
+
+function setUserCredEditing(enabled) {
+  userCredEditing = enabled;
+
+  $("userCredName").disabled = !enabled;
+  $("userCredEmail").disabled = !enabled;
+  $("userCredPhone").disabled = !enabled;
+  $("userCredPassword").disabled = !enabled;
+
+  $("saveUserBtn").disabled = !enabled || !currentUserIdForCreds;
+}
+
+function fillUserCredFormFromProfile(profile) {
+  const u = profile?.user;
+  if (!u) return;
+
+  currentUserIdForCreds = u.id;
+  $("userCredId").textContent = u.id || "(none)";
+
+  $("userCredName").value = u.name || "";
+  $("userCredEmail").value = u.email || "";
+  $("userCredPhone").value = u.phone || "";
+  $("userCredPassword").value = ""; // never show existing password
+}
+
+async function loadSelectedUserIntoCredForm() {
+  const userId = $("usersSelect") ? $("usersSelect").value : "";
+  if (!userId) {
+    currentUserIdForCreds = null;
+    $("userCredId").textContent = "(none)";
+    $("userCredName").value = "";
+    $("userCredEmail").value = "";
+    $("userCredPhone").value = "";
+    $("userCredPassword").value = "";
+    setUserCredEditing(false);
+    return;
+  }
+
+  try {
+    const profile = await loadUserProfile(userId, { force: true });
+    fillUserCredFormFromProfile(profile);
+    setUserCredEditing(false);
+    setStatus($("userCredStatus"), "Loaded credentials. Click Edit User to modify.", false);
+  } catch (e) {
+    setStatus($("userCredStatus"), "Profile load error: " + e.message, true);
+  }
+}
+
+async function saveUserCreds() {
+  if (!currentUserIdForCreds) {
+    setStatus($("userCredStatus"), "No user loaded", true);
+    return;
+  }
+
+  try {
+    const payload = {
+      name: $("userCredName").value.trim(),
+      email: $("userCredEmail").value.trim(),
+      phone: $("userCredPhone").value.trim(),
+      password: $("userCredPassword").value || "" // blank => keep existing
+    };
+
+    await apiJson(`/users/${encodeURIComponent(currentUserIdForCreds)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+
+    $("userCredPassword").value = "";
+
+    // Refresh caches so other UI stays consistent
+    await loadUserProfile(currentUserIdForCreds, { force: true });
+    if (typeof loadUsers === "function") await loadUsers(null);
+
+    setUserCredEditing(false);
+    setStatus($("userCredStatus"), "Saved user credentials", false);
+  } catch (e) {
+    setStatus($("userCredStatus"), "Save error: " + e.message, true);
+  }
+}
+
+function initUserCredEditor() {
+  if (!$("editUserBtn") || !$("saveUserBtn")) return;
+
+  $("editUserBtn").addEventListener("click", async () => {
+    if (!currentUserIdForCreds) {
+      await loadSelectedUserIntoCredForm();
+    }
+    if (!currentUserIdForCreds) {
+      setStatus($("userCredStatus"), "Load a profile first", true);
+      return;
+    }
+    setUserCredEditing(!userCredEditing);
+    setStatus(
+      $("userCredStatus"),
+      userCredEditing ? "Edit enabled. Change fields then Save." : "Edit disabled.",
+      false
+    );
+  });
+
+  $("saveUserBtn").addEventListener("click", saveUserCreds);
+
+  // Keep form synced with dropdown choice (does not auto-enable editing)
+  if ($("usersSelect")) {
+    $("usersSelect").addEventListener("change", async () => {
+      await loadSelectedUserIntoCredForm();
+    });
+  }
+
+  // When Load Profile is clicked, also load creds into this form
+  if ($("usersLoadProfileBtn")) {
+    $("usersLoadProfileBtn").addEventListener("click", async () => {
+      await loadSelectedUserIntoCredForm();
+    });
+  }
+
+  setUserCredEditing(false);
+}
 
     // =========================
     // Gates screen
@@ -1223,14 +1386,6 @@ async function showBuildInfo() {
     if (el) el.textContent = `Build: ${data.buildTag} · Node: ${data.node} · Server time: ${data.time}`;
   } catch (_) {}
 }
-async function showBuildInfo() {
-  try {
-    const res = await fetch("/__build");
-    const data = await res.json();
-    const el = document.getElementById("buildInfo");
-    if (el) el.textContent = `Build: ${data.buildTag} · Node: ${data.node} · Server time: ${data.time}`;
-  } catch (_) {}
-}
 
     // =========================
     // Initial load
@@ -1239,6 +1394,7 @@ async function showBuildInfo() {
       initNav();
       initAuth();
       initUsers();
+	  initUserCredEditor();
       initGates();
       initSchedules();
       initEvents();
