@@ -185,6 +185,34 @@
 .whitebox .event-row span {
   color: #122b3a !important; /* dark text on whitebox */
 }
+/* Whitebox is light background, so force readable form colors inside it */
+.whitebox label {
+  color: #122b3a !important;
+}
+
+.whitebox .small,
+.whitebox .small-green {
+  color: #35576b !important;
+}
+
+.whitebox input,
+.whitebox select,
+.whitebox textarea {
+  color: #122b3a;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.18);
+}
+
+.whitebox input::placeholder,
+.whitebox textarea::placeholder {
+  color: rgba(18,43,58,0.55);
+}
+
+/* optional: keep pill-title readable on whitebox */
+.whitebox .pill-title {
+  color: #17405f;
+}
+
 
 
     /* prevent global width:100% breaking checkboxes/radios */
