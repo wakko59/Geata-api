@@ -456,7 +456,9 @@
           <select id="gatesSelect">
             <option value="">-- Select a gate --</option>
           </select>
-          <button id="gatesLoadBtn" class="secondary">Load Gate Data</button>
+          <button id="gatesLoadBtn" class="btn-secondary btn-small">Load Gate Data</button>
+		  <button id="gatesAddUserBtn" class="btn-secondary btn-small">Add User</button>
+
           <div id="gatesStatus" class="status"></div>
 
           <div class="whitebox">
@@ -536,6 +538,33 @@
             <button id="simTamperBtn">Sim TAMPER_OPENED (+Output3)</button>
           </div>
           <div id="gatesSimStatus" class="status"></div>
+		  
+		  <div id="gateAddUserPanel" class="whitebox" style="display:none; margin-top:10px;">
+  <div class="pill-title">Add User to This Gate</div>
+
+  <label for="gateAddUserSelect">Select User</label>
+  <select id="gateAddUserSelect">
+    <option value="">-- Select a user --</option>
+  </select>
+
+  <label for="gateAddUserRole">Role</label>
+  <select id="gateAddUserRole">
+    <option value="operator">operator</option>
+    <option value="admin">admin</option>
+  </select>
+
+  <div class="inline-actions">
+    <button id="gateAddUserConfirmBtn" class="btn-small">Add</button>
+    <button id="gateAddUserCancelBtn" class="btn-secondary btn-small">Cancel</button>
+  </div>
+
+  <div id="gateAddUserStatus" class="status"></div>
+
+  <div class="small" style="margin-top:8px;color:#1c3b4f;">
+    Attaches an existing user to the selected gate via <code>POST /devices/:id/users</code>.
+  </div>
+</div>
+
 
           <div class="small">
             Uses: <code>POST /devices/:id/simulate-event</code>
@@ -795,6 +824,61 @@ function getCheckedDevices(containerEl) {
         return `${dayStr} ${s.start || ""}-${s.end || ""}`;
       }).join(" | ");
     }
+	function showGateAddUserPanel(show) {
+  const panel = document.getElementById("gateAddUserPanel");
+  if (panel) panel.style.display = show ? "block" : "none";
+}
+
+function fillGateAddUserSelect() {
+  const sel = document.getElementById("gateAddUserSelect");
+  if (!sel) return;
+
+  const current = sel.value || "";
+  sel.innerHTML = `<option value="">-- Select a user --</option>`;
+
+  (allUsers || []).forEach(u => {
+    const opt = document.createElement("option");
+    opt.value = u.id;
+    opt.textContent =
+      `${u.name || "(no name)"}`
+      + (u.email ? ` · ${u.email}` : "")
+      + (u.phone ? ` · ${u.phone}` : "")
+      + ` [${u.id}]`;
+    sel.appendChild(opt);
+  });
+
+  if (current && (allUsers || []).some(u => u.id === current)) sel.value = current;
+}
+async function gateAddUserConfirm() {
+  // IMPORTANT: this must match your Gates screen selected gate value
+  // Change "gatesSelect" below if your gate dropdown id is different.
+  const deviceId = document.getElementById("gatesSelect")?.value || "";
+  const userId = document.getElementById("gateAddUserSelect")?.value || "";
+  const role = document.getElementById("gateAddUserRole")?.value || "operator";
+
+  if (!deviceId) return setStatus($("gateAddUserStatus"), "Select a gate first", true);
+  if (!userId) return setStatus($("gateAddUserStatus"), "Select a user", true);
+
+  try {
+    await apiJson(`/devices/${encodeURIComponent(deviceId)}/users`, {
+      method: "POST",
+      body: JSON.stringify({ userId, role })
+    });
+
+    setStatus($("gateAddUserStatus"), "User added to gate", false);
+
+    // refresh gate view immediately (same as gatesLoadBtn)
+await loadGateUsers(deviceId);
+await loadGateSettings(deviceId);
+
+
+    showGateAddUserPanel(false);
+  } catch (e) {
+    setStatus($("gateAddUserStatus"), "Add failed: " + e.message, true);
+  }
+}
+
+
 
     // =========================
     // Profile API
@@ -1464,6 +1548,28 @@ function initCreateUserUI() {
           setStatus($("gatesStatus"), "Load error: " + e.message, true);
         }
       });
+function initGateAddUserUI() {
+  const openBtn = document.getElementById("gatesAddUserBtn");
+  if (!openBtn) return;
+
+  openBtn.addEventListener("click", () => {
+    const gateId = $("gatesSelect").value || "";
+    if (!gateId) return setStatus($("gatesStatus"), "Select a gate first", true);
+
+    fillGateAddUserSelect();          // populate dropdown with all users
+    showGateAddUserPanel(true);       // open panel
+    setStatus($("gateAddUserStatus"), "", false);
+  });
+
+  $("gateAddUserCancelBtn")?.addEventListener("click", () => {
+    showGateAddUserPanel(false);
+  });
+
+  $("gateAddUserConfirmBtn")?.addEventListener("click", gateAddUserConfirm);
+
+  showGateAddUserPanel(false);
+}
+
 
       $("gatesLoadSettingsBtn").addEventListener("click", async ()=>{
         const gateId = $("gatesSelect").value || "";
@@ -1607,6 +1713,7 @@ async function showBuildInfo() {
 	  initCreateUserUI();
 	  initUserCredEditor();
       initGates();
+	  initGateAddUserUI();
       initSchedules();
       initEvents();
 	  await showBuildInfo();
