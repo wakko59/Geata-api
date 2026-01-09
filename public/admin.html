@@ -232,7 +232,7 @@
           </select>
           <button id="usersLoadProfileBtn">Load Profile</button>
 		  <button id="editUserBtn" class="btn-secondary btn-small">Edit User</button>
-		  <button id="addUserBtn" class="btn-secondary btn-small">Add User</button>
+		  <button id="addUserBtn" class="btn-secondary btn-small">New User</button>
           <button id="saveUserBtn" class="btn-small" disabled>Save</button>
 		  <div class="section-divider"></div>
 
@@ -257,16 +257,14 @@
     </div>
     <div>
       <label for="newUserPassword">Password</label>
-      <input id="newUserPassword" type="password" placeholder="Required" />
+      <input id="newUserPassword" type="password" placeholder="Password Required" />
     </div>
   </div>
 
   <div class="two-column">
     <div>
-      <label for="newUserAttachDevice">Attach to gate (optional)</label>
-      <select id="newUserAttachDevice">
-        <option value="">-- Don’t attach yet --</option>
-      </select>
+	  <div class="device-label-big" style="margin-top:6px;">Attach to gates (optional)</div>
+      <div id="newUserDevicesPanel"></div>
     </div>
     <div>
       <label for="newUserAttachRole">Role (if attaching)</label>
@@ -285,7 +283,7 @@
   <div id="createUserStatus" class="status"></div>
 
   <div class="small" style="margin-top:8px;color:#1c3b4f;">
-    Creates user via <code>POST /auth/register</code>. If gate selected, attaches via <code>POST /devices/:id/users</code>.
+   Creates user via <code>POST /admin/users</code> (admin only). Optional: attach to one or more gates.
   </div>
 </div>
 
@@ -664,6 +662,38 @@
       });
       containerEl.appendChild(panel);
     }
+function renderDeviceCheckboxPanel(containerEl, devices) {
+  if (!containerEl) return;
+  containerEl.innerHTML = "";
+
+  const panel = document.createElement("div");
+  panel.className = "event-panel"; // reuse existing styling
+
+  (devices || []).forEach(d => {
+    const row = document.createElement("label");
+    row.className = "event-row";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = d.id;
+
+    const txt = document.createElement("span");
+    txt.textContent = d.name ? `${d.id} – ${d.name}` : d.id;
+
+    row.appendChild(cb);
+    row.appendChild(txt);
+    panel.appendChild(row);
+  });
+
+  containerEl.appendChild(panel);
+}
+
+function getCheckedDevices(containerEl) {
+  const out = [];
+  if (!containerEl) return out;
+  containerEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => out.push(cb.value));
+  return out;
+}
 
     function setPanelChecked(containerEl, selectedList){
       if(!containerEl) return;
@@ -1136,105 +1166,68 @@ function showCreateUserPanel(show) {
   if (panel) panel.style.display = show ? "block" : "none";
 }
 
-function fillCreateUserDeviceSelect() {
-  const sel = document.getElementById("newUserAttachDevice");
-  if (!sel) return;
-
-  const current = sel.value || "";
-  sel.innerHTML = `<option value="">-- Don’t attach yet --</option>`;
-
-  (allDevices || []).forEach(d => {
-    const opt = document.createElement("option");
-    opt.value = d.id;
-    opt.textContent = d.name ? `${d.id} – ${d.name}` : d.id;
-    sel.appendChild(opt);
-  });
-
-  if (current && (allDevices || []).some(d => d.id === current)) sel.value = current;
-}
-
 async function createUserAndMaybeAttach() {
-  const name = (document.getElementById("newUserName")?.value || "").trim();
-  const email = (document.getElementById("newUserEmail")?.value || "").trim();
-  const phone = (document.getElementById("newUserPhone")?.value || "").trim();
-  const password = document.getElementById("newUserPassword")?.value || "";
+  const name = ($("newUserName")?.value || "").trim();
+  const email = ($("newUserEmail")?.value || "").trim();
+  const phone = ($("newUserPhone")?.value || "").trim();
+  const password = $("newUserPassword")?.value || "";
 
-  const attachDeviceId = document.getElementById("newUserAttachDevice")?.value || "";
-  const attachRole = document.getElementById("newUserAttachRole")?.value || "operator";
+  const role = $("newUserAttachRole")?.value || "operator";
+  const deviceIds = getCheckedDevices($("newUserDevicesPanel"));
 
-  if (!password) {
-    setStatus($("createUserStatus"), "Password is required", true);
-    return;
-  }
-  if (!email && !phone) {
-    setStatus($("createUserStatus"), "Provide at least email or phone", true);
-    return;
-  }
+  if (!password) return setStatus($("createUserStatus"), "Password is required", true);
+  if (!email && !phone) return setStatus($("createUserStatus"), "Provide at least email or phone", true);
 
   try {
-    // Create user (public endpoint - no admin key)
-    const regRes = await fetch("/auth/register", {
+    const payload = {
+      name,
+      email: email || null,
+      phone: phone || null,
+      password,
+      devices: deviceIds.map(id => ({ deviceId: id, role }))
+    };
+
+    const data = await apiJson("/admin/users", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email: email || null, phone: phone || null, password })
+      body: JSON.stringify(payload)
     });
 
-    const regText = await regRes.text().catch(() => "");
-    let regData = null;
-    try { regData = regText ? JSON.parse(regText) : null; } catch { regData = regText; }
+    const newUser = data?.user;
+    setStatus(
+      $("createUserStatus"),
+      `Created ${newUser?.name || ""} (${newUser?.id})` + (deviceIds.length ? ` · attached to ${deviceIds.length} gate(s)` : ""),
+      false
+    );
 
-    if (!regRes.ok) {
-      const msg = regData?.error || regText || ("HTTP " + regRes.status);
-      throw new Error("Register failed: " + msg);
-    }
+    // refresh lists
+    await loadUsers(null);
+    fillUserSelect($("usersSelect"));
 
-    const newUser = regData?.user;
-    if (!newUser?.id) throw new Error("Register succeeded but missing user id");
+    if ($("usersSelect") && newUser?.id) $("usersSelect").value = newUser.id;
 
-    // Optionally attach to a gate
-    if (attachDeviceId) {
-      await apiJson(`/devices/${encodeURIComponent(attachDeviceId)}/users`, {
-        method: "POST",
-        body: JSON.stringify({ userId: newUser.id, role: attachRole })
-      });
-    }
-
-    setStatus($("createUserStatus"), `Created user ${newUser.name || ""} (${newUser.id})` + (attachDeviceId ? ` and attached to ${attachDeviceId}` : ""), false);
-
-    // Refresh admin user list + select new user
-    if (typeof loadUsers === "function") await loadUsers(null);
-    if (typeof fillUserSelect === "function") fillUserSelect($("usersSelect"));
-
-    if ($("usersSelect")) $("usersSelect").value = newUser.id;
-
-    // Clear form + close
-    document.getElementById("newUserName").value = "";
-    document.getElementById("newUserEmail").value = "";
-    document.getElementById("newUserPhone").value = "";
-    document.getElementById("newUserPassword").value = "";
-    document.getElementById("newUserAttachDevice").value = "";
-    document.getElementById("newUserAttachRole").value = "operator";
-
+    // reset + close
+    $("newUserName").value = "";
+    $("newUserEmail").value = "";
+    $("newUserPhone").value = "";
+    $("newUserPassword").value = "";
+    $("newUserAttachRole").value = "operator";
     showCreateUserPanel(false);
-
-    // Load profile into UI if you have that function
-    if (typeof loadSelectedUserIntoCredForm === "function") {
-      await loadSelectedUserIntoCredForm();
-    }
 
   } catch (e) {
     setStatus($("createUserStatus"), e.message, true);
   }
 }
 
+
 function initCreateUserUI() {
   if (!$("addUserBtn")) return;
 
-  $("addUserBtn").addEventListener("click", () => {
-    fillCreateUserDeviceSelect();
-    showCreateUserPanel(true);
-    setStatus($("createUserStatus"), "", false);
-  });
+ $("addUserBtn").addEventListener("click", () => {
+  renderDeviceCheckboxPanel($("newUserDevicesPanel"), allDevices);
+  showCreateUserPanel(true);
+  setStatus($("createUserStatus"), "", false);
+});
+
 
   $("createUserCancelBtn")?.addEventListener("click", () => {
     showCreateUserPanel(false);

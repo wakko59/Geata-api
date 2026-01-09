@@ -1250,6 +1250,57 @@ app.put("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
   const id = req.params.id;
   const user = await getUserById(id);
   if (!user) return res.status(404).json({ error: "User not found" });
+// ======================================================
+// Admin-only: Create user + attach to multiple gates
+// POST /admin/users
+// Body: { name, email, phone, password, devices:[{deviceId, role}] }
+// ======================================================
+app.post("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
+  const body = req.body || {};
+  const name = (body.name || "").trim() || null;
+  const email = (body.email || "").trim() || null;
+  const phone = normalizePhone(body.phone || null);
+  const password = body.password || "";
+
+  const devices = Array.isArray(body.devices) ? body.devices : [];
+
+  if (!password || (!email && !phone)) {
+    return res.status(400).json({ error: "password and at least phone or email are required" });
+  }
+
+  // Uniqueness checks (same as /auth/register)
+  if (phone) {
+    const existingByPhone = await getUserByPhone(phone);
+    if (existingByPhone) return res.status(409).json({ error: "User with this phone already exists" });
+  }
+  if (email) {
+    const existingByEmail = await getUserByEmail(email);
+    if (existingByEmail) return res.status(409).json({ error: "User with this email already exists" });
+  }
+
+  // Create user (uses your existing helper, hashes password)
+  const user = await createUser({ name: name || email || phone, email, phone, password });
+
+  // Attach to multiple devices (optional)
+  const attached = [];
+  for (const d of devices) {
+    const deviceId = (d?.deviceId || "").trim();
+    if (!deviceId) continue;
+
+    const device = await getDeviceById(deviceId);
+    if (!device) continue; // ignore unknown device ids
+
+    const role = (d?.role || "operator").trim() || "operator";
+    await attachUserToDevice(deviceId, user.id, role);
+    attached.push({ deviceId, role });
+  }
+
+  res.status(201).json({
+    user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+    devices: attached
+  });
+}));
+
 
   const updated = await updateUser(id, {
     name: req.body && req.body.name,
