@@ -172,6 +172,20 @@
       justify-self:start;
     }
     .event-row span{color:var(--text-main);font-size:13px;line-height:1.2}
+	/* Make checkbox panels readable inside .whitebox (light background) */
+.whitebox .event-panel {
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(0,0,0,0.10);
+}
+
+.whitebox .event-row {
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.whitebox .event-row span {
+  color: #122b3a !important; /* dark text on whitebox */
+}
+
 
     /* prevent global width:100% breaking checkboxes/radios */
     input[type="checkbox"], input[type="radio"]{width:auto !important;margin:0 !important}
