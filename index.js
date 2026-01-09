@@ -1228,6 +1228,77 @@ app.delete("/schedules/:id", requireAdminKey, asyncHandler(async (req, res) => {
 }));
 
 // Users (Admin)
+// ======================================================
+// Admin Users (Alias + Create)
+// Build: render-2026-01-08-e
+// ======================================================
+
+// Alias GET /admin/users -> same as GET /users
+app.get("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
+  const qstr = (req.query.q || "").trim();
+  const rows = await searchUsers(qstr || null);
+
+  const result = [];
+  for (const u of rows) {
+    const devices = await listUserDevices(u.id);
+    result.push({ id: u.id, name: u.name, email: u.email, phone: u.phone, devices });
+  }
+  res.json(result);
+}));
+
+// Create user (admin-only) + optionally attach to multiple devices
+// Body:
+// {
+//   name, email, phone, password,
+//   devices: [{ deviceId, role, scheduleId? }, ...]
+// }
+app.post("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
+  const body = req.body || {};
+  const name = (body.name || "").trim();
+  const email = (body.email || "").trim() || null;
+  const phone = normalizePhone(body.phone || null);
+  const password = body.password || "";
+
+  if (!password) return res.status(400).json({ error: "password is required" });
+  if (!email && !phone) return res.status(400).json({ error: "Provide at least email or phone" });
+
+  // Prevent duplicates
+  if (phone) {
+    const existingByPhone = await getUserByPhone(phone);
+    if (existingByPhone) return res.status(409).json({ error: "User with this phone already exists" });
+  }
+  if (email) {
+    const existingByEmail = await getUserByEmail(email);
+    if (existingByEmail) return res.status(409).json({ error: "User with this email already exists" });
+  }
+
+  // Create
+  const user = await createUser({ name, email, phone, password });
+
+  // Optional attach to devices
+  const devices = Array.isArray(body.devices) ? body.devices : [];
+  for (const d of devices) {
+    const deviceId = (d?.deviceId || "").trim();
+    if (!deviceId) continue;
+
+    const role = (d?.role || "operator").trim() || "operator";
+    await attachUserToDevice(deviceId, user.id, role);
+
+    // Optional schedule assignment
+    const scheduleId = d?.scheduleId ? Number(d.scheduleId) : null;
+    if (scheduleId) {
+      const sched = await getScheduleById(scheduleId);
+      if (!sched) return res.status(404).json({ error: `Schedule not found: ${scheduleId}` });
+      await setDeviceUserSchedule(deviceId, user.id, scheduleId);
+    }
+  }
+
+  // Return created user (and optionally a profile if you want)
+  res.status(201).json({
+    user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+  });
+}));
+
 app.get("/users", requireAdminKey, asyncHandler(async (req, res) => {
   const qstr = (req.query.q || "").trim();
   const rows = await searchUsers(qstr || null);
