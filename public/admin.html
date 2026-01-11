@@ -573,30 +573,111 @@
       </div>
     </section>
 
-    <!-- SCHEDULES -->
-    <section id="screen-schedules" class="card" style="display:none">
-      <div class="pill-title">Time</div>
-      <h2>Schedules (read-only list)</h2>
-      <button id="schedRefreshBtn" class="secondary">Refresh</button>
-      <div id="schedStatus" class="status"></div>
+<!-- SCHEDULES -->
+<section id="screen-schedules" class="screen">
 
-      <table id="schedTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Slots</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+  <div id="scheduleCard" class="card view-mode">
 
-      <div class="small" style="margin-top:8px">
-        This UI is intentionally simple. You can manage schedules via your existing endpoints:
-        <code>GET/POST/PUT/DELETE /schedules</code>.
+    <div class="topbar" style="margin-bottom: 10px;">
+      <div class="topbar-left">
+        <button class="btn-secondary btn-small" data-back>← Back</button>
+        <button class="btn-secondary btn-small" data-home>🏠 Home</button>
       </div>
-    </section>
+      <div class="topbar-right">
+        <button id="refreshSchedulesBtn" class="btn-secondary btn-small">Refresh</button>
+        <button id="scheduleNewBtn" class="btn-secondary btn-small">New</button>
+        <button id="scheduleEnableBtn" class="btn-secondary btn-small">Edit</button>
+        <button id="scheduleSaveTopBtn" class="btn-small" disabled>Save</button>
+      </div>
+    </div>
+
+    <!-- keep your existing card-header + rest of the schedule UI exactly as-is -->
+    <div class="card-header">
+      ...
+    </div>
+
+    ...
+  </div>
+</section>
+
+
+  <div id="scheduleCard" class="card view-mode">
+    <div class="card-header">
+      <div>
+        <div class="pill-title">Time</div>
+        <h2 class="card-title">Schedules</h2>
+        <p class="card-subtitle">Create/edit a schedule, then assign it to users per gate.</p>
+      </div>
+    </div>
+
+    <div id="scheduleStatus" class="status"></div>
+
+    <table id="schedulesTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Slots</th>
+          <th>Edit</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="section-divider"></div>
+
+    <h3 id="scheduleFormTitle" style="margin-top: 4px; font-size: 15px;">Create / Edit Schedule</h3>
+
+    <label for="scheduleNameInput">Schedule Name</label>
+    <input id="scheduleNameInput" type="text" placeholder="e.g. Weekdays 9–5" disabled />
+
+    <label for="scheduleDescInput">Description (optional)</label>
+    <input id="scheduleDescInput" type="text" placeholder="Short description" disabled />
+
+    <p class="small">
+      Days: 0–6 for Sun–Sat. Use ranges <code>1-5</code> or lists <code>1,2,3</code>. Blank days = all days.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Slot</th>
+          <th>Days (0–6)</th>
+          <th>Start</th>
+          <th>End</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td><input id="slot1Days" type="text" disabled /></td><td><input id="slot1Start" type="time" disabled /></td><td><input id="slot1End" type="time" disabled /></td>
+        </tr>
+        <tr>
+          <td>2</td><td><input id="slot2Days" type="text" disabled /></td><td><input id="slot2Start" type="time" disabled /></td><td><input id="slot2End" type="time" disabled /></td>
+        </tr>
+        <tr>
+          <td>3</td><td><input id="slot3Days" type="text" disabled /></td><td><input id="slot3Start" type="time" disabled /></td><td><input id="slot3End" type="time" disabled /></td>
+        </tr>
+        <tr>
+          <td>4</td><td><input id="slot4Days" type="text" disabled /></td><td><input id="slot4Start" type="time" disabled /></td><td><input id="slot4End" type="time" disabled /></td>
+        </tr>
+        <tr>
+          <td>5</td><td><input id="slot5Days" type="text" disabled /></td><td><input id="slot5Start" type="time" disabled /></td><td><input id="slot5End" type="time" disabled /></td>
+        </tr>
+        <tr>
+          <td>6</td><td><input id="slot6Days" type="text" disabled /></td><td><input id="slot6Start" type="time" disabled /></td><td><input id="slot6End" type="time" disabled /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button id="resetScheduleFormBtn" class="btn-secondary btn-small">Reset Form</button>
+
+    <div class="small">
+      After Save, the form resets for the next schedule.
+    </div>
+  </div>
+</section>
+
 
     <!-- EVENTS -->
     <section id="screen-events" class="card" style="display:none">
@@ -1612,35 +1693,210 @@ function initCreateUserUI() {
     // =========================
     // Schedules screen
     // =========================
-    async function renderSchedules(){
-      const tbody = document.querySelector("#schedTable tbody");
-      tbody.innerHTML = "";
-      allSchedules.forEach(s=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${s.id}</td>
-          <td>${s.name || ""}</td>
-          <td>${s.description || ""}</td>
-          <td>${describeSlots(s.slots || [])}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
 
-    function initSchedules(){
-      $("schedRefreshBtn").addEventListener("click", async ()=>{
-        setStatus($("schedStatus"), "Loading…", false);
-        try{
-          await loadSchedules();
-          await renderSchedules();
-          // keep other schedule selects in sync
-          rebuildScheduleSelect($("usersScheduleSelect"));
-          setStatus($("schedStatus"), `Loaded ${allSchedules.length} schedules`, false);
-        }catch(e){
-          setStatus($("schedStatus"), "Load error: " + e.message, true);
+function dayName(d) { return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d] || "?"; }
+
+function describeSlots(slots) {
+  if (!slots || slots.length === 0) return "No slots";
+  return slots.map(s => {
+    const days = Array.isArray(s.daysOfWeek) ? s.daysOfWeek : [];
+    const dayStr = days.length ? days.map(dayName).join(",") : "All days";
+    return `${dayStr} ${s.start || ""}-${s.end || ""}`;
+  }).join(" | ");
+}
+
+function parseDaysString(str) {
+  const result = [];
+  const s = (str || "").trim();
+  if (!s) return [];
+  const parts = s.split(",");
+  parts.forEach(part => {
+    const t = part.trim();
+    if (!t) return;
+    if (t.includes("-")) {
+      const [aS, bS] = t.split("-");
+      const a = parseInt(aS.trim(), 10);
+      const b = parseInt(bS.trim(), 10);
+      if (Number.isFinite(a) && Number.isFinite(b)) {
+        const step = a <= b ? 1 : -1;
+        for (let d = a; step > 0 ? d <= b : d >= b; d += step) {
+          if (d >= 0 && d <= 6 && !result.includes(d)) result.push(d);
         }
-      });
+      }
+    } else {
+      const n = parseInt(t, 10);
+      if (Number.isFinite(n) && n >= 0 && n <= 6 && !result.includes(n)) result.push(n);
     }
+  });
+  result.sort((x,y) => x-y);
+  return result;
+}
+
+let editingScheduleId = null;
+
+function setScheduleEditing(enabled) {
+  $("scheduleNameInput").disabled = !enabled;
+  $("scheduleDescInput").disabled = !enabled;
+  for (let i=1;i<=6;i++) {
+    $(`slot${i}Days`).disabled = !enabled;
+    $(`slot${i}Start`).disabled = !enabled;
+    $(`slot${i}End`).disabled = !enabled;
+  }
+  $("scheduleSaveTopBtn").disabled = !enabled;
+}
+
+function resetScheduleForm() {
+  editingScheduleId = null;
+  $("scheduleFormTitle").textContent = "Create / Edit Schedule";
+  $("scheduleNameInput").value = "";
+  $("scheduleDescInput").value = "";
+  for (let i=1;i<=6;i++) {
+    $(`slot${i}Days`).value = "";
+    $(`slot${i}Start`).value = "";
+    $(`slot${i}End`).value = "";
+  }
+  setScheduleEditing(false);
+}
+
+function readSlotsFromForm() {
+  const slots = [];
+  for (let i=1;i<=6;i++) {
+    const daysStr = $(`slot${i}Days`).value.trim();
+    const start = $(`slot${i}Start`).value;
+    const end = $(`slot${i}End`).value;
+    if (!daysStr && !start && !end) continue;
+    if (!start || !end) continue;
+    slots.push({ daysOfWeek: parseDaysString(daysStr), start, end });
+  }
+  return slots;
+}
+
+function fillSlotsFormFromSchedule(s) {
+  for (let i=1;i<=6;i++) {
+    $(`slot${i}Days`).value = "";
+    $(`slot${i}Start`).value = "";
+    $(`slot${i}End`).value = "";
+  }
+  const slots = s.slots || [];
+  for (let i=0; i<slots.length && i<6; i++) {
+    const sl = slots[i];
+    $(`slot${i+1}Days`).value = (sl.daysOfWeek || []).join(",");
+    $(`slot${i+1}Start`).value = sl.start || "";
+    $(`slot${i+1}End`).value = sl.end || "";
+  }
+}
+
+async function loadSchedules() {
+  try {
+    const data = await apiJson("/schedules");
+    allSchedules = Array.isArray(data) ? data : [];
+    setStatus($("scheduleStatus"), `Loaded ${allSchedules.length} schedules`, false);
+  } catch (e) {
+    setStatus($("scheduleStatus"), "Error loading schedules: " + e.message, true);
+  }
+}
+
+async function renderSchedules() {
+  const tbody = document.querySelector("#schedulesTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  (allSchedules || []).forEach(s => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${s.id}</td>
+      <td>${s.name || ""}</td>
+      <td>${describeSlots(s.slots || [])}</td>
+      <td></td>
+      <td></td>
+    `;
+
+    const tdEdit = tr.children[3];
+    const tdDel = tr.children[4];
+
+    const btnEdit = document.createElement("button");
+    btnEdit.textContent = "Edit";
+    btnEdit.className = "btn-small";
+    btnEdit.addEventListener("click", () => {
+      editingScheduleId = s.id;
+      $("scheduleFormTitle").textContent = `Editing schedule ${s.id}`;
+      $("scheduleNameInput").value = s.name || "";
+      $("scheduleDescInput").value = s.description || "";
+      fillSlotsFormFromSchedule(s);
+      setScheduleEditing(true);
+      setStatus($("scheduleStatus"), "Edit enabled. Adjust and Save.", false);
+    });
+    tdEdit.appendChild(btnEdit);
+
+    const btnDel = document.createElement("button");
+    btnDel.textContent = "Delete";
+    btnDel.className = "btn-danger btn-small";
+    btnDel.addEventListener("click", async () => {
+      if (!confirm(`Delete schedule "${s.name}"?`)) return;
+      try {
+        await apiJson(`/schedules/${encodeURIComponent(s.id)}`, { method: "DELETE" });
+        setStatus($("scheduleStatus"), "Deleted schedule", false);
+        resetScheduleForm();
+        await loadSchedules();
+        await renderSchedules();
+      } catch (e) {
+        setStatus($("scheduleStatus"), "Delete error: " + e.message, true);
+      }
+    });
+    tdDel.appendChild(btnDel);
+
+    tbody.appendChild(tr);
+  });
+}
+
+function initSchedulesUI() {
+  $("refreshSchedulesBtn")?.addEventListener("click", async () => {
+    await loadSchedules();
+    await renderSchedules();
+  });
+
+  $("scheduleNewBtn")?.addEventListener("click", () => {
+    resetScheduleForm();
+    setScheduleEditing(true);
+    setStatus($("scheduleStatus"), "Creating new schedule. Fill the form and click Save.", false);
+  });
+
+  $("scheduleEnableBtn")?.addEventListener("click", () => {
+    const enable = $("scheduleNameInput").disabled;
+    setScheduleEditing(enable);
+    setStatus($("scheduleStatus"), enable ? "Edit enabled." : "Edit disabled.", false);
+  });
+
+  $("scheduleSaveTopBtn")?.addEventListener("click", async () => {
+    const name = $("scheduleNameInput").value.trim();
+    if (!name) return setStatus($("scheduleStatus"), "Schedule name required", true);
+
+    const payload = {
+      name,
+      description: $("scheduleDescInput").value.trim(),
+      slots: readSlotsFromForm()
+    };
+
+    try {
+      if (editingScheduleId) {
+        await apiJson(`/schedules/${encodeURIComponent(editingScheduleId)}`, { method: "PUT", body: JSON.stringify(payload) });
+      } else {
+        await apiJson("/schedules", { method: "POST", body: JSON.stringify(payload) });
+      }
+      setStatus($("scheduleStatus"), "Saved schedule", false);
+      resetScheduleForm();
+      await loadSchedules();
+      await renderSchedules();
+    } catch (e) {
+      setStatus($("scheduleStatus"), "Save error: " + e.message, true);
+    }
+  });
+
+  $("resetScheduleFormBtn")?.addEventListener("click", resetScheduleForm);
+
+  // default locked
+  setScheduleEditing(false);
+}
 
     // =========================
     // Events screen
@@ -1711,9 +1967,12 @@ async function showBuildInfo() {
 	  initUserCredEditor();
       initGates();
 	  initGateAddUserUI();
-      initSchedules();
+      initSchedulesUI();
       initEvents();
+	  
 	  await showBuildInfo();
+	  await loadSchedules();
+	  await renderSchedules();
 
 
       // Pre-render checkbox panels
