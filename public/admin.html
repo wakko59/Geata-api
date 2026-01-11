@@ -666,44 +666,84 @@
 
 
     <!-- EVENTS -->
-    <section id="screen-events" class="card" style="display:none">
-      <div class="pill-title">Audit</div>
-      <h2>Recent Events</h2>
-
-      <div class="two">
-        <div>
-          <label for="eventsDevice">Device filter (optional)</label>
-          <select id="eventsDevice">
-            <option value="">-- Any device --</option>
-          </select>
-        </div>
-        <div>
-          <label for="eventsLimit">Limit</label>
-          <input id="eventsLimit" type="number" min="10" max="5000" value="200" />
-        </div>
-      </div>
-
-      <button id="eventsLoadBtn" class="secondary">Load</button>
-      <div id="eventsStatus" class="status"></div>
-
-      <table id="eventsTable">
-        <thead>
-          <tr>
-            <th>Time (UTC)</th>
-            <th>Device</th>
-            <th>User</th>
-            <th>Event</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <div class="small" style="margin-top:8px">
-        Uses: <code>GET /events?deviceId=&limit=</code>
-      </div>
-    </section>
+    <section id="screen-events" style="display:none">
+     <div class="card">
+		<div class="card-header">
+	<div>
+      <div class="pill-title">Monitoring</div>
+      <h2 class="card-title">Events / Audit Trail</h2>
+      <p class="card-subtitle">Filter by gate and/or user, choose date range, then export or email.</p>
+    </div>
   </div>
+
+  <div class="two-column">
+    <div>
+      <label for="eventsDeviceFilterSelect">Gate (optional)</label>
+      <select id="eventsDeviceFilterSelect">
+        <option value="">-- Any gate --</option>
+      </select>
+    </div>
+    <div>
+      <label for="eventsUserFilterSelect">User (optional)</label>
+      <select id="eventsUserFilterSelect">
+        <option value="">-- Any user --</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="two-column">
+    <div>
+      <label for="eventsFromDate">From date</label>
+      <input id="eventsFromDate" type="date" />
+    </div>
+    <div>
+      <label for="eventsToDate">To date</label>
+      <input id="eventsToDate" type="date" />
+    </div>
+  </div>
+
+  <div class="two-column">
+    <div>
+      <label for="eventsLimitInput">Limit</label>
+      <input id="eventsLimitInput" type="number" min="10" max="5000" value="500" />
+    </div>
+    <div>
+      <label for="eventsEmailTo">Email report to (optional)</label>
+      <input id="eventsEmailTo" type="email" placeholder="name@company.com" />
+    </div>
+  </div>
+
+  <div class="inline-actions">
+    <button id="eventsLoadBtn" class="btn-secondary btn-small">Load</button>
+    <button id="eventsDownloadCsvBtn" class="btn-secondary btn-small">Download CSV</button>
+    <button id="eventsDownloadXlsxBtn" class="btn-secondary btn-small">Download XLSX</button>
+    <button id="eventsEmailBtn" class="btn-small">Email Report</button>
+  </div>
+
+  <div id="eventsStatus" class="status"></div>
+
+  <table id="eventsTable">
+    <thead>
+      <tr>
+        <th>Time (UTC)</th>
+        <th>Device</th>
+        <th>User</th>
+        <th>Event</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="small" style="margin-top:8px;">
+    Backend:
+    <code>GET /events</code>,
+    <code>GET /events/export.csv</code>,
+    <code>GET /events/export.xlsx</code>,
+    <code>POST /events/email</code>.
+  </div>
+</div>
+</section>
 
   <script>
     // =========================
@@ -1887,40 +1927,111 @@ function initSchedulesUI() {
     // =========================
     // Events screen
     // =========================
-    async function loadEvents(){
-      const tbody = document.querySelector("#eventsTable tbody");
-      tbody.innerHTML = "";
-      setStatus($("eventsStatus"), "Loading…", false);
+    function buildEventsQueryParams() {
+  const params = new URLSearchParams();
 
-      const deviceId = $("eventsDevice").value || "";
-      const limit = Math.max(10, Math.min(5000, parseInt($("eventsLimit").value || "200", 10)));
+  const deviceId = $("eventsDeviceFilterSelect")?.value || "";
+  const userId = $("eventsUserFilterSelect")?.value || "";
 
-      const qs = new URLSearchParams();
-      if(deviceId) qs.set("deviceId", deviceId);
-      qs.set("limit", String(limit));
+  const fromDate = $("eventsFromDate")?.value || "";
+  const toDate = $("eventsToDate")?.value || "";
 
-      try{
-        const rows = await apiJson("/events?" + qs.toString());
-        (rows || []).forEach(ev=>{
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${ev.at || ""}</td>
-            <td>${(ev.device_id || "")}${ev.device_name ? " – " + ev.device_name : ""}</td>
-            <td>${[ev.user_name, ev.user_phone, ev.user_id ? "[" + ev.user_id + "]" : ""].filter(Boolean).join(" | ")}</td>
-            <td>${ev.event_type || ""}</td>
-            <td>${ev.details || ""}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-        setStatus($("eventsStatus"), `Loaded ${rows.length} events`, false);
-      }catch(e){
-        setStatus($("eventsStatus"), "Load error: " + e.message, true);
-      }
-    }
+  const limit = Math.max(10, Math.min(5000, parseInt($("eventsLimitInput")?.value || "500", 10)));
 
-    function initEvents(){
-      $("eventsLoadBtn").addEventListener("click", loadEvents);
-    }
+  if (deviceId) params.set("deviceId", deviceId);
+  if (userId) params.set("userId", userId);
+
+  if (fromDate) params.set("from", fromDate + "T00:00:00");
+  if (toDate) params.set("to", toDate + "T23:59:59");
+
+  params.set("limit", String(limit));
+  return params.toString();
+}
+
+async function eventsLoadTable() {
+  const tbody = document.querySelector("#eventsTable tbody");
+  if (tbody) tbody.innerHTML = "";
+  setStatus($("eventsStatus"), "Loading…", false);
+
+  try {
+    const qs = buildEventsQueryParams();
+    const rows = await apiJson("/events?" + qs);
+
+    (rows || []).forEach(ev => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${ev.at || ""}</td>
+        <td>${(ev.device_id || "")}${ev.device_name ? " – " + ev.device_name : ""}</td>
+        <td>${[ev.user_name, ev.user_phone, ev.user_id ? "[" + ev.user_id + "]" : ""].filter(Boolean).join(" | ")}</td>
+        <td>${ev.event_type || ""}</td>
+        <td>${ev.details || ""}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    setStatus($("eventsStatus"), `Loaded ${rows?.length || 0} events`, false);
+  } catch (e) {
+    setStatus($("eventsStatus"), "Load error: " + e.message, true);
+  }
+}
+
+function downloadWithAuth(url, filename) {
+  // uses x-api-key like your other downloads
+  fetch(url, { headers: headersJson() })
+    .then(async (res) => {
+      if (!res.ok) throw new Error(await res.text());
+      return res.blob();
+    })
+    .then((blob) => {
+      const a = document.createElement("a");
+      const href = URL.createObjectURL(blob);
+      a.href = href;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    })
+    .catch((e) => setStatus($("eventsStatus"), "Download error: " + e.message, true));
+}
+
+function eventsDownloadCsv() {
+  const qs = buildEventsQueryParams();
+  downloadWithAuth("/events/export.csv?" + qs, "events-report.csv");
+}
+
+function eventsDownloadXlsx() {
+  const qs = buildEventsQueryParams();
+  downloadWithAuth("/events/export.xlsx?" + qs, "events-report.xlsx");
+}
+
+async function eventsEmailReport() {
+  const to = ($("eventsEmailTo")?.value || "").trim();
+  if (!to) return setStatus($("eventsStatus"), "Enter an email address to send to", true);
+
+  setStatus($("eventsStatus"), "Sending email…", false);
+  try {
+    const qs = buildEventsQueryParams();
+    await apiJson("/events/email", {
+      method: "POST",
+      body: JSON.stringify({ to, query: qs })
+    });
+    setStatus($("eventsStatus"), "Email sent", false);
+  } catch (e) {
+    setStatus($("eventsStatus"), "Email error: " + e.message, true);
+  }
+}
+
+function initEventsUI() {
+  // populate device + user filters (needs allDevices/allUsers already loaded)
+  fillDeviceSelect($("eventsDeviceFilterSelect"), true, "-- Any gate --");
+  fillUserSelect($("eventsUserFilterSelect"), allUsers, true, "-- Any user --");
+
+  $("eventsLoadBtn")?.addEventListener("click", eventsLoadTable);
+  $("eventsDownloadCsvBtn")?.addEventListener("click", eventsDownloadCsv);
+  $("eventsDownloadXlsxBtn")?.addEventListener("click", eventsDownloadXlsx);
+  $("eventsEmailBtn")?.addEventListener("click", eventsEmailReport);
+}
 
     // =========================
     // Wiring nav
@@ -1947,14 +2058,15 @@ async function showBuildInfo() {
     // =========================
     window.addEventListener("load", async ()=>{
       initNav();
-      initAuth();
-      initUsers();
-	  initCreateUserUI();
-	  initUserCredEditor();
-      initGates();
-	  initGateAddUserUI();
-      initSchedulesUI();
-      initEvents();
+	initAuth();
+	initUsers();
+	initCreateUserUI();
+	initUserCredEditor();
+	initGates();
+	initGateAddUserUI();
+	initSchedulesUI();
+	initEventsUI();     
+     
 	  
 	  await showBuildInfo();
 	  await loadSchedules();
@@ -1970,9 +2082,11 @@ async function showBuildInfo() {
           await loadDevices();
           await loadUsers(null);
           await loadSchedules();
+          await loadSchedules();
 
-          fillDeviceSelect($("gatesSelect"), true, "-- Select a gate --");
-          fillDeviceSelect($("eventsDevice"), true, "-- Any device --");
+          fillDeviceSelect($("eventsDeviceFilterSelect"), true, "-- Any gate --");
+		  fillUserSelect($("eventsUserFilterSelect"), allUsers, true, "-- Any user --");
+		  fillDeviceSelect($("gatesSelect"), true, "-- Select a gate --");
           fillUserSelect($("usersSelect"), allUsers);
           rebuildScheduleSelect($("usersScheduleSelect"));
           await renderSchedules();

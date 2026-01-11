@@ -10,6 +10,7 @@ const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const ExcelJS = require("exceljs");
 
 const app = express();
 app.use(express.json());
@@ -1542,7 +1543,39 @@ app.post("/devices/:id/simulate-event", requireAdminKey, asyncHandler(async (req
   await logDeviceEvent(deviceId, type, { details: "simulated=true" });
   res.json({ status: "ok", deviceId, type });
 }));
+function toCsv(rows) {
+  const header = ["at", "device_id", "device_name", "user_id", "user_name", "user_phone", "event_type", "details"];
+  const esc = (v) => {
+    const s = (v ?? "").toString();
+    if (s.includes('"') || s.includes(",") || s.includes("\n")) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
 
+  const lines = [header.join(",")];
+  for (const r of rows || []) {
+    lines.push([
+      esc(r.at),
+      esc(r.device_id),
+      esc(r.device_name),
+      esc(r.user_id),
+      esc(r.user_name),
+      esc(r.user_phone),
+      esc(r.event_type),
+      esc(r.details),
+    ].join(","));
+  }
+  return lines.join("\n");
+}
+
+async function fetchReportEventsFromQuery(req) {
+  const deviceId = (req.query.deviceId || "").trim() || null;
+  const userId = (req.query.userId || "").trim() || null;
+  const from = (req.query.from || "").trim() || null;
+  const to = (req.query.to || "").trim() || null;
+  const limit = req.query.limit ? Number(req.query.limit) || 500 : 500;
+
+  return await getEventsForReport({ deviceId, userId, from, to, limit });
+}
 // Recent events per device (admin)
 app.get("/devices/:id/events", requireAdminKey, asyncHandler(async (req, res) => {
   const deviceId = req.params.id;
@@ -1562,6 +1595,113 @@ app.get("/events", requireAdminKey, asyncHandler(async (req, res) => {
 
   const events = await getEventsForReport({ deviceId, userId, from, to, limit });
   res.json(events);
+}));
+// Export events as CSV (admin)
+app.get("/events/export.csv", requireAdminKey, asyncHandler(async (req, res) => {
+  const events = await fetchReportEventsFromQuery(req);
+  const csv = toCsv(events);
+
+  const filename = `events-report-${Date.now()}.csv`;
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(csv);
+}));
+
+// Export events as XLSX (admin)
+app.get("/events/export.xlsx", requireAdminKey, asyncHandler(async (req, res) => {
+  const events = await fetchReportEventsFromQuery(req);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Events");
+
+  ws.columns = [
+    { header: "Time (UTC)", key: "at", width: 24 },
+    { header: "Device ID", key: "device_id", width: 16 },
+    { header: "Device Name", key: "device_name", width: 22 },
+    { header: "User ID", key: "user_id", width: 22 },
+    { header: "User Name", key: "user_name", width: 18 },
+    { header: "User Phone", key: "user_phone", width: 16 },
+    { header: "Event Type", key: "event_type", width: 26 },
+    { header: "Details", key: "details", width: 60 },
+  ];
+
+  (events || []).forEach(e => ws.addRow(e));
+  ws.getRow(1).font = { bold: true };
+
+  const filename = `events-report-${Date.now()}.xlsx`;
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  await wb.xlsx.write(res);
+  res.end();
+}));
+
+// Email events report (admin) - sends CSV or XLSX as attachment
+app.post("/events/email", requireAdminKey, asyncHandler(async (req, res) => {
+  const toEmail = (req.body?.toEmail || "").trim();
+  const format = (req.body?.format || "csv").trim().toLowerCase(); // "csv" or "xlsx"
+
+  if (!toEmail || !toEmail.includes("@")) {
+    return res.status(400).json({ error: "Valid toEmail is required" });
+  }
+  if (!["csv", "xlsx"].includes(format)) {
+    return res.status(400).json({ error: "format must be csv or xlsx" });
+  }
+
+  // Reuse the same filters, but from req.body
+  const deviceId = (req.body?.deviceId || "").trim() || null;
+  const userId = (req.body?.userId || "").trim() || null;
+  const from = (req.body?.from || "").trim() || null;
+  const to = (req.body?.to || "").trim() || null;
+  const limit = req.body?.limit ? Number(req.body.limit) || 500 : 500;
+
+  const events = await getEventsForReport({ deviceId, userId, from, to, limit });
+
+  let attachment;
+  let filename;
+
+  if (format === "csv") {
+    filename = `events-report-${Date.now()}.csv`;
+    const csv = toCsv(events);
+    attachment = {
+      filename,
+      content: Buffer.from(csv, "utf-8").toString("base64"),
+      type: "text/csv"
+    };
+  } else {
+    filename = `events-report-${Date.now()}.xlsx`;
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Events");
+    ws.columns = [
+      { header: "Time (UTC)", key: "at", width: 24 },
+      { header: "Device ID", key: "device_id", width: 16 },
+      { header: "Device Name", key: "device_name", width: 22 },
+      { header: "User ID", key: "user_id", width: 22 },
+      { header: "User Name", key: "user_name", width: 18 },
+      { header: "User Phone", key: "user_phone", width: 16 },
+      { header: "Event Type", key: "event_type", width: 26 },
+      { header: "Details", key: "details", width: 60 },
+    ];
+    (events || []).forEach(e => ws.addRow(e));
+    ws.getRow(1).font = { bold: true };
+
+    const buf = await wb.xlsx.writeBuffer();
+    attachment = {
+      filename,
+      content: Buffer.from(buf).toString("base64"),
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    };
+  }
+
+  // IMPORTANT: call your existing mail sender here
+  await sendEmail({
+    to: toEmail,
+    subject: "Geata Events Report",
+    text: `Events report attached.\nDevice: ${deviceId || "Any"}\nUser: ${userId || "Any"}\nFrom: ${from || "Any"}\nTo: ${to || "Any"}\nRows: ${(events || []).length}`,
+    attachments: [attachment]
+  });
+
+  res.json({ ok: true, rows: (events || []).length, format, sentTo: toEmail });
 }));
 
 // ESP poll endpoint (no auth yet)
