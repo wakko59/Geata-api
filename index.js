@@ -926,7 +926,7 @@ app.post("/admin/test-email", requireAdminKey, asyncHandler(async (req, res) => 
 }));
 
 // Auth
-app.post("/auth/register", requirefAdminKey, asyncHandler(async (req, res) => {
+app.post("/auth/register", requireAdminKey, asyncHandler(async (req, res) => {
   const { name, email, phone, password } = req.body || {};
   if (!password || (!email && !phone)) {
     return res.status(400).json({ error: "password and at least phone or email are required" });
