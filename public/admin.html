@@ -2083,49 +2083,50 @@ async function showBuildInfo() {
     // =========================
     // Initial load
     // =========================
-    window.addEventListener("load", async ()=>{
-    initNav();
-	showScreen("screen-auth");
-	history.replaceState(null, "", "#screen-auth");
-	initAuth();
-	initUsers();
-	initCreateUserUI();
-	initUserCredEditor();
-	initGates();
-	initGateAddUserUI();
-	initSchedulesUI();
-	initEventsUI();     
-     
-	  
-	  await showBuildInfo();
-	  await loadSchedules();
-	  await renderSchedules();
+ window.addEventListener("load", async ()=>{
+  initNav();
+  showScreen("screen-auth");
+  history.replaceState(null, "", "#screen-auth");
 
+  initAuth();
+  initUsers();
+  initCreateUserUI();
+  initUserCredEditor();
+  initGates();
+  initGateAddUserUI();
+  initSchedulesUI();
+  initEventsUI();
 
-      // Pre-render checkbox panels
-      renderEventCheckboxPanel($("usersEmailPanel"), EMAIL_EVENT_TYPES);
+  await showBuildInfo();
 
-      // attempt to load if key already present
-      if(apiKey){
-        try{
-          await loadDevices();
-          await loadUsers(null);
-          await loadSchedules();
-          await loadSchedules();
+  // Pre-render checkbox panels
+  renderEventCheckboxPanel($("usersEmailPanel"), EMAIL_EVENT_TYPES);
 
-          fillDeviceSelect($("eventsDeviceFilterSelect"), true, "-- Any gate --");
-		  fillUserSelect($("eventsUserFilterSelect"), allUsers, true, "-- Any user --");
-		  fillDeviceSelect($("gatesSelect"), true, "-- Select a gate --");
-          fillUserSelect($("usersSelect"), allUsers);
-          rebuildScheduleSelect($("usersScheduleSelect"));
-          await renderSchedules();
+  // attempt to load if key already present
+  if(apiKey){
+    try{
+      await loadDevices();
+      await loadUsers(null);
+      await loadSchedules();
 
-          setStatus($("bootstrapStatus"), `Loaded: ${allDevices.length} devices, ${allUsers.length} users, ${allSchedules.length} schedules`, false);
-        }catch(e){
-          setStatus($("bootstrapStatus"), "Auto-load failed (check API key): " + e.message, true);
-        }
-      }
-    });
+      fillDeviceSelect($("eventsDeviceFilterSelect"), true, "-- Any gate --");
+      fillUserSelect($("eventsUserFilterSelect"), allUsers);
+      fillDeviceSelect($("gatesSelect"), true, "-- Select a gate --");
+      fillUserSelect($("usersSelect"), allUsers);
+      rebuildScheduleSelect($("usersScheduleSelect"));
+
+      await renderSchedules();
+
+      setStatus($("bootstrapStatus"),
+        `Loaded: ${allDevices.length} devices, ${allUsers.length} users, ${allSchedules.length} schedules`,
+        false
+      );
+    }catch(e){
+      setStatus($("bootstrapStatus"), "Auto-load failed (check API key): " + e.message, true);
+    }
+  }
+});
+
   </script>
   <div class="small" id="buildInfo" style="opacity:0.8;margin-top:10px;"></div>
 
