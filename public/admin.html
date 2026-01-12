@@ -1229,6 +1229,27 @@ function initGateAddUserUI() {
         const userId = $("usersSelect").value;
         await loadAndRenderUserProfile(userId);
       });
+	  $("usersDeleteBtn")?.addEventListener("click", async () => {
+  const userId = $("usersSelect")?.value || "";
+  if (!userId) return setStatus($("usersStatus"), "Select a user first", true);
+
+  if (!confirm(`Delete user ${userId} from the system? This removes them from all gates.`)) return;
+
+  try {
+    await apiJson(`/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+    setStatus($("usersStatus"), "User deleted", false);
+
+    // refresh dropdown + clear any loaded profile UI
+    await loadUsers(null);
+    fillUserSelect($("usersSelect"), allUsers);
+
+    // optional: clear profile panel fields if you have them in
+    // e.g. $("usersProfileBox").textContent = "";
+  } catch (e) {
+    setStatus($("usersStatus"), "Delete failed: " + e.message, true);
+  }
+});
+
 
       $("usersSelect").addEventListener("change", async ()=>{
         // convenience: auto-load profile
