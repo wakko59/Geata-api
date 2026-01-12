@@ -791,7 +791,12 @@
     // Helpers
     // =========================
     function $(id){ return document.getElementById(id); }
-
+	
+	function showScreen(id){
+   document.querySelectorAll(".screen").forEach(el => el.style.display = "none");
+   const el = document.getElementById(id);
+   if (el) el.style.display = "block";
+	}
     function setStatus(el, msg, isErr=false){
       if(!el) return;
       el.textContent = msg || "";
@@ -2056,13 +2061,15 @@ function initEventsUI() {
     // =========================
     // Wiring nav
     // =========================
-    function initNav(){
-      document.querySelectorAll(".navbtn").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          showScreen(btn.dataset.screen);
-        });
-      });
-    }
+    function initNav(){ 
+  document.querySelectorAll(".navbtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.dataset.screen;
+      showScreen(id);
+      history.replaceState(null, "", "#" + id); // keep URL in sync
+    });
+  });
+}
 
 async function showBuildInfo() {
   try {
@@ -2077,7 +2084,9 @@ async function showBuildInfo() {
     // Initial load
     // =========================
     window.addEventListener("load", async ()=>{
-      initNav();
+    initNav();
+	showScreen("screen-auth");
+	history.replaceState(null, "", "#screen-auth");
 	initAuth();
 	initUsers();
 	initCreateUserUI();
