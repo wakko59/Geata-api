@@ -334,16 +334,48 @@ async function updateUser(id, { name, email, phone, password }) {
   return getUserById(id);
 }
 async function deleteUser(userId) {
-  // delete dependencies first (order matters)
-  await supabase.from("device_users").delete().eq("user_id", userId);
-  await supabase.from("device_notifications").delete().eq("user_id", userId);
+  // 1) Gate memberships
+  {
+    const { error } = await supabase.from("device_users").delete().eq("user_id", userId);
+    if (error) throw new Error("device_users: " + error.message);
+  }
 
-  // optional: if you store per-user event logs in a table keyed by user_id
-  // await supabase.from("device_events").delete().eq("user_id", userId);
+  // 2) Notification subscriptions (your real table name)
+  {
+    const { error } = await supabase
+      .from("device_notification_subscriptions")
+      .delete()
+      .eq("user_id", userId);
+    if (error) throw new Error("device_notification_subscriptions: " + error.message);
+  }
 
-  const { error } = await supabase.from("users").delete().eq("id", userId);
-  if (error) throw new Error(error.message);
+  // 3) Outbox rows (only if this table really exists + has user_id)
+  {
+    const { error } = await supabase.from("notification_outbox").delete().eq("user_id", userId);
+    if (error) throw new Error("notification_outbox: " + error.message);
+  }
+
+  // 4) Optional: purge commands + device events for this user
+  // (uncomment if you want "delete user" to remove all traces)
+  /*
+  {
+    const { error } = await supabase.from("commands").delete().eq("user_id", userId);
+    if (error) throw new Error("commands: " + error.message);
+  }
+  {
+    const { error } = await supabase.from("device_events").delete().eq("user_id", userId);
+    if (error) throw new Error("device_events: " + error.message);
+  }
+  */
+
+  // 5) Finally delete the user row
+  {
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+    if (error) throw new Error("users: " + error.message);
+  }
 }
+
+
 
 async function searchUsers(qstr) {
   if (!qstr) {
@@ -1367,23 +1399,12 @@ app.delete("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
 
   const user = await getUserById(id);
   if (!user) return res.status(404).json({ error: "User not found" });
-  await deleteUser(is);
 
-  // 1) Remove gate memberships
-  await sb.from("device_users").delete().eq("user_id", id);
-
-  // 2) Remove per-device notifications (if you use this table)
-  await sb.from("device_notifications").delete().eq("user_id", id);
-
-  // 3) Remove outbox rows (optional)
-  await sb.from("notification_outbox").delete().eq("user_id", id);
-
-  // 4) Delete the user row
-  const del = await sb.from("users").delete().eq("id", id);
-  if (del.error) return res.status(500).json({ error: del.error.message });
+  await deleteUser(id);
 
   res.json({ status: "deleted", id });
 }));
+
 
 
 
