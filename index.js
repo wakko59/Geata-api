@@ -357,12 +357,12 @@ async function deleteUser(userId) {
 
   // 4) Optional: purge commands + device events for this user
   // (uncomment if you want "delete user" to remove all traces)
-  /*
+  
   {
     const { error } = await supabase.from("commands").delete().eq("user_id", userId);
     if (error) throw new Error("commands: " + error.message);
   }
-  {
+ /* {
     const { error } = await supabase.from("device_events").delete().eq("user_id", userId);
     if (error) throw new Error("device_events: " + error.message);
   }
