@@ -11,6 +11,13 @@ const { Pool } = require("pg");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const ExcelJS = require("exceljs");
+const { createClient } = require("@supabase/supabase-js");
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,   // <-- IMPORTANT
+  { auth: { persistSession: false } }
+);
+
 
 const app = express();
 app.use(express.json());
@@ -70,6 +77,10 @@ const mailer =
         auth: { user: SMTP_USER, pass: SMTP_PASS }
       })
     : null;
+console.log("Supabase env present:", {
+  url: !!process.env.SUPABASE_URL,
+  serviceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+});
 
 console.log("SMTP env present:", {
   host: !!SMTP_HOST,
@@ -322,10 +333,18 @@ async function updateUser(id, { name, email, phone, password }) {
 
   return getUserById(id);
 }
-async function deleteUser(id) {
-  await q("DELETE FROM device_users WHERE user_id = $1", [id]);
-  await q("DELETE FROM users WHERE id = $1", [id]);
+async function deleteUser(userId) {
+  // delete dependencies first (order matters)
+  await supabase.from("device_users").delete().eq("user_id", userId);
+  await supabase.from("device_notifications").delete().eq("user_id", userId);
+
+  // optional: if you store per-user event logs in a table keyed by user_id
+  // await supabase.from("device_events").delete().eq("user_id", userId);
+
+  const { error } = await supabase.from("users").delete().eq("id", userId);
+  if (error) throw new Error(error.message);
 }
+
 async function searchUsers(qstr) {
   if (!qstr) {
     const r = await q("SELECT * FROM users ORDER BY LOWER(name)");
@@ -1348,6 +1367,7 @@ app.delete("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
 
   const user = await getUserById(id);
   if (!user) return res.status(404).json({ error: "User not found" });
+  await deleteUser(is);
 
   // 1) Remove gate memberships
   await sb.from("device_users").delete().eq("user_id", id);
