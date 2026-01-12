@@ -1248,11 +1248,7 @@ app.get("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
 }));
 
 // Create user (admin-only) + optionally attach to multiple devices
-// Body:
-// {
-//   name, email, phone, password,
-//   devices: [{ deviceId, role, scheduleId? }, ...]
-// }
+// Body: { name, email, phone, password, devices:[{deviceId, role, scheduleId?}] }
 app.post("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
   const body = req.body || {};
   const name = (body.name || "").trim();
@@ -1263,7 +1259,7 @@ app.post("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
   if (!password) return res.status(400).json({ error: "password is required" });
   if (!email && !phone) return res.status(400).json({ error: "Provide at least email or phone" });
 
-  // Prevent duplicates
+  // Prevent duplicates (nice error messages, DB also enforces)
   if (phone) {
     const existingByPhone = await getUserByPhone(phone);
     if (existingByPhone) return res.status(409).json({ error: "User with this phone already exists" });
@@ -1285,7 +1281,6 @@ app.post("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
     const role = (d?.role || "operator").trim() || "operator";
     await attachUserToDevice(deviceId, user.id, role);
 
-    // Optional schedule assignment
     const scheduleId = d?.scheduleId ? Number(d.scheduleId) : null;
     if (scheduleId) {
       const sched = await getScheduleById(scheduleId);
@@ -1294,11 +1289,11 @@ app.post("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
     }
   }
 
-  // Return created user (and optionally a profile if you want)
   res.status(201).json({
     user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
   });
 }));
+
 
 app.get("/users", requireAdminKey, asyncHandler(async (req, res) => {
   const qstr = (req.query.q || "").trim();
@@ -1318,78 +1313,59 @@ app.get("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
   const devices = await listUserDevices(u.id);
   res.json({ id: u.id, name: u.name, email: u.email, phone: u.phone, devices });
 }));
+
 app.put("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
   const id = req.params.id;
   const user = await getUserById(id);
   if (!user) return res.status(404).json({ error: "User not found" });
-// ======================================================
-// Admin-only: Create user + attach to multiple gates
-// POST /admin/users
-// Body: { name, email, phone, password, devices:[{deviceId, role}] }
-// ======================================================
-app.post("/admin/users", requireAdminKey, asyncHandler(async (req, res) => {
-  const body = req.body || {};
-  const name = (body.name || "").trim() || null;
-  const email = (body.email || "").trim() || null;
-  const phone = normalizePhone(body.phone || null);
-  const password = body.password || "";
 
-  const devices = Array.isArray(body.devices) ? body.devices : [];
+  const name  = (req.body?.name ?? "").toString().trim();
+  const email = (req.body?.email ?? "").toString().trim() || null;
+  const phone = normalizePhone(req.body?.phone ?? null);
+  const password = req.body?.password || "";
 
-  if (!password || (!email && !phone)) {
-    return res.status(400).json({ error: "password and at least phone or email are required" });
-  }
-
-  // Uniqueness checks (same as /auth/register)
+  // Duplicate protection (exclude self)
   if (phone) {
-    const existingByPhone = await getUserByPhone(phone);
-    if (existingByPhone) return res.status(409).json({ error: "User with this phone already exists" });
+    const existing = await getUserByPhone(phone);
+    if (existing && existing.id !== id) {
+      return res.status(409).json({ error: "User with this phone already exists" });
+    }
   }
   if (email) {
-    const existingByEmail = await getUserByEmail(email);
-    if (existingByEmail) return res.status(409).json({ error: "User with this email already exists" });
+    const existing = await getUserByEmail(email);
+    if (existing && existing.id !== id) {
+      return res.status(409).json({ error: "User with this email already exists" });
+    }
   }
 
-  // Create user (uses your existing helper, hashes password)
-  const user = await createUser({ name: name || email || phone, email, phone, password });
-
-  // Attach to multiple devices (optional)
-  const attached = [];
-  for (const d of devices) {
-    const deviceId = (d?.deviceId || "").trim();
-    if (!deviceId) continue;
-
-    const device = await getDeviceById(deviceId);
-    if (!device) continue; // ignore unknown device ids
-
-    const role = (d?.role || "operator").trim() || "operator";
-    await attachUserToDevice(deviceId, user.id, role);
-    attached.push({ deviceId, role });
-  }
-
-  res.status(201).json({
-    user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
-    devices: attached
-  });
-}));
-
-
-  const updated = await updateUser(id, {
-    name: req.body && req.body.name,
-    email: req.body && req.body.email,
-    phone: req.body && req.body.phone,
-    password: req.body && req.body.password
-  });
+  const updated = await updateUser(id, { name, email, phone, password });
 
   res.json({ id: updated.id, name: updated.name, email: updated.email, phone: updated.phone });
 }));
+
 app.delete("/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
   const id = req.params.id;
+
   const user = await getUserById(id);
   if (!user) return res.status(404).json({ error: "User not found" });
-  await deleteUser(id);
+
+  // 1) Remove gate memberships
+  await sb.from("device_users").delete().eq("user_id", id);
+
+  // 2) Remove per-device notifications (if you use this table)
+  await sb.from("device_notifications").delete().eq("user_id", id);
+
+  // 3) Remove outbox rows (optional)
+  await sb.from("notification_outbox").delete().eq("user_id", id);
+
+  // 4) Delete the user row
+  const del = await sb.from("users").delete().eq("id", id);
+  if (del.error) return res.status(500).json({ error: del.error.message });
+
   res.json({ status: "deleted", id });
 }));
+
+
 
 // Profile (Admin) - profile-driven UI endpoint
 app.get("/profiles/users/:id", requireAdminKey, asyncHandler(async (req, res) => {
