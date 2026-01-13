@@ -461,6 +461,8 @@
           </select>
           <button id="gatesLoadBtn" class="btn-secondary btn-small">Load Gate Data</button>
 		  <button id="gatesAddUserBtn" class="btn-secondary btn-small">Add User</button>
+		  <button id="gatesCreateBtn" class="btn-secondary btn-small">Add New Gate</button>
+
 
           <div id="gatesStatus" class="status"></div>
 
@@ -567,6 +569,32 @@
     Attaches an existing user to the selected gate via <code>POST /devices/:id/users</code>.
   </div>
 </div>
+<div id="gateCreatePanel" class="whitebox" style="display:none; margin-top:10px;">
+  <div class="pill-title">Create New Gate</div>
+
+  <div class="two-column">
+    <div>
+      <label for="newGateId">Gate ID</label>
+      <input id="newGateId" type="text" placeholder="e.g. gate1001" />
+    </div>
+    <div>
+      <label for="newGateName">Gate Name (optional)</label>
+      <input id="newGateName" type="text" placeholder="e.g. Main Entrance" />
+    </div>
+  </div>
+
+  <div class="inline-actions">
+    <button id="newGateCreateConfirmBtn" class="btn-small">Create</button>
+    <button id="newGateCreateCancelBtn" class="btn-secondary btn-small">Cancel</button>
+  </div>
+
+  <div id="newGateCreateStatus" class="status"></div>
+
+  <div class="small" style="margin-top:8px;">
+    Saves via: <code>POST /devices</code> (admin only)
+  </div>
+</div>
+
 
 
           <div class="small">
@@ -1012,6 +1040,60 @@ function initGateAddUserUI() {
 
   showGateAddUserPanel(false);
 }
+function showGateCreatePanel(show){
+  const p = $("gateCreatePanel");
+  if (p) p.style.display = show ? "block" : "none";
+}
+
+async function createGateConfirm(){
+  const id = ($("newGateId")?.value || "").trim();
+  const name = ($("newGateName")?.value || "").trim();
+
+  if (!id) return setStatus($("newGateCreateStatus"), "Gate ID is required", true);
+
+  try{
+    const data = await apiJson("/devices", {
+      method: "POST",
+      body: JSON.stringify({ id, name: name || null })
+    });
+
+    setStatus($("newGateCreateStatus"), `Created gate ${data?.device?.id || id}`, false);
+
+    // Refresh device list + repopulate selects
+    await loadDevices();
+    fillDeviceSelect($("gatesSelect"), true, "-- Select a gate --");
+    fillDeviceSelect($("eventsDeviceFilterSelect"), true, "-- Any gate --");
+
+    // select the new gate in the dropdown
+    if ($("gatesSelect")) $("gatesSelect").value = id;
+
+    // reset + close
+    $("newGateId").value = "";
+    $("newGateName").value = "";
+    showGateCreatePanel(false);
+
+  }catch(e){
+    setStatus($("newGateCreateStatus"), "Create failed: " + e.message, true);
+  }
+}
+
+function initGateCreateUI(){
+  if (!$("gatesCreateBtn")) return;
+
+  $("gatesCreateBtn").addEventListener("click", ()=>{
+    setStatus($("newGateCreateStatus"), "", false);
+    showGateCreatePanel(true);
+  });
+
+  $("newGateCreateCancelBtn")?.addEventListener("click", ()=>{
+    showGateCreatePanel(false);
+  });
+
+  $("newGateCreateConfirmBtn")?.addEventListener("click", createGateConfirm);
+
+  showGateCreatePanel(false);
+}
+
     // =========================
     // Profile API
     // =========================
@@ -2094,6 +2176,7 @@ async function showBuildInfo() {
   initUserCredEditor();
   initGates();
   initGateAddUserUI();
+  initGateCreateUI();
   initSchedulesUI();
   initEventsUI();
 

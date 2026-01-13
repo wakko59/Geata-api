@@ -286,6 +286,25 @@ async function createDevice(id, name) {
   return getDeviceById(id);
 }
 
+// Create device / gate (admin-only)
+// Body: { id, name }
+app.post("/devices", requireAdminKey, asyncHandler(async (req, res) => {
+  const id = (req.body?.id || "").trim();
+  const name = (req.body?.name || "").trim() || null;
+
+  if (!id) return res.status(400).json({ error: "id is required" });
+
+  // prevent duplicates
+  const existing = await getDeviceById(id);
+  if (existing) return res.status(409).json({ error: "Device with this id already exists" });
+
+  // create
+  const created = await createDevice({ id, name });
+
+  res.status(201).json({ device: created });
+}));
+
+
 // Users
 async function getUserById(id) {
   return one("SELECT * FROM users WHERE id = $1", [id]);
