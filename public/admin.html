@@ -2112,37 +2112,44 @@ function eventsDownloadXlsx() {
   downloadWithAuth("/events/export.xlsx?" + qs, "events-report.xlsx");
 }
 
-async function eventsEmailReport(){
-  const to = ($("eventsEmailTo")?.value || "").trim();
-  if(!to) return setStatus($("eventsStatus"), "Enter an email address.", true);
+async function eventsEmailReport() {
+  const statusEl = $("eventsStatus");
+
+  // Recipient email comes ONLY from the email input
+  const emailTo = ($("eventsEmailTo")?.value || "").trim();
+  if (!emailTo) return setStatus(statusEl, "Enter an email address to send the report to.", true);
 
   const deviceId = $("eventsDeviceFilterSelect")?.value || "";
   const userId   = $("eventsUserFilterSelect")?.value || "";
-  const from     = $("eventsFromDate")?.value || "";
+
+  const fromDate = $("eventsFromDate")?.value || "";
   const toDate   = $("eventsToDate")?.value || "";
 
   const limit = Math.max(10, Math.min(5000, parseInt($("eventsLimitInput")?.value || "500", 10)));
 
+  // IMPORTANT: 'to' is the recipient email.
+  // 'toDate' is the end of the date range.
   const payload = {
-  toEmail: to,                 // recipient email (NOT the date)
-  deviceId: deviceId || null,
-  userId: userId || null,
-  from: from ? (from + "T00:00:00.000Z") : null,
-  to: toDate ? (toDate + "T23:59:59.999Z") : null,   // end date field name is "to"
-  limit
-};
+    to: emailTo,
+    deviceId: deviceId || null,
+    userId: userId || null,
+    from: fromDate || null,
+    toDate: toDate || null,
+    limit
+  };
 
-
-  try{
+  try {
+    setStatus(statusEl, "Sending report…", false);
     const resp = await apiJson("/events/email", {
       method: "POST",
       body: JSON.stringify(payload)
     });
-    setStatus($("eventsStatus"), resp?.status || "Email queued/sent", false);
-  }catch(e){
-    setStatus($("eventsStatus"), "Email error: " + e.message, true);
+    setStatus(statusEl, `Email queued/sent to ${resp.to} (${resp.rows} rows)`, false);
+  } catch (e) {
+    setStatus(statusEl, "Email failed: " + e.message, true);
   }
 }
+
 
 
 function initEventsUI() {
