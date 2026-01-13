@@ -292,17 +292,21 @@ app.post("/devices", requireAdminKey, asyncHandler(async (req, res) => {
   const id = (req.body?.id || "").trim();
   const name = (req.body?.name || "").trim() || null;
 
-  if (!id) return res.status(400).json({ error: "id is required" });
+  if (!id) {
+    return res.status(400).json({ error: "id is required" });
+  }
 
   // prevent duplicates
   const existing = await getDeviceById(id);
-  if (existing) return res.status(409).json({ error: "Device with this id already exists" });
+  if (existing) {
+    return res.status(409).json({ error: "Device with this id already exists" });
+  }
 
-  // create
-  const created = await createDevice({ id, name });
+  const device = await createDevice(id, name);
 
-  res.status(201).json({ device: created });
+  res.status(201).json({ device });
 }));
+
 
 
 // Users
