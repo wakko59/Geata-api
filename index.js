@@ -1682,73 +1682,110 @@ app.get("/events/export.xlsx", requireAdminKey, asyncHandler(async (req, res) =>
   res.end();
 }));
 
-// Email events report (admin) - sends CSV or XLSX as attachment
+// Email events report (admin)
 app.post("/events/email", requireAdminKey, asyncHandler(async (req, res) => {
-  const toEmail = (req.body?.toEmail || "").trim();
-  const format = (req.body?.format || "csv").trim().toLowerCase(); // "csv" or "xlsx"
+  // -------- Normalize inputs --------
+  const body = req.body || {};
 
-  if (!toEmail || !toEmail.includes("@")) {
-    return res.status(400).json({ error: "Valid toEmail is required" });
-  }
-  if (!["csv", "xlsx"].includes(format)) {
-    return res.status(400).json({ error: "format must be csv or xlsx" });
-  }
+  // Accept: "to": "a@b.com" OR "to": { email: "a@b.com" } OR "to": ["a@b.com"]
+  let toEmail = body.to;
+  if (Array.isArray(toEmail)) toEmail = toEmail[0];
+  if (toEmail && typeof toEmail === "object") toEmail = toEmail.email;
+  toEmail = (toEmail || "").trim();
 
-  // Reuse the same filters, but from req.body
-  const deviceId = (req.body?.deviceId || "").trim() || null;
-  const userId = (req.body?.userId || "").trim() || null;
-  const from = (req.body?.from || "").trim() || null;
-  const to = (req.body?.to || "").trim() || null;
-  const limit = req.body?.limit ? Number(req.body.limit) || 500 : 500;
+  if (!toEmail) return res.status(400).json({ error: "to is required" });
 
+  const deviceId = (body.deviceId || "").trim() || null;
+  const userId = (body.userId || "").trim() || null;
+
+  // Your UI uses date inputs; convert to ISO bounds (UTC-ish)
+  // Accept either "from"/"to" or "fromDate"/"toDate"
+  const fromDate = (body.from || body.fromDate || "").trim() || null;
+  const toDate = (body.to || body.toDate || "").trim() || null; // NOTE: body.to is email; we handled above
+  // Because "to" is email in your payload, we only use body.toDate for date end.
+  const toDateOnly = (body.toDate || "").trim() || null;
+
+  const limit = body.limit ? (Number(body.limit) || 500) : 500;
+
+  // Build proper from/to timestamps if date-only provided
+  const from = fromDate ? `${fromDate}T00:00:00.000Z` : null;
+  const to = toDateOnly ? `${toDateOnly}T23:59:59.999Z` : null;
+
+  // -------- Query events --------
   const events = await getEventsForReport({ deviceId, userId, from, to, limit });
 
-  let attachment;
-  let filename;
+  // -------- Build CSV attachment --------
+  // Use your existing toCsv(rows) helper if you already added it.
+  // If not, this fallback will work.
+  const csv = (typeof toCsv === "function")
+    ? toCsv(events || [])
+    : (() => {
+        const rows = events || [];
+        const headers = ["at","device_id","device_name","user_id","user_name","user_phone","event_type","details"];
+        const esc = (v) => {
+          const s = (v ?? "").toString();
+          return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+        };
+        const lines = [headers.join(",")];
+        for (const r of rows) {
+          lines.push(headers.map(h => esc(r[h])).join(","));
+        }
+        return lines.join("\n");
+      })();
 
-  if (format === "csv") {
-    filename = `events-report-${Date.now()}.csv`;
-    const csv = toCsv(events);
-    attachment = {
-      filename,
-      content: Buffer.from(csv, "utf-8").toString("base64"),
-      type: "text/csv"
-    };
-  } else {
-    filename = `events-report-${Date.now()}.xlsx`;
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Events");
-    ws.columns = [
-      { header: "Time (UTC)", key: "at", width: 24 },
-      { header: "Device ID", key: "device_id", width: 16 },
-      { header: "Device Name", key: "device_name", width: 22 },
-      { header: "User ID", key: "user_id", width: 22 },
-      { header: "User Name", key: "user_name", width: 18 },
-      { header: "User Phone", key: "user_phone", width: 16 },
-      { header: "Event Type", key: "event_type", width: 26 },
-      { header: "Details", key: "details", width: 60 },
-    ];
-    (events || []).forEach(e => ws.addRow(e));
-    ws.getRow(1).font = { bold: true };
+  const subject = `Geata Events Report${deviceId ? " · Gate " + deviceId : ""}${userId ? " · User " + userId : ""}`;
+  const text =
+    `Attached: events report\n` +
+    `Filters:\n` +
+    `- deviceId: ${deviceId || "(any)"}\n` +
+    `- userId: ${userId || "(any)"}\n` +
+    `- from: ${from || "(none)"}\n` +
+    `- to: ${to || "(none)"}\n` +
+    `- limit: ${limit}\n` +
+    `Rows: ${(events || []).length}\n`;
 
-    const buf = await wb.xlsx.writeBuffer();
-    attachment = {
-      filename,
-      content: Buffer.from(buf).toString("base64"),
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    };
+  const attachments = [{
+    filename: `events_${new Date().toISOString().slice(0,10)}.csv`,
+    type: "text/csv",
+    disposition: "attachment",
+    content: Buffer.from(csv, "utf-8").toString("base64"),
+  }];
+
+  // -------- Send email --------
+  // Option A: @sendgrid/mail style (sgMail.send)
+  if (typeof sgMail !== "undefined" && sgMail && typeof sgMail.send === "function") {
+    await sgMail.send({
+      to: toEmail, // MUST be a string
+      from: process.env.EMAIL_FROM,
+      subject,
+      text,
+      attachments,
+    });
+
+    return res.json({ status: "sent", to: toEmail, rows: (events || []).length });
   }
 
-  // IMPORTANT: call your existing mail sender here
-  await sendEmail({
-    to: toEmail,
-    subject: "Geata Events Report",
-    text: `Events report attached.\nDevice: ${deviceId || "Any"}\nUser: ${userId || "Any"}\nFrom: ${from || "Any"}\nTo: ${to || "Any"}\nRows: ${(events || []).length}`,
-    attachments: [attachment]
-  });
+  // Option B: nodemailer transporter (transporter.sendMail)
+  if (typeof transporter !== "undefined" && transporter && typeof transporter.sendMail === "function") {
+    await transporter.sendMail({
+      to: toEmail, // MUST be a string
+      from: process.env.EMAIL_FROM,
+      subject,
+      text,
+      attachments: [{
+        filename: attachments[0].filename,
+        content: Buffer.from(csv, "utf-8"),
+        contentType: "text/csv",
+      }],
+    });
 
-  res.json({ ok: true, rows: (events || []).length, format, sentTo: toEmail });
+    return res.json({ status: "sent", to: toEmail, rows: (events || []).length });
+  }
+
+  // If neither is configured, fail clearly
+  return res.status(500).json({ error: "Email not configured (no sgMail or transporter found)" });
 }));
+
 
 // ESP poll endpoint (no auth yet)
 app.post("/device/poll", asyncHandler(async (req, res) => {
