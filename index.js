@@ -1696,124 +1696,93 @@ app.get("/events/export.xlsx", requireAdminKey, asyncHandler(async (req, res) =>
 app.post("/events/email", requireAdminKey, asyncHandler(async (req, res) => {
   const body = req.body || {};
 
-  // SAFE lookups: do not crash if variables were never declared
-  const smtpTransporter = (typeof transporter !== "undefined") ? transporter : null;
-  const sendgridMailer  = (typeof sgMail !== "undefined") ? sgMail : null;
-
+  // --- Provider (SendGrid) ---
+  const sendgridMailer = (typeof sgMail !== "undefined") ? sgMail : null;
   const usingSendgrid = !!(sendgridMailer && process.env.SENDGRID_API_KEY);
-  const usingSmtp     = !!smtpTransporter;
 
-  // Accept `to` as: "x@y.com" OR { email: "x@y.com" }
+  if (!usingSendgrid) {
+    return res.status(500).json({ error: "Email not configured (SendGrid not enabled)" });
+  }
+
+  // --- Recipient email (ONLY from body.to) ---
   const toEmail =
     (typeof body.to === "string" ? body.to : (body.to && body.to.email)) || "";
   const toEmailTrimmed = String(toEmail).trim();
 
-  if (!toEmailTrimmed) {
-    return res.status(400).json({ error: "to is required" });
+  if (!toEmailTrimmed) return res.status(400).json({ error: "to is required" });
+  if (!toEmailTrimmed.includes("@")) {
+    return res.status(400).json({ error: `Invalid recipient email: ${toEmailTrimmed}` });
   }
 
-  if (!usingSendgrid && !usingSmtp) {
-    return res.status(500).json({ error: "Email not configured (no SendGrid or SMTP configured)" });
-  }
-
-  // Filters
+  // --- Report filters ---
   const deviceId = (body.deviceId || "").trim() || null;
-  const userId   = (body.userId || "").trim() || null;
-  const from     = (body.from || "").trim() || null;      // "YYYY-MM-DD" ok
-  const toDate   = (body.toDate || "").trim() || null;    // IMPORTANT: only toDate here
-  const limit    = body.limit ? (Number(body.limit) || 500) : 500;
+  const userId = (body.userId || "").trim() || null;
+  const from = (body.from || "").trim() || null;          // YYYY-MM-DD ok
+  const toDate = (body.toDate || "").trim() || null;      // YYYY-MM-DD ok
+  const limit = body.limit ? Number(body.limit) || 500 : 500;
+
+  // IMPORTANT: report end date is toDate (NOT body.to)
+  const to = toDate;
+
+  // --- Sender (EMAIL ONLY in env var) ---
+  // If someone accidentally put "Name<email@x.com>" in env, extract the email part.
+  const rawFrom = (process.env.SENDGRID_FROM || process.env.EMAIL_FROM || "").trim();
+  const m = rawFrom.match(/<([^>]+)>/);
+  const fromEmail = (m ? m[1] : rawFrom).trim();
+
+  if (!fromEmail || !fromEmail.includes("@")) {
+    return res.status(500).json({ error: "Missing/invalid sender address (set SENDGRID_FROM to a real email)" });
+  }
 
   // Pull events
-  const events = await getEventsForReport({
-    deviceId,
-    userId,
-    from,
-    to: toDate,     // your report function expects { from, to }
-    limit
-  });
+  const events = await getEventsForReport({ deviceId, userId, from, to, limit });
 
-  // CSV
+  // Convert to CSV (expects your existing toCsv(rows) helper)
   const csv = toCsv(events || []);
-
-  // Sender
-  const fromEmail = (process.env.SENDGRID_FROM || process.env.EMAIL_FROM || "").trim();
-  if (!fromEmail) {
-    return res.status(500).json({ error: "Missing sender address (set SENDGRID_FROM or EMAIL_FROM)" });
-  }
-
-  const subject  = "Geata Events Report";
+  const subject = `Geata Events Report`;
   const filename = `events_${new Date().toISOString().slice(0, 10)}.csv`;
 
-  // --- SENDGRID ---
-  if (usingSendgrid) {
-    try {
-		console.log("[events/email] sendgrid using:", {
-		hasKey: !!process.env.SENDGRID_API_KEY,
-		fromEmail,
-		toEmailTrimmed,
-		rows: (events || []).length
-		});
+  // Debug log (safe)
+  console.log("[events/email] sendgrid using:", {
+    hasKey: !!process.env.SENDGRID_API_KEY,
+    fromEmail,
+    toEmailTrimmed,
+    rows: (events || []).length
+  });
 
-      await sendgridMailer.send({
-        to: toEmailTrimmed,                 // must be a string
-        from: { email: fromEmail, name: "Geata Reports" },                 
-        subject,
-        text: `Attached: events report\nRows: ${(events || []).length}\n`,
-        attachments: [
-          {
-            filename,
-            type: "text/csv",
-            disposition: "attachment",
-            content: Buffer.from(csv, "utf-8").toString("base64"),
-          }
-        ]
-      });
-
-      return res.json({
-        status: "sent",
-        via: "sendgrid",
-        to: toEmailTrimmed,
-        rows: (events || []).length
-      });
-
-    } catch (e) {
-      const sgBody = e?.response?.body;
-      console.error("SendGrid send failed:", JSON.stringify(sgBody || e, null, 2));
-      return res.status(400).json({
-        error: "SendGrid rejected request",
-        details: sgBody?.errors || (e.message || "Unknown SendGrid error")
-      });
-    }
-  }
-
-  // --- SMTP fallback ---
   try {
-    await smtpTransporter.sendMail({
+    await sendgridMailer.send({
       to: toEmailTrimmed,
-      from: fromEmail,
+      from: { email: fromEmail, name: "Geata Reports" },
       subject,
       text: `Attached: events report\nRows: ${(events || []).length}\n`,
       attachments: [
         {
           filename,
-          content: csv,
-          contentType: "text/csv",
+          type: "text/csv",
+          disposition: "attachment",
+          content: Buffer.from(csv, "utf-8").toString("base64"),
         }
       ]
     });
 
     return res.json({
       status: "sent",
-      via: "smtp",
+      via: "sendgrid",
       to: toEmailTrimmed,
       rows: (events || []).length
     });
 
   } catch (e) {
-    console.error("SMTP send failed:", e);
-    return res.status(500).json({ error: "SMTP send failed", details: e.message || String(e) });
+    const sgBody = e?.response?.body;
+    console.error("SendGrid send failed:", JSON.stringify(sgBody || e, null, 2));
+    return res.status(400).json({
+      error: "SendGrid rejected request",
+      details: sgBody?.errors || (e.message || "Unknown SendGrid error")
+    });
   }
 }));
+
 
 
 // ESP poll endpoint (no auth yet)
