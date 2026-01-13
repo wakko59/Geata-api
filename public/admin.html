@@ -2124,13 +2124,14 @@ async function eventsEmailReport(){
   const limit = Math.max(10, Math.min(5000, parseInt($("eventsLimitInput")?.value || "500", 10)));
 
   const payload = {
-    to,
-    deviceId: deviceId || null,
-    userId: userId || null,
-    from: from || null,
-    toDate: toDate || null,
-    limit
-  };
+  toEmail: to,                 // recipient email (NOT the date)
+  deviceId: deviceId || null,
+  userId: userId || null,
+  from: from ? (from + "T00:00:00.000Z") : null,
+  to: toDate ? (toDate + "T23:59:59.999Z") : null,   // end date field name is "to"
+  limit
+};
+
 
   try{
     const resp = await apiJson("/events/email", {
