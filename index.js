@@ -281,33 +281,21 @@ async function getDevices() {
 async function getDeviceById(id) {
   return one("SELECT id, name FROM devices WHERE id = $1", [id]);
 }
+async function getDeviceByName(name) {
+  const nm = (name || "").trim();
+  if (!nm) return null;
+
+  const { rows } = await q(
+    "SELECT * FROM devices WHERE lower(trim(name)) = lower(trim($1)) LIMIT 1",
+    [nm]
+  );
+  return rows[0] || null;
+}
+
 async function createDevice(id, name) {
   await q("INSERT INTO devices (id, name) VALUES ($1, $2)", [id, name]);
   return getDeviceById(id);
 }
-
-// Create device / gate (admin-only)
-// Body: { id, name }
-app.post("/devices", requireAdminKey, asyncHandler(async (req, res) => {
-  const id = (req.body?.id || "").trim();
-  const name = (req.body?.name || "").trim() || null;
-
-  if (!id) {
-    return res.status(400).json({ error: "id is required" });
-  }
-
-  // prevent duplicates
-  const existing = await getDeviceById(id);
-  if (existing) {
-    return res.status(409).json({ error: "Device with this id already exists" });
-  }
-
-  const device = await createDevice(id, name);
-
-  res.status(201).json({ device });
-}));
-
-
 
 // Users
 async function getUserById(id) {
@@ -1079,15 +1067,33 @@ app.get("/devices", requireAdminKey, asyncHandler(async (req, res) => {
 }));
 
 app.post("/devices", requireAdminKey, asyncHandler(async (req, res) => {
-  const { id, name } = req.body || {};
-  if (!id || !name) return res.status(400).json({ error: "id and name are required" });
+  const body = req.body || {};
+  const id = (body.id || "").trim();
+  const name = (body.name || "").trim();
 
+  if (!id) {
+    return res.status(400).json({ error: "id is required" });
+  }
+  if (!name) {
+    return res.status(400).json({ error: "name is required" });
+  }
+
+  // Check ID uniqueness
   const existing = await getDeviceById(id);
-  if (existing) return res.status(409).json({ error: "Device with this id already exists" });
+  if (existing) {
+    return res.status(409).json({ error: "Device with this id already exists" });
+  }
 
-  const dev = await createDevice(id, name);
-  res.status(201).json(dev);
+  // ✅ Check NAME uniqueness
+  const existingByName = await getDeviceByName(name);
+  if (existingByName) {
+    return res.status(409).json({ error: "Device with this name already exists" });
+  }
+
+  const device = await createDevice(id, name);
+  res.status(201).json(device);
 }));
+
 
 // Device users (admin-only)
 app.get("/devices/:id/users", requireAdminKey, asyncHandler(async (req, res) => {
