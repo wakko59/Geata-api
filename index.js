@@ -1696,97 +1696,117 @@ app.get("/events/export.xlsx", requireAdminKey, asyncHandler(async (req, res) =>
 app.post("/events/email", requireAdminKey, asyncHandler(async (req, res) => {
   const body = req.body || {};
 
-  // Accept to as string OR { email: "x@y.com" }
+  // SAFE lookups: do not crash if variables were never declared
+  const smtpTransporter = (typeof transporter !== "undefined") ? transporter : null;
+  const sendgridMailer  = (typeof sgMail !== "undefined") ? sgMail : null;
+
+  const usingSendgrid = !!(sendgridMailer && process.env.SENDGRID_API_KEY);
+  const usingSmtp     = !!smtpTransporter;
+
+  // Accept `to` as: "x@y.com" OR { email: "x@y.com" }
   const toEmail =
     (typeof body.to === "string" ? body.to : (body.to && body.to.email)) || "";
+  const toEmailTrimmed = String(toEmail).trim();
 
-  const deviceId = (body.deviceId || "").trim() || null;
-  const userId = (body.userId || "").trim() || null;
-  const from = (body.from || "").trim() || null;         // YYYY-MM-DD ok
-  const to = (body.toDate || body.to || "").trim() || null; // NOTE: toDate field
-  const limit = body.limit ? Number(body.limit) || 500 : 500;
-
-  if (!toEmail) return res.status(400).json({ error: "to is required" });
-
-  // Email provider must be configured
-  const usingSendgrid = !!(sgMail && process.env.SENDGRID_API_KEY);
-  const usingSmtp = !!transporter;
-
-  if (!usingSendgrid && !usingSmtp) {
-    return res.status(500).json({ error: "Email not configured (no sgMail or transporter found)" });
+  if (!toEmailTrimmed) {
+    return res.status(400).json({ error: "to is required" });
   }
 
-  // Pull events
-  const events = await getEventsForReport({ deviceId, userId, from, to, limit });
+  if (!usingSendgrid && !usingSmtp) {
+    return res.status(500).json({ error: "Email not configured (no SendGrid or SMTP configured)" });
+  }
 
-  // Convert to CSV (uses your existing helper; keep your toCsv(rows) function)
+  // Filters
+  const deviceId = (body.deviceId || "").trim() || null;
+  const userId   = (body.userId || "").trim() || null;
+  const from     = (body.from || "").trim() || null;      // "YYYY-MM-DD" ok
+  const toDate   = (body.toDate || "").trim() || null;    // IMPORTANT: only toDate here
+  const limit    = body.limit ? (Number(body.limit) || 500) : 500;
+
+  // Pull events
+  const events = await getEventsForReport({
+    deviceId,
+    userId,
+    from,
+    to: toDate,     // your report function expects { from, to }
+    limit
+  });
+
+  // CSV
   const csv = toCsv(events || []);
 
   // Sender
-  const fromEmail =
-    (process.env.SENDGRID_FROM || process.env.EMAIL_FROM || "").trim();
-
+  const fromEmail = (process.env.SENDGRID_FROM || process.env.EMAIL_FROM || "").trim();
   if (!fromEmail) {
     return res.status(500).json({ error: "Missing sender address (set SENDGRID_FROM or EMAIL_FROM)" });
   }
 
-  const subject = `Geata Events Report`;
+  const subject  = "Geata Events Report";
   const filename = `events_${new Date().toISOString().slice(0, 10)}.csv`;
 
   // --- SENDGRID ---
   if (usingSendgrid) {
     try {
-      await sgMail.send({
-        to: toEmail,
-        from: fromEmail,
+      await sendgridMailer.send({
+        to: toEmailTrimmed,                 // must be a string
+        from: fromEmail,                    // must be a string
         subject,
         text: `Attached: events report\nRows: ${(events || []).length}\n`,
-        attachments: [{
-          filename,
-          type: "text/csv",
-          disposition: "attachment",
-          content: Buffer.from(csv, "utf-8").toString("base64"),
-        }]
+        attachments: [
+          {
+            filename,
+            type: "text/csv",
+            disposition: "attachment",
+            content: Buffer.from(csv, "utf-8").toString("base64"),
+          }
+        ]
       });
 
-      return res.json({ status: "sent", via: "sendgrid", to: toEmail, rows: (events || []).length });
+      return res.json({
+        status: "sent",
+        via: "sendgrid",
+        to: toEmailTrimmed,
+        rows: (events || []).length
+      });
 
     } catch (e) {
-      // Print the real SendGrid error into Render logs
-      const sg = e?.response?.body;
-      console.error("SendGrid send failed:", JSON.stringify(sg || e, null, 2));
-
-      // Return details to admin UI
-      const details = sg?.errors || null;
+      const sgBody = e?.response?.body;
+      console.error("SendGrid send failed:", JSON.stringify(sgBody || e, null, 2));
       return res.status(400).json({
         error: "SendGrid rejected request",
-        details: details || (e.message || "Unknown SendGrid error")
+        details: sgBody?.errors || (e.message || "Unknown SendGrid error")
       });
     }
   }
 
-  // --- SMTP (fallback) ---
+  // --- SMTP fallback ---
   try {
-    await transporter.sendMail({
-      to: toEmail,
+    await smtpTransporter.sendMail({
+      to: toEmailTrimmed,
       from: fromEmail,
       subject,
       text: `Attached: events report\nRows: ${(events || []).length}\n`,
-      attachments: [{
-        filename,
-        content: csv,
-        contentType: "text/csv",
-      }]
+      attachments: [
+        {
+          filename,
+          content: csv,
+          contentType: "text/csv",
+        }
+      ]
     });
 
-    return res.json({ status: "sent", via: "smtp", to: toEmail, rows: (events || []).length });
+    return res.json({
+      status: "sent",
+      via: "smtp",
+      to: toEmailTrimmed,
+      rows: (events || []).length
+    });
 
   } catch (e) {
     console.error("SMTP send failed:", e);
     return res.status(500).json({ error: "SMTP send failed", details: e.message || String(e) });
   }
 }));
-
 
 
 // ESP poll endpoint (no auth yet)
