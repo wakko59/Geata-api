@@ -1756,7 +1756,7 @@ app.post("/events/email", requireAdminKey, asyncHandler(async (req, res) => {
 
       await sendgridMailer.send({
         to: toEmailTrimmed,                 // must be a string
-        from: fromEmail,                    // must be a string
+        from: { email: fromEmail, name: "Geata Reports" },                 
         subject,
         text: `Attached: events report\nRows: ${(events || []).length}\n`,
         attachments: [
