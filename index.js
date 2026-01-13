@@ -1747,6 +1747,13 @@ app.post("/events/email", requireAdminKey, asyncHandler(async (req, res) => {
   // --- SENDGRID ---
   if (usingSendgrid) {
     try {
+		console.log("[events/email] sendgrid using:", {
+		hasKey: !!process.env.SENDGRID_API_KEY,
+		fromEmail,
+		toEmailTrimmed,
+		rows: (events || []).length
+		});
+
       await sendgridMailer.send({
         to: toEmailTrimmed,                 // must be a string
         from: fromEmail,                    // must be a string
