@@ -9,6 +9,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
+
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
 const crypto = require("crypto");
 const ExcelJS = require("exceljs");
 const { createClient } = require("@supabase/supabase-js");
@@ -34,7 +40,6 @@ app.get("/", (req, res) => {
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "dev-only-admin-key";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-only-jwt-secret";
 const PORT = process.env.PORT || 3000;
-
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
   console.warn("*** WARNING: DATABASE_URL is not set (Postgres will not connect). ***");
@@ -92,6 +97,7 @@ console.log("SMTP env present:", {
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const SENDGRID_FROM = process.env.SENDGRID_FROM || process.env.SMTP_FROM || "";
+const EMAIL_FROM = process.env.EMAIL_FROM || process.env.SENDGRID_FROM || null;
 const USE_SENDGRID = !!SENDGRID_API_KEY;
 
 function parseFrom(from) {
@@ -1682,73 +1688,64 @@ app.get("/events/export.xlsx", requireAdminKey, asyncHandler(async (req, res) =>
   res.end();
 }));
 
-// Email events report (admin) - sends CSV or XLSX as attachment
+// Email events report (admin)
 app.post("/events/email", requireAdminKey, asyncHandler(async (req, res) => {
-  const toEmail = (req.body?.toEmail || "").trim();
-  const format = (req.body?.format || "csv").trim().toLowerCase(); // "csv" or "xlsx"
+  const body = req.body || {};
 
-  if (!toEmail || !toEmail.includes("@")) {
-    return res.status(400).json({ error: "Valid toEmail is required" });
-  }
-  if (!["csv", "xlsx"].includes(format)) {
-    return res.status(400).json({ error: "format must be csv or xlsx" });
-  }
+  // --- recipient email ---
+  let toEmail = body.to;
+  if (Array.isArray(toEmail)) toEmail = toEmail[0];
+  if (toEmail && typeof toEmail === "object") toEmail = toEmail.email;
+  toEmail = (toEmail || "").trim();
+  if (!toEmail) return res.status(400).json({ error: "to is required" });
 
-  // Reuse the same filters, but from req.body
-  const deviceId = (req.body?.deviceId || "").trim() || null;
-  const userId = (req.body?.userId || "").trim() || null;
-  const from = (req.body?.from || "").trim() || null;
-  const to = (req.body?.to || "").trim() || null;
-  const limit = req.body?.limit ? Number(req.body.limit) || 500 : 500;
+  // --- filters ---
+  const deviceId = (body.deviceId || "").trim() || null;
+  const userId   = (body.userId || "").trim() || null;
 
+  const fromDate = (body.fromDate || body.from || "").trim() || null;
+  const toDate   = (body.toDate || "").trim() || null; // IMPORTANT: ONLY toDate, NOT body.to
+
+  const limit = body.limit ? (Number(body.limit) || 500) : 500;
+
+  const from = fromDate ? `${fromDate}T00:00:00.000Z` : null;
+  const to   = toDate   ? `${toDate}T23:59:59.999Z`   : null;
+
+  // --- query ---
   const events = await getEventsForReport({ deviceId, userId, from, to, limit });
 
-  let attachment;
-  let filename;
+  // --- csv ---
+  const csv = (typeof toCsv === "function")
+    ? toCsv(events || [])
+    : JSON.stringify(events || [], null, 2);
 
-  if (format === "csv") {
-    filename = `events-report-${Date.now()}.csv`;
-    const csv = toCsv(events);
-    attachment = {
-      filename,
-      content: Buffer.from(csv, "utf-8").toString("base64"),
-      type: "text/csv"
-    };
-  } else {
-    filename = `events-report-${Date.now()}.xlsx`;
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Events");
-    ws.columns = [
-      { header: "Time (UTC)", key: "at", width: 24 },
-      { header: "Device ID", key: "device_id", width: 16 },
-      { header: "Device Name", key: "device_name", width: 22 },
-      { header: "User ID", key: "user_id", width: 22 },
-      { header: "User Name", key: "user_name", width: 18 },
-      { header: "User Phone", key: "user_phone", width: 16 },
-      { header: "Event Type", key: "event_type", width: 26 },
-      { header: "Details", key: "details", width: 60 },
-    ];
-    (events || []).forEach(e => ws.addRow(e));
-    ws.getRow(1).font = { bold: true };
+  // --- email config ---
+  const fromEmail = process.env.EMAIL_FROM || process.env.SENDGRID_FROM;
+  if (!fromEmail) return res.status(500).json({ error: "Missing SENDGRID_FROM (or EMAIL_FROM)" });
+  if (!process.env.SENDGRID_API_KEY) return res.status(500).json({ error: "Missing SENDGRID_API_KEY" });
 
-    const buf = await wb.xlsx.writeBuffer();
-    attachment = {
-      filename,
-      content: Buffer.from(buf).toString("base64"),
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    };
+  // --- send via SendGrid ---
+  if (!sgMail || typeof sgMail.send !== "function") {
+    return res.status(500).json({ error: "SendGrid not initialized (sgMail missing)" });
   }
 
-  // IMPORTANT: call your existing mail sender here
-  await sendEmail({
-    to: toEmail,
-    subject: "Geata Events Report",
-    text: `Events report attached.\nDevice: ${deviceId || "Any"}\nUser: ${userId || "Any"}\nFrom: ${from || "Any"}\nTo: ${to || "Any"}\nRows: ${(events || []).length}`,
-    attachments: [attachment]
+  await sgMail.send({
+    to: toEmail,          // MUST be string
+    from: fromEmail,      // MUST be verified sender
+    subject: `Geata Events Report`,
+    text: `Attached: events report\nRows: ${(events || []).length}\n`,
+    attachments: [{
+      filename: `events_${new Date().toISOString().slice(0,10)}.csv`,
+      type: "text/csv",
+      disposition: "attachment",
+      content: Buffer.from(csv, "utf-8").toString("base64"),
+    }]
   });
 
-  res.json({ ok: true, rows: (events || []).length, format, sentTo: toEmail });
+  res.json({ status: "sent", to: toEmail, rows: (events || []).length });
 }));
+
+
 
 // ESP poll endpoint (no auth yet)
 app.post("/device/poll", asyncHandler(async (req, res) => {
