@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Geata Admin (Profile-driven)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:,">
   <style>
     :root {
       /* shared background */
@@ -878,7 +879,7 @@
     // ================ Initial load ================
     window.addEventListener('load', async ()=>{
       initNav(); showScreen('screen-auth'); history.replaceState(null, '', '#screen-auth');
-      initAuth(); initUsers(); initCreateUserUI(); initUserCredEditor(); initGates(); initGateAddUserUI(); initGateAlertsUI(); initGateCreateUI(); initSchedulesUI(); initEventsUI();
+      initAuth(); initUsers(); initCreateUserUI(); initUserCredEditor(); initGatesUI(); initGateAddUserUI(); initGateAlertsUI(); initGateCreateUI(); initSchedulesUI(); initEventsUI();
       await showBuildInfo();
       // Pre-render checkbox panels
       renderEventCheckboxPanel($('usersEmailPanel'), ALERT_EVENT_TYPES);
