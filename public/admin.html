@@ -1366,7 +1366,7 @@ function initGateCreateUI(){
     }
 
     function initUsers(){
-      renderEventCheckboxPanel($("usersEmailPanel"), EMAIL_EVENT_TYPES);
+      renderEventCheckboxPanel($("usersEmailPanel"), ALERT_EVENT_TYPES);
 
       $("usersSearchBtn").addEventListener("click", async ()=>{
         const q = $("usersSearch").value.trim();
@@ -2304,7 +2304,7 @@ tr.appendChild(tdAlerts);
   await showBuildInfo();
 
   // Pre-render checkbox panels
-  renderEventCheckboxPanel($("usersEmailPanel"), EMAIL_EVENT_TYPES);
+  renderEventCheckboxPanel($("usersEmailPanel"), ALERT_EVENT_TYPES);
 
   // attempt to load if key already present
   if(apiKey){
