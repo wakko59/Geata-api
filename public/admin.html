@@ -1742,18 +1742,18 @@ function initCreateUserUI() {
               setStatus($("gatesUsersStatus"), "Remove error: " + e.message, true);
             }
           });
-const btnAlerts = document.createElement("button");
-btnAlerts.textContent = "Alerts";
-btnAlerts.className = "btn-secondary btn-small";
-btnAlerts.addEventListener("click", async ()=> {
-  // user label used in the panel title
-  const userLabel = (u.name || "(no name)");
-  try {
-    await openGateAlerts(gateId, u.userId, userLabel);
-  } catch (e) {
-    setStatus($("gatesUsersStatus"), "Alerts open error: " + e.message, true);
-  }
-});
+           const btnAlerts = document.createElement("button");
+           btnAlerts.textContent = "Alerts";
+           btnAlerts.className = "btn-secondary btn-small";
+           btnAlerts.addEventListener("click", async ()=> {
+            // user label used in the panel title
+           const userLabel = (u.name || "(no name)");
+           try {
+               await openGateAlerts(gateId, u.userId, userLabel);
+               } catch (e) {
+              setStatus($("gatesUsersStatus"), "Alerts open error: " + e.message, true);
+               }
+             });
 
           tr.innerHTML = `
             <td>${u.userId || ""}</td>
@@ -2294,8 +2294,8 @@ async function showBuildInfo() {
   initGates();
   initGateAddUserUI();
   const tdAlerts = document.createElement("td");
-tdAlerts.appendChild(btnAlerts);
-tr.appendChild(tdAlerts);
+ 
+  tr.appendChild(tdAlerts);
 
   initGateCreateUI();
   initSchedulesUI();
