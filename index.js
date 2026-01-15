@@ -331,7 +331,7 @@ async function initDb() {
       details    TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS device_notification_subscriptions (
+    CREATE TABLE IF NOT EXISTS device_notifications_subscriptions (
       device_id  TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
       user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       event_type TEXT NOT NULL,
@@ -345,7 +345,7 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_device_events_user_at ON device_events(user_id, at);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
-    CREATE INDEX IF NOT EXISTS idx_notify_device_event ON device_notification_subscriptions(device_id, event_type);
+    CREATE INDEX IF NOT EXISTS idx_notify_device_event ON device_notifications_subscriptions(device_id, event_type);
   `);
 
   const row = await one("SELECT COUNT(*)::int AS c FROM devices");
@@ -441,10 +441,10 @@ async function deleteUser(userId) {
   // 2) Notification subscriptions (your real table name)
   {
     const { error } = await supabase
-      .from("device_notification_subscriptions")
+      .from("device_notifications_subscriptions")
       .delete()
       .eq("user_id", userId);
-    if (error) throw new Error("device_notification_subscriptions: " + error.message);
+    if (error) throw new Error("device_notifications_subscriptions: " + error.message);
   }
 
   // 3) Outbox rows (only if this table really exists + has user_id)
@@ -734,14 +734,14 @@ async function isUserAllowedNow(deviceId, userId, now) {
 // ---- Notifications (subscriptions) ----
 async function setUserSubscriptions(deviceId, userId, eventTypes) {
   const evs = Array.isArray(eventTypes) ? eventTypes.map(String) : [];
-  await q("DELETE FROM device_notification_subscriptions WHERE device_id=$1 AND user_id=$2", [deviceId, userId]);
+  await q("DELETE FROM device_notifications_subscriptions WHERE device_id=$1 AND user_id=$2", [deviceId, userId]);
 
   for (const ev of evs) {
     const clean = (ev || "").trim();
     if (!clean) continue;
     await q(
       `
-      INSERT INTO device_notification_subscriptions (device_id, user_id, event_type, enabled)
+      INSERT INTO device_notifications_subscriptions (device_id, user_id, event_type, enabled)
       VALUES ($1,$2,$3,TRUE)
       ON CONFLICT (device_id, user_id, event_type) DO UPDATE SET enabled = TRUE
       `,
@@ -754,7 +754,7 @@ async function getSubscribedEmails(deviceId, eventType) {
   const r = await q(
     `
     SELECT DISTINCT u.email
-    FROM device_notification_subscriptions ns
+    FROM device_notifications_subscriptions ns
     JOIN users u ON u.id = ns.user_id
     WHERE ns.device_id = $1
       AND ns.enabled = TRUE
@@ -769,7 +769,7 @@ async function isUserSubscribed(deviceId, userId, eventType) {
   const row = await one(
     `
     SELECT 1
-    FROM device_notification_subscriptions
+    FROM device_notifications_subscriptions
     WHERE device_id=$1
       AND user_id=$2
       AND enabled=TRUE
@@ -810,7 +810,7 @@ async function getUserProfile(userId) {
       SELECT
         ns.device_id,
         json_agg(ns.event_type ORDER BY ns.event_type) AS event_types
-      FROM device_notification_subscriptions ns
+      FROM device_notifications_subscriptions ns
       WHERE ns.user_id = $1
         AND ns.enabled = TRUE
       GROUP BY ns.device_id
