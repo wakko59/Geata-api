@@ -1,777 +1,957 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Geata App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    :root{
-      --bg-main:#ffe4b5;
-      --bg-card:#0b2535;
-      --bg-card-soft:#123653;
-      --accent:#1c5e86;
-      --accent-soft: rgba(28, 94, 134, 0.2);
-      --danger:#d9534f;
-      --text-main:#f5f7fa;
-      --muted:#f5f7fa;
-      --warn:#ffb300;
-      --ok:#2e7d32;
-    }
-    *{box-sizing:border-box}
-    body{
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      margin:0; padding:0;
-      background: radial-gradient(circle at top, #1e3f5d 0, var(--bg-main) 45%, #b3cde5 100%);
-      color:var(--text-main);
-    }
-    .container{max-width:900px;margin:0 auto;padding:20px 16px 40px}
-    h1{margin:0 0 12px;font-size:24px;letter-spacing:.04em}
-    .subtitle{margin:0 0 16px;font-size:13px;color:var(--muted)}
-    .card{
-      background:var(--bg-card);
-      border-radius:24px;
-      padding:14px 16px 32px;
-      box-shadow:0 12px 30px rgba(0,0,0,0.18);
-      margin-bottom:10px;
-      border:1px solid rgba(255,255,255,0.08);
-    }
-    .card-header{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      margin-bottom:10px;
-    }
-    .card-title{margin:0;font-size:16px;letter-spacing:.02em}
-    .pill-title{
-      display:inline-block;padding:2px 10px;border-radius:999px;
-      background:var(--accent-soft);color:#bfe9ff;font-size:11px;
-      text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;
-    }
-    label{display:block;margin-bottom:4px;font-size:13px;font-weight:500;color:#e3f2fd}
-    input, select{
-      padding:8px 10px;margin-bottom:10px;border-radius:10px;border:1px solid #ccd2dd;
-      font-size:13px;width:100%;
-    }
-    button{
-      padding:8px 12px;border-radius:999px;border:none;
-      background:var(--accent);color:#fff;font-size:13px;cursor:pointer;
-      margin-right:8px;margin-bottom:8px;display:inline-flex;align-items:center;gap:6px;
-      white-space:nowrap;
-    }
-    button.secondary{background:#345a77}
-    button.danger{background:var(--danger)}
-    button:disabled{opacity:.5;cursor:default}
-    .status{font-size:12px;min-height:16px;margin-top:4px}
-    .status.ok{color:var(--warn)}
-    .status.error{color:#ff6b6b}
-    .small{font-size:12px;color:#cfe8ff}
-    .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    @media (max-width:700px){.row{grid-template-columns:1fr}}
-    .controls{
-      display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;
-    }
-    .control{
-      flex:1 1 240px;
-      background:var(--bg-card-soft);
-      border-radius:14px;
-      padding:12px;
-      border:1px solid rgba(255,255,255,0.06);
-      min-width:240px;
-    }
-    .control h3{margin:0 0 10px;font-size:14px}
-    .msg{
-      margin-top:6px;
-      font-size:12px;
-      color:var(--warn);
-      min-height:16px;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Geata App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --bg-main: #ffe4b5;
+        --bg-card: #0b2535;
+        --bg-card-soft: #123653;
+        --accent: #1c5e86;
+        --accent-soft: rgba(28, 94, 134, 0.2);
+        --danger: #d9534f;
+        --text-main: #f5f7fa;
+        --muted: #f5f7fa;
+        --warn: #ffb300;
+        --ok: #2e7d32;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(
+          circle at top,
+          #1e3f5d 0,
+          var(--bg-main) 45%,
+          #b3cde5 100%
+        );
+        color: var(--text-main);
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px 16px 40px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 24px;
+        letter-spacing: 0.04em;
+      }
+      .subtitle {
+        margin: 0 0 16px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .card {
+        background: var(--bg-card);
+        border-radius: 24px;
+        padding: 14px 16px 32px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+        margin-bottom: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .card-title {
+        margin: 0;
+        font-size: 16px;
+        letter-spacing: 0.02em;
+      }
+      .pill-title {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #bfe9ff;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 6px;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #e3f2fd;
+      }
+      input,
+      select {
+        padding: 8px 10px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        border: 1px solid #ccd2dd;
+        font-size: 13px;
+        width: 100%;
+      }
+      button {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: none;
+        background: var(--accent);
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      button.secondary {
+        background: #345a77;
+      }
+      button.danger {
+        background: var(--danger);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .status {
+        font-size: 12px;
+        min-height: 16px;
+        margin-top: 4px;
+      }
+      .status.ok {
+        color: var(--warn);
+      }
+      .status.error {
+        color: #ff6b6b;
+      }
+      .small {
+        font-size: 12px;
+        color: #cfe8ff;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      @media (max-width: 700px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .control {
+        flex: 1 1 240px;
+        background: var(--bg-card-soft);
+        border-radius: 14px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        min-width: 240px;
+      }
+      .control h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+      }
+      .msg {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--warn);
+        min-height: 16px;
+      }
 
-    /* Flashing alert text */
-    .flashText{
-      animation: blink 0.5s infinite;
-      font-weight:700;
-    }
-    @keyframes blink{
-      0%{opacity:1}
-      50%{opacity:0.2}
-      100%{opacity:1}
-    }
+      /* Flashing alert text */
+      .flashText {
+        animation: blink 0.5s infinite;
+        font-weight: 700;
+      }
+      @keyframes blink {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.2;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
 
-    /* OK button styles */
-    .okNormal{background: var(--ok);}
-    .okAlert{
-      background: var(--warn);
-      color:#1b1b1b;
-      animation: blink 0.5s infinite;
-      font-weight:800;
-    }
+      /* OK button styles */
+      .okNormal {
+        background: var(--ok);
+      }
+      .okAlert {
+        background: var(--warn);
+        color: #1b1b1b;
+        animation: blink 0.5s infinite;
+        font-weight: 800;
+      }
 
-    /* Mode pill/button */
-    .modeBtn{background:#345a77}
-    .modeEng{
-      background:#b00020;
-      animation: blink 0.5s infinite;
-      font-weight:900;
-    }
+      /* Mode pill/button */
+      .modeBtn {
+        background: #345a77;
+      }
+      .modeEng {
+        background: #b00020;
+        animation: blink 0.5s infinite;
+        font-weight: 900;
+      }
 
-    .divider{height:1px;margin:10px 0;background:linear-gradient(to right, rgba(255,255,255,0.14), rgba(0,0,0,0))}
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>EirGate</h1>
-    <p class="subtitle">Login → Select Device → Control Device + See Status.</p>
+      .divider {
+        height: 1px;
+        margin: 10px 0;
+        background: linear-gradient(
+          to right,
+          rgba(255, 255, 255, 0.14),
+          rgba(0, 0, 0, 0)
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>EirGate</h1>
+      <p class="subtitle">
+        Login → Select Device → Control Device + See Status.
+      </p>
 
-    <!-- LOGIN CARD -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Login</div>
-          <h2 class="card-title">User Authentication</h2>
+      <!-- LOGIN CARD -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Login</div>
+            <h2 class="card-title">User Authentication</h2>
+          </div>
+
+          <!-- Mode button lives in login card (as requested) -->
+          <button
+            id="modeBtn"
+            class="modeBtn"
+            disabled
+            title="Admin users only"
+          >
+            <span id="modeLabel">Mode</span>
+          </button>
         </div>
 
-        <!-- Mode button lives in login card (as requested) -->
-        <button id="modeBtn" class="modeBtn" disabled title="Admin users only">
-          <span id="modeLabel">Mode</span>
-        </button>
+        <div class="row">
+          <div>
+            <label for="identityInput">Email or Phone</label>
+            <input
+              id="identityInput"
+              type="text"
+              placeholder="user@example.com or +353..."
+            />
+          </div>
+          <div>
+            <label for="passwordInput">Password</label>
+            <input id="passwordInput" type="password" placeholder="Password" />
+          </div>
+        </div>
+
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn" class="secondary" disabled>Logout</button>
+
+        <div id="authStatus" class="status"></div>
+        <p class="small">
+          Mode (ENG) is enabled only if you are <b>admin</b> on the selected
+          device.
+        </p>
       </div>
 
-      <div class="row">
-        <div>
-          <label for="identityInput">Email or Phone</label>
-          <input id="identityInput" type="text" placeholder="user@example.com or +353..." />
+      <!-- DEVICE SELECTION -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Device</div>
+            <h2 class="card-title">Select Gate</h2>
+          </div>
+          <button id="refreshBtn" class="secondary" disabled>Refresh</button>
         </div>
-        <div>
-          <label for="passwordInput">Password</label>
-          <input id="passwordInput" type="password" placeholder="Password" />
-        </div>
+
+        <label for="deviceSelect">My Devices</label>
+        <select id="deviceSelect" disabled>
+          <option value="">-- login first --</option>
+        </select>
+
+        <div id="deviceStatus" class="status"></div>
+        <div class="divider"></div>
+        <p class="small" id="deviceInfo"></p>
       </div>
 
-      <button id="loginBtn">Login</button>
-      <button id="logoutBtn" class="secondary" disabled>Logout</button>
+      <!-- CONTROLS -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="pill-title">Controls</div>
+            <h2 class="card-title">Open / Aux1 / Aux2 / OK</h2>
+          </div>
+        </div>
 
-      <div id="authStatus" class="status"></div>
-      <p class="small">Mode (ENG) is enabled only if you are <b>admin</b> on the selected device.</p>
+        <div class="controls">
+          <div class="control">
+            <h3>Open Gate</h3>
+            <button id="openBtn" disabled>Open</button>
+            <div id="openMsg" class="msg"></div>
+          </div>
+
+          <div class="control">
+            <h3 id="aux1Title">Aux 1</h3>
+            <button id="aux1Btn" disabled>Aux 1</button>
+            <div id="aux1Msg" class="msg"></div>
+          </div>
+
+          <div class="control">
+            <h3>Reset / OK</h3>
+            <button id="okBtn" class="okNormal" disabled>OK</button>
+            <div id="okMsg" class="msg"></div>
+          </div>
+        </div>
+
+        <div id="controlStatus" class="status"></div>
+      </div>
     </div>
 
-    <!-- DEVICE SELECTION -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Device</div>
-          <h2 class="card-title">Select Gate</h2>
-        </div>
-        <button id="refreshBtn" class="secondary" disabled>Refresh</button>
-      </div>
+    <script>
+      // -------------------------
+      // State
+      // -------------------------
+      let token = localStorage.getItem("geata_token") || "";
+      let me = null;
+      let devices = [];
+      let selectedDeviceId = localStorage.getItem("geata_deviceId") || "";
+      let selectedRole = null;
+      // ---- session + alert state ----
+      let sessionStartIso = null;
 
-      <label for="deviceSelect">My Devices</label>
-      <select id="deviceSelect" disabled>
-        <option value="">-- login first --</option>
-      </select>
+      let alertGateAjar = false;
+      let alertGateForced = false;
+      let alertDoorForced = false;
+      let alertTamper = false;
 
-      <div id="deviceStatus" class="status"></div>
-      <div class="divider"></div>
-      <p class="small" id="deviceInfo"></p>
-    </div>
+      function resetAlertsUI() {
+        alertGateAjar = false;
+        alertGateForced = false;
+        alertDoorForced = false;
+        alertTamper = false;
 
-    <!-- CONTROLS -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="pill-title">Controls</div>
-          <h2 class="card-title">Open / Aux1 / Aux2 / OK</h2>
-        </div>
-      </div>
-
-      <div class="controls">
-        <div class="control">
-          <h3>Open Gate</h3>
-          <button id="openBtn" disabled>Open</button>
-          <div id="openMsg" class="msg"></div>
-        </div>
-
-        <div class="control">
-          <h3 id="aux1Title">Aux 1</h3>
-          <button id="aux1Btn" disabled>Aux 1</button>
-          <div id="aux1Msg" class="msg"></div>
-        </div>
-
-        <div class="control">
-          <h3>Reset / OK</h3>
-          <button id="okBtn" class="okNormal" disabled>OK</button>
-          <div id="okMsg" class="msg"></div>
-        </div>
-      </div>
-
-      <div id="controlStatus" class="status"></div>
-    </div>
-  </div>
-
-  <script>
-    // -------------------------
-    // State
-    // -------------------------
-    let token = localStorage.getItem("geata_token") || "";
-    let me = null;
-    let devices = [];
-    let selectedDeviceId = localStorage.getItem("geata_deviceId") || "";
-    let selectedRole = null;
-	// ---- session + alert state ----
-	let sessionStartIso = null;
-
-	let alertGateAjar = false;
-	let alertGateForced = false;
-	let alertDoorForced = false;
-	let alertTamper = false;
-
-  function resetAlertsUI() {
-	alertGateAjar = false;
-	alertGateForced = false;
-	alertDoorForced = false;
-	alertTamper = false;
-
-  // IMPORTANT: call your existing UI render/update function here
-  // e.g. renderAlerts(); or updateStatusPills(); etc.
-}
-
-
-    // Device settings (comes from backend; defaults here)
-    let deviceSettings = {
-      aux1Mode: "relay",           // "relay" or "door"
-      gateAjarSeconds: 60,         // just UI for now
-      notifySupervisorOnEng: false // UI only for now
-    };
-
-    // Sensor / alert state (from events)
-    let gateOpen = false;
-    let doorOpen = false;
-    let tamperOpen = false;
-
-    let alerts = {
-      gateForced: false,
-      doorForced: false,
-      gateAjar: false,
-      tamper: false
-    };
-
-    let engineerMode = false;
-
-    // Event polling
-    let pollTimer = null;
-    let lastSeenEventId = 0; // assumes device_events.id is integer increasing
-
-    // Timers for 3-second yellow messages
-    const timers = {};
-
-    // -------------------------
-    // DOM
-    // -------------------------
-    const identityInput = document.getElementById("identityInput");
-    const passwordInput = document.getElementById("passwordInput");
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const authStatus = document.getElementById("authStatus");
-
-    const deviceSelect = document.getElementById("deviceSelect");
-    const refreshBtn = document.getElementById("refreshBtn");
-    const deviceStatus = document.getElementById("deviceStatus");
-    const deviceInfo = document.getElementById("deviceInfo");
-
-    const openBtn = document.getElementById("openBtn");
-    const aux1Btn = document.getElementById("aux1Btn");
-    const okBtn = document.getElementById("okBtn");
-
-    const openMsg = document.getElementById("openMsg");
-    const aux1Msg = document.getElementById("aux1Msg");
-    const okMsg = document.getElementById("okMsg");
-
-    const aux1Title = document.getElementById("aux1Title");
-    const controlStatus = document.getElementById("controlStatus");
-
-    const modeBtn = document.getElementById("modeBtn");
-    const modeLabel = document.getElementById("modeLabel");
-
-    // -------------------------
-    // Helpers
-    // -------------------------
-    function setStatus(el, msg, isError){
-      el.textContent = msg || "";
-      el.className = "status " + (isError ? "error" : "ok");
-    }
-
-    function flash(el, text, ms=3000, flashing=false){
-      if (!el) return;
-      el.textContent = text || "";
-      el.classList.toggle("flashText", !!flashing);
-
-      const key = el.id || Math.random().toString(16);
-      if (timers[key]) clearTimeout(timers[key]);
-      timers[key] = setTimeout(() => {
-        el.textContent = "";
-        el.classList.remove("flashText");
-      }, ms);
-    }
-
-    async function apiFetch(path, opts){
-      opts = opts || {};
-      opts.headers = opts.headers || {};
-      opts.headers["Content-Type"] = "application/json";
-      if (token) opts.headers["Authorization"] = "Bearer " + token;
-      const res = await fetch(path, opts);
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        const msg = (data && data.error) ? data.error : ("HTTP " + res.status);
-        throw new Error(msg);
-      }
-      return data;
-    }
-
-    function isEmail(val){ return (val || "").includes("@"); }
-
-    function updateOkButtonUI(){
-      const anyAlert = alerts.gateForced || alerts.doorForced || alerts.gateAjar || alerts.tamper;
-
-      okBtn.className = anyAlert ? "okAlert" : "okNormal";
-      okBtn.disabled = !selectedDeviceId; // enabled when device selected
-      if (anyAlert) {
-        okMsg.textContent = "Press OK to reset";
-        okMsg.classList.add("flashText");
-      } else {
-        okMsg.textContent = "";
-        okMsg.classList.remove("flashText");
-      }
-    }
-
-    function updateAux1UI(){
-      const mode = (deviceSettings.aux1Mode || "relay").toLowerCase();
-      if (mode === "door") {
-        aux1Title.textContent = "Aux 1 (Door)";
-        aux1Btn.textContent = "Aux 1 (Door)";
-      } else {
-        aux1Title.textContent = "Aux 1 (Relay)";
-        aux1Btn.textContent = "Aux 1";
-      }
-    }
-
-    function updateModeButtonUI(){
-      const canUseMode = !!selectedDeviceId && selectedRole === "admin";
-      modeBtn.disabled = !canUseMode;
-      modeBtn.title = canUseMode ? "Toggle Engineer Mode" : "Admin users only";
-
-      if (!canUseMode) {
-        modeBtn.className = "modeBtn";
-        modeLabel.textContent = "Mode";
-        return;
+        // IMPORTANT: call your existing UI render/update function here
+        // e.g. renderAlerts(); or updateStatusPills(); etc.
       }
 
-      if (engineerMode) {
-        modeBtn.className = "modeBtn modeEng";
-        modeLabel.textContent = "ENG";
-      } else {
-        modeBtn.className = "modeBtn";
-        modeLabel.textContent = "Mode";
-      }
-    }
+      // Device settings (comes from backend; defaults here)
+      let deviceSettings = {
+        aux1Mode: "relay", // "relay" or "door"
+        gateAjarSeconds: 60, // just UI for now
+        notifySupervisorOnEng: false, // UI only for now
+      };
 
-    function applyDeviceRoleFromList(){
-      selectedRole = null;
-      const d = devices.find(x => x.id === selectedDeviceId);
-      if (d) selectedRole = d.role || null;
-      updateModeButtonUI();
-    }
+      // Sensor / alert state (from events)
+      let gateOpen = false;
+      let doorOpen = false;
+      let tamperOpen = false;
 
-    // -------------------------
-    // Auth + Device Load
-    // -------------------------
-    async function loadMeAndDevices(){
-      me = await apiFetch("/me", { method: "GET" });
-      const devs = await apiFetch("/me/devices", { method: "GET" });
+      let alerts = {
+        gateForced: false,
+        doorForced: false,
+        gateAjar: false,
+        tamper: false,
+      };
 
-      // Normalize to {id,name,role}
-      devices = (devs || []).map(d => ({
-        id: d.id || d.deviceId || d.device_id,
-        name: d.name || "",
-        role: d.role || "operator"
-      })).filter(d => !!d.id);
+      let engineerMode = false;
 
-      rebuildDeviceSelect();
-      refreshBtn.disabled = false;
-      deviceSelect.disabled = false;
+      // Event polling
+      let pollTimer = null;
+      let lastSeenEventId = 0; // assumes device_events.id is integer increasing
 
-      setStatus(authStatus, "Logged in as " + (me.name || me.email || me.phone || me.id), false);
+      // Timers for 3-second yellow messages
+      const timers = {};
 
-      if (!selectedDeviceId && devices.length) {
-        selectedDeviceId = devices[0].id;
-        localStorage.setItem("geata_deviceId", selectedDeviceId);
-      }
-      deviceSelect.value = selectedDeviceId || "";
-      applyDeviceRoleFromList();
+      // -------------------------
+      // DOM
+      // -------------------------
+      const identityInput = document.getElementById("identityInput");
+      const passwordInput = document.getElementById("passwordInput");
+      const loginBtn = document.getElementById("loginBtn");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const authStatus = document.getElementById("authStatus");
 
-      await loadDeviceSettingsSafe();
-      startPolling();
-      updateControlsEnabled();
-    }
+      const deviceSelect = document.getElementById("deviceSelect");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const deviceStatus = document.getElementById("deviceStatus");
+      const deviceInfo = document.getElementById("deviceInfo");
 
-    function rebuildDeviceSelect(){
-      deviceSelect.innerHTML = "";
-      if (!devices.length) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "-- no devices assigned --";
-        deviceSelect.appendChild(opt);
-        return;
-      }
-      const def = document.createElement("option");
-      def.value = "";
-      def.textContent = "-- select a device --";
-      deviceSelect.appendChild(def);
+      const openBtn = document.getElementById("openBtn");
+      const aux1Btn = document.getElementById("aux1Btn");
+      const okBtn = document.getElementById("okBtn");
 
-      devices.forEach(d => {
-        const opt = document.createElement("option");
-        opt.value = d.id;
-        opt.textContent = d.id + (d.name ? (" – " + d.name) : "") + " (" + (d.role || "operator") + ")";
-        deviceSelect.appendChild(opt);
-      });
-    }
+      const openMsg = document.getElementById("openMsg");
+      const aux1Msg = document.getElementById("aux1Msg");
+      const okMsg = document.getElementById("okMsg");
 
-    function updateControlsEnabled(){
-      const ok = !!token && !!selectedDeviceId;
-      openBtn.disabled = !ok;
-      aux1Btn.disabled = !ok;
-      updateOkButtonUI();
-      deviceInfo.textContent = selectedDeviceId
-        ? ("Selected: " + selectedDeviceId + " | Role: " + (selectedRole || "operator"))
-        : "";
-    }
+      const aux1Title = document.getElementById("aux1Title");
+      const controlStatus = document.getElementById("controlStatus");
 
- async function login(){
-  setStatus(authStatus, "Logging in...", false);
-  const ident = identityInput.value.trim();
-  const pwd = passwordInput.value;
+      const modeBtn = document.getElementById("modeBtn");
+      const modeLabel = document.getElementById("modeLabel");
 
-  if (!ident || !pwd) {
-    setStatus(authStatus, "Enter email/phone + password", true);
-    return;
-  }
-
-  const body = isEmail(ident)
-    ? { email: ident, password: pwd }
-    : { phone: ident, password: pwd };
-
-  try {
-    const data = await apiFetch("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(body)
-    });
-    token = data.token;
-    localStorage.setItem("geata_token", token);
-
-    //
-    sessionStartIso = new Date().toISOString();
-    resetAlertsUI();
-
-    logoutBtn.disabled = false;
-    await loadMeAndDevices();
-  } catch (err) {
-    token = "";
-    localStorage.removeItem("geata_token");
-    setStatus(authStatus, "Login failed: " + err.message, true);
-  }
-}
-
-
-    function logout(){
-      token = "";
-      me = null;
-      devices = [];
-      selectedDeviceId = "";
-      selectedRole = null;
-      localStorage.removeItem("geata_token");
-      localStorage.removeItem("geata_deviceId");
-
-      stopPolling();
-
-      deviceSelect.disabled = true;
-      refreshBtn.disabled = true;
-      openBtn.disabled = true;
-      aux1Btn.disabled = true;
-      okBtn.disabled = true;
-      modeBtn.disabled = true;
-
-      setStatus(authStatus, "Logged out", false);
-      setStatus(deviceStatus, "", false);
-      setStatus(controlStatus, "", false);
-
-      deviceSelect.innerHTML = '<option value="">-- login first --</option>';
-      deviceInfo.textContent = "";
-      openMsg.textContent = "";
-      aux1Msg.textContent = "";
-      okMsg.textContent = "";
-
-      engineerMode = false;
-      updateModeButtonUI();
-    }
-
-    // -------------------------
-    // Device Settings (needs backend endpoint below)
-    // -------------------------
-    async function loadDeviceSettingsSafe(){
-      if (!selectedDeviceId) return;
-      try {
-        const s = await apiFetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/user-settings", {
-          method: "GET"
-        });
-        if (s && typeof s === "object") deviceSettings = Object.assign({}, deviceSettings, s);
-      } catch (err) {
-        // If endpoint not added yet, app still works (just defaults)
-      }
-      updateAux1UI();
-    }
-
-    // -------------------------
-    // Commands
-    // -------------------------
-    async function sendOpen(){
-      if (!selectedDeviceId) return;
-      setStatus(controlStatus, "Sending OPEN...", false);
-      try {
-        await apiFetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/open", {
-          method: "POST",
-          body: JSON.stringify({ durationMs: 1000 })
-        });
-        flash(openMsg, "OPEN requested", 3000, false);
-        setStatus(controlStatus, "Open command queued", false);
-      } catch (err) {
-        setStatus(controlStatus, "Open failed: " + err.message, true);
-      }
-    }
-
-    async function sendAux1(){
-      if (!selectedDeviceId) return;
-      setStatus(controlStatus, "Sending AUX1...", false);
-      try {
-        await apiFetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/aux1", {
-          method: "POST",
-          body: JSON.stringify({ durationMs: 1000 })
-        });
-        flash(aux1Msg, "AUX1 requested", 3000, false);
-        setStatus(controlStatus, "Aux1 command queued", false);
-      } catch (err) {
-        setStatus(controlStatus, "Aux1 failed: " + err.message, true);
-      }
-    }
-
-    // -------------------------
-    // OK / Reset (UI-only for now)
-    // -------------------------
-    function pressOk(){
-      const anyAlert = alerts.gateForced || alerts.doorForced || alerts.gateAjar || alerts.tamper;
-      if (!anyAlert) {
-        flash(okMsg, "OK", 1000, false);
-        return;
+      // -------------------------
+      // Helpers
+      // -------------------------
+      function setStatus(el, msg, isError) {
+        el.textContent = msg || "";
+        el.className = "status " + (isError ? "error" : "ok");
       }
 
-      // Don’t clear forced/ajar until sensor is closed
-      if ((alerts.gateForced || alerts.gateAjar) && gateOpen) {
-        flash(okMsg, "Close Gate!", 3000, true);
-        return;
+      function flash(el, text, ms = 3000, flashing = false) {
+        if (!el) return;
+        el.textContent = text || "";
+        el.classList.toggle("flashText", !!flashing);
+
+        const key = el.id || Math.random().toString(16);
+        if (timers[key]) clearTimeout(timers[key]);
+        timers[key] = setTimeout(() => {
+          el.textContent = "";
+          el.classList.remove("flashText");
+        }, ms);
       }
-      if (alerts.doorForced && doorOpen) {
-        flash(okMsg, "Close Door!", 3000, true);
-        return;
+
+      async function apiFetch(path, opts) {
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        opts.headers["Content-Type"] = "application/json";
+        if (token) opts.headers["Authorization"] = "Bearer " + token;
+        const res = await fetch(path, opts);
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          const msg = data && data.error ? data.error : "HTTP " + res.status;
+          throw new Error(msg);
+        }
+        return data;
       }
-      if (alerts.tamper && tamperOpen) {
-        flash(okMsg, "Close Cover!", 3000, true);
-        return;
+
+      function isEmail(val) {
+        return (val || "").includes("@");
       }
 
-      alerts.gateForced = false;
-      alerts.doorForced = false;
-      alerts.gateAjar = false;
-      alerts.tamper = false;
+      function updateOkButtonUI() {
+        const anyAlert =
+          alerts.gateForced ||
+          alerts.doorForced ||
+          alerts.gateAjar ||
+          alerts.tamper;
 
-      updateOkButtonUI();
-      flash(okMsg, "Reset", 2000, false);
-    }
-
-    // -------------------------
-    // Engineer Mode (UI-only for now)
-    // -------------------------
-    function toggleEngineerMode(){
-      if (!selectedDeviceId || selectedRole !== "admin") return;
-
-      engineerMode = !engineerMode;
-      updateModeButtonUI();
-
-      if (engineerMode) {
-        flash(controlStatus, "Engineer Mode ENABLED (ENG)", 3000, false);
-      } else {
-        flash(controlStatus, "Engineer Mode OFF", 3000, false);
+        okBtn.className = anyAlert ? "okAlert" : "okNormal";
+        okBtn.disabled = !selectedDeviceId; // enabled when device selected
+        if (anyAlert) {
+          okMsg.textContent = "Press OK to reset";
+          okMsg.classList.add("flashText");
+        } else {
+          okMsg.textContent = "";
+          okMsg.classList.remove("flashText");
+        }
       }
-    }
 
-    // -------------------------
-    // Events polling (needs backend endpoint below)
-    // -------------------------
-    function stopPolling(){
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = null;
-    }
-    function startPolling(){
-      stopPolling();
-      if (!selectedDeviceId) return;
-      pollTimer = setInterval(pollOnce, 2500);
-      pollOnce();
-    }
+      function updateAux1UI() {
+        const mode = (deviceSettings.aux1Mode || "relay").toLowerCase();
+        if (mode === "door") {
+          aux1Title.textContent = "Aux 1 (Door)";
+          aux1Btn.textContent = "Aux 1 (Door)";
+        } else {
+          aux1Title.textContent = "Aux 1 (Relay)";
+          aux1Btn.textContent = "Aux 1";
+        }
+      }
 
-    async function pollOnce(){
-      if (!selectedDeviceId) return;
+      function updateModeButtonUI() {
+        const canUseMode = !!selectedDeviceId && selectedRole === "admin";
+        modeBtn.disabled = !canUseMode;
+        modeBtn.title = canUseMode
+          ? "Toggle Engineer Mode"
+          : "Admin users only";
 
-      try {
-        const rows = await apiFetch("/devices/" + encodeURIComponent(selectedDeviceId) + "/user-events?limit=30", {
-          method: "GET"
-        });
-
-        if (!Array.isArray(rows)) return;
-
-        // Process oldest→newest so UI makes sense
-        const ordered = rows.slice().sort((a,b) => (a.id||0) - (b.id||0));
-        for (const ev of ordered) {
-          const id = Number(ev.id || 0);
-          if (id && id <= lastSeenEventId) continue;
-          if (id) lastSeenEventId = id;
-          handleEvent(ev);
+        if (!canUseMode) {
+          modeBtn.className = "modeBtn";
+          modeLabel.textContent = "Mode";
+          return;
         }
 
-      } catch (err) {
-        // If endpoint missing or temporary errors, ignore quietly
-      }
-    }
-
-    function handleEvent(ev){
-      const type = String(ev.event_type || ev.eventType || "").toUpperCase();
-      const details = String(ev.details || "");
-
-      // Gate input messages
-      if (type === "GATE_OPENED") {
-        gateOpen = true;
-        flash(openMsg, "Opened", 3000, false);
-        return;
-      }
-      if (type === "GATE_CLOSED") {
-        gateOpen = false;
-        flash(openMsg, "Closed", 3000, false);
-        return;
-      }
-
-      // Door input messages (aux1 door mode)
-      if (type === "DOOR_OPENED" || type === "AUX1_OPENED" || type === "INPUT2_OPENED") {
-        doorOpen = true;
-        flash(aux1Msg, "Opened", 3000, false);
-        return;
-      }
-      if (type === "DOOR_CLOSED" || type === "AUX1_CLOSED" || type === "INPUT2_CLOSED") {
-        doorOpen = false;
-        flash(aux1Msg, "Closed", 3000, false);
-        return;
-      }
-
-      // Tamper input
-      if (type === "TAMPER_OPENED" || type === "INPUT3_OPENED") {
-        tamperOpen = true;
-        alerts.tamper = true;
-        updateOkButtonUI();
-        flash(okMsg, "Tamper!", 999999, true);
-        return;
-      }
-      if (type === "TAMPER_CLOSED" || type === "INPUT3_CLOSED") {
-        tamperOpen = false;
-        // don’t auto-clear alert; OK clears once closed
-        return;
-      }
-
-      // Forced / Ajar (alerts)
-      if (type === "GATE_FORCED_OPEN" || type === "GATE_FORCED") {
-        alerts.gateForced = true;
-        updateOkButtonUI();
-        flash(openMsg, "Gate Forced", 999999, true);
-        return;
-      }
-      if (type === "DOOR_FORCED_OPEN" || type === "DOOR_FORCED") {
-        alerts.doorForced = true;
-        updateOkButtonUI();
-        flash(aux1Msg, "Door Forced", 999999, true);
-        return;
-      }
-      if (type === "GATE_OPEN_TOO_LONG" || type === "GATE_AJAR") {
-        alerts.gateAjar = true;
-        updateOkButtonUI();
-        flash(openMsg, "Gate Ajar", 999999, true);
-        return;
-      }
-
-      // Relay result messages from CMD_COMPLETED details (example: "AUX1 result=ON")
-      if (type === "CMD_COMPLETED") {
-        const d = details.toUpperCase();
-        if (d.includes("AUX1") && (d.includes("RESULT=ON") || d.includes("RESULT=OFF"))) {
-          const isOn = d.includes("RESULT=ON");
-          flash(aux1Msg, isOn ? "RLA ON" : "OFF", 3000, false);
+        if (engineerMode) {
+          modeBtn.className = "modeBtn modeEng";
+          modeLabel.textContent = "ENG";
+        } else {
+          modeBtn.className = "modeBtn";
+          modeLabel.textContent = "Mode";
         }
-        return;
       }
-    }
 
-    // -------------------------
-    // Events / UI wiring
-    // -------------------------
-    loginBtn.addEventListener("click", login);
-    logoutBtn.addEventListener("click", logout);
-    refreshBtn.addEventListener("click", async () => {
-      try {
-        await loadMeAndDevices();
-      } catch (e) {}
-    });
+      function applyDeviceRoleFromList() {
+        selectedRole = null;
+        const d = devices.find((x) => x.id === selectedDeviceId);
+        if (d) selectedRole = d.role || null;
+        updateModeButtonUI();
+      }
 
-    deviceSelect.addEventListener("change", async () => {
-      selectedDeviceId = deviceSelect.value || "";
-      localStorage.setItem("geata_deviceId", selectedDeviceId);
+      // -------------------------
+      // Auth + Device Load
+      // -------------------------
+      async function loadMeAndDevices() {
+        me = await apiFetch("/me", { method: "GET" });
+        const devs = await apiFetch("/me/devices", { method: "GET" });
 
-      lastSeenEventId = 0;
-      gateOpen = false;
-      doorOpen = false;
-      tamperOpen = false;
+        // Normalize to {id,name,role}
+        devices = (devs || [])
+          .map((d) => ({
+            id: d.id || d.deviceId || d.device_id,
+            name: d.name || "",
+            role: d.role || "operator",
+          }))
+          .filter((d) => !!d.id);
 
-      alerts = { gateForced:false, doorForced:false, gateAjar:false, tamper:false };
+        rebuildDeviceSelect();
+        refreshBtn.disabled = false;
+        deviceSelect.disabled = false;
 
-      applyDeviceRoleFromList();
-      await loadDeviceSettingsSafe();
-      updateControlsEnabled();
-      startPolling();
-    });
+        setStatus(
+          authStatus,
+          "Logged in as " + (me.name || me.email || me.phone || me.id),
+          false,
+        );
 
-    openBtn.addEventListener("click", sendOpen);
-    aux1Btn.addEventListener("click", sendAux1);
-    okBtn.addEventListener("click", pressOk);
-    modeBtn.addEventListener("click", toggleEngineerMode);
+        if (!selectedDeviceId && devices.length) {
+          selectedDeviceId = devices[0].id;
+          localStorage.setItem("geata_deviceId", selectedDeviceId);
+        }
+        deviceSelect.value = selectedDeviceId || "";
+        applyDeviceRoleFromList();
 
-    // -------------------------
-    // Boot
-    // -------------------------
-    (async function boot(){
-      if (token) {
-        logoutBtn.disabled = false;
+        await loadDeviceSettingsSafe();
+        startPolling();
+        updateControlsEnabled();
+      }
+
+      function rebuildDeviceSelect() {
+        deviceSelect.innerHTML = "";
+        if (!devices.length) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "-- no devices assigned --";
+          deviceSelect.appendChild(opt);
+          return;
+        }
+        const def = document.createElement("option");
+        def.value = "";
+        def.textContent = "-- select a device --";
+        deviceSelect.appendChild(def);
+
+        devices.forEach((d) => {
+          const opt = document.createElement("option");
+          opt.value = d.id;
+          opt.textContent =
+            d.id +
+            (d.name ? " – " + d.name : "") +
+            " (" +
+            (d.role || "operator") +
+            ")";
+          deviceSelect.appendChild(opt);
+        });
+      }
+
+      function updateControlsEnabled() {
+        const ok = !!token && !!selectedDeviceId;
+        openBtn.disabled = !ok;
+        aux1Btn.disabled = !ok;
+        updateOkButtonUI();
+        deviceInfo.textContent = selectedDeviceId
+          ? "Selected: " +
+            selectedDeviceId +
+            " | Role: " +
+            (selectedRole || "operator")
+          : "";
+      }
+
+      async function login() {
+        setStatus(authStatus, "Logging in...", false);
+        const ident = identityInput.value.trim();
+        const pwd = passwordInput.value;
+
+        if (!ident || !pwd) {
+          setStatus(authStatus, "Enter email/phone + password", true);
+          return;
+        }
+
+        const body = isEmail(ident)
+          ? { email: ident, password: pwd }
+          : { phone: ident, password: pwd };
+
         try {
+          const data = await apiFetch("/auth/login", {
+            method: "POST",
+            body: JSON.stringify(body),
+          });
+          token = data.token;
+          localStorage.setItem("geata_token", token);
+
+          //
+          sessionStartIso = new Date().toISOString();
+          resetAlertsUI();
+
+          logoutBtn.disabled = false;
           await loadMeAndDevices();
         } catch (err) {
           token = "";
           localStorage.removeItem("geata_token");
-          setStatus(authStatus, "Session expired. Please login again.", true);
+          setStatus(authStatus, "Login failed: " + err.message, true);
         }
-      } else {
-        setStatus(authStatus, "Not logged in", false);
       }
-      updateControlsEnabled();
-      updateModeButtonUI();
-      updateAux1UI();
-    })();
-  </script>
-</body>
+
+      function logout() {
+        token = "";
+        me = null;
+        devices = [];
+        selectedDeviceId = "";
+        selectedRole = null;
+        localStorage.removeItem("geata_token");
+        localStorage.removeItem("geata_deviceId");
+
+        stopPolling();
+
+        deviceSelect.disabled = true;
+        refreshBtn.disabled = true;
+        openBtn.disabled = true;
+        aux1Btn.disabled = true;
+        okBtn.disabled = true;
+        modeBtn.disabled = true;
+
+        setStatus(authStatus, "Logged out", false);
+        setStatus(deviceStatus, "", false);
+        setStatus(controlStatus, "", false);
+
+        deviceSelect.innerHTML = '<option value="">-- login first --</option>';
+        deviceInfo.textContent = "";
+        openMsg.textContent = "";
+        aux1Msg.textContent = "";
+        okMsg.textContent = "";
+
+        engineerMode = false;
+        updateModeButtonUI();
+      }
+
+      // -------------------------
+      // Device Settings (needs backend endpoint below)
+      // -------------------------
+      async function loadDeviceSettingsSafe() {
+        if (!selectedDeviceId) return;
+        try {
+          const s = await apiFetch(
+            "/devices/" +
+              encodeURIComponent(selectedDeviceId) +
+              "/user-settings",
+            {
+              method: "GET",
+            },
+          );
+          if (s && typeof s === "object")
+            deviceSettings = Object.assign({}, deviceSettings, s);
+        } catch (err) {
+          // If endpoint not added yet, app still works (just defaults)
+        }
+        updateAux1UI();
+      }
+
+      // -------------------------
+      // Commands
+      // -------------------------
+      async function sendOpen() {
+        if (!selectedDeviceId) return;
+        setStatus(controlStatus, "Sending OPEN...", false);
+        try {
+          await apiFetch(
+            "/devices/" + encodeURIComponent(selectedDeviceId) + "/open",
+            {
+              method: "POST",
+              body: JSON.stringify({ durationMs: 1000 }),
+            },
+          );
+          flash(openMsg, "OPEN requested", 3000, false);
+          setStatus(controlStatus, "Open command queued", false);
+        } catch (err) {
+          setStatus(controlStatus, "Open failed: " + err.message, true);
+        }
+      }
+
+      async function sendAux1() {
+        if (!selectedDeviceId) return;
+        setStatus(controlStatus, "Sending AUX1...", false);
+        try {
+          await apiFetch(
+            "/devices/" + encodeURIComponent(selectedDeviceId) + "/aux1",
+            {
+              method: "POST",
+              body: JSON.stringify({ durationMs: 1000 }),
+            },
+          );
+          flash(aux1Msg, "AUX1 requested", 3000, false);
+          setStatus(controlStatus, "Aux1 command queued", false);
+        } catch (err) {
+          setStatus(controlStatus, "Aux1 failed: " + err.message, true);
+        }
+      }
+
+      // -------------------------
+      // OK / Reset (UI-only for now)
+      // -------------------------
+      function pressOk() {
+        const anyAlert =
+          alerts.gateForced ||
+          alerts.doorForced ||
+          alerts.gateAjar ||
+          alerts.tamper;
+        if (!anyAlert) {
+          flash(okMsg, "OK", 1000, false);
+          return;
+        }
+
+        // Don’t clear forced/ajar until sensor is closed
+        if ((alerts.gateForced || alerts.gateAjar) && gateOpen) {
+          flash(okMsg, "Close Gate!", 3000, true);
+          return;
+        }
+        if (alerts.doorForced && doorOpen) {
+          flash(okMsg, "Close Door!", 3000, true);
+          return;
+        }
+        if (alerts.tamper && tamperOpen) {
+          flash(okMsg, "Close Cover!", 3000, true);
+          return;
+        }
+
+        alerts.gateForced = false;
+        alerts.doorForced = false;
+        alerts.gateAjar = false;
+        alerts.tamper = false;
+
+        updateOkButtonUI();
+        flash(okMsg, "Reset", 2000, false);
+      }
+
+      // -------------------------
+      // Engineer Mode (UI-only for now)
+      // -------------------------
+      function toggleEngineerMode() {
+        if (!selectedDeviceId || selectedRole !== "admin") return;
+
+        engineerMode = !engineerMode;
+        updateModeButtonUI();
+
+        if (engineerMode) {
+          flash(controlStatus, "Engineer Mode ENABLED (ENG)", 3000, false);
+        } else {
+          flash(controlStatus, "Engineer Mode OFF", 3000, false);
+        }
+      }
+
+      // -------------------------
+      // Events polling (needs backend endpoint below)
+      // -------------------------
+      function stopPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      function startPolling() {
+        stopPolling();
+        if (!selectedDeviceId) return;
+        pollTimer = setInterval(pollOnce, 2500);
+        pollOnce();
+      }
+
+      async function pollOnce() {
+        if (!selectedDeviceId) return;
+
+        try {
+          const rows = await apiFetch(
+            "/devices/" +
+              encodeURIComponent(selectedDeviceId) +
+              "/user-events?limit=30",
+            {
+              method: "GET",
+            },
+          );
+
+          if (!Array.isArray(rows)) return;
+
+          // Process oldest→newest so UI makes sense
+          const ordered = rows
+            .slice()
+            .sort((a, b) => (a.id || 0) - (b.id || 0));
+          for (const ev of ordered) {
+            const id = Number(ev.id || 0);
+            if (id && id <= lastSeenEventId) continue;
+            if (id) lastSeenEventId = id;
+            handleEvent(ev);
+          }
+        } catch (err) {
+          // If endpoint missing or temporary errors, ignore quietly
+        }
+      }
+
+      function handleEvent(ev) {
+        const type = String(ev.event_type || ev.eventType || "").toUpperCase();
+        const details = String(ev.details || "");
+
+        // Gate input messages
+        if (type === "GATE_OPENED") {
+          gateOpen = true;
+          flash(openMsg, "Opened", 3000, false);
+          return;
+        }
+        if (type === "GATE_CLOSED") {
+          gateOpen = false;
+          flash(openMsg, "Closed", 3000, false);
+          return;
+        }
+
+        // Door input messages (aux1 door mode)
+        if (
+          type === "DOOR_OPENED" ||
+          type === "AUX1_OPENED" ||
+          type === "INPUT2_OPENED"
+        ) {
+          doorOpen = true;
+          flash(aux1Msg, "Opened", 3000, false);
+          return;
+        }
+        if (
+          type === "DOOR_CLOSED" ||
+          type === "AUX1_CLOSED" ||
+          type === "INPUT2_CLOSED"
+        ) {
+          doorOpen = false;
+          flash(aux1Msg, "Closed", 3000, false);
+          return;
+        }
+
+        // Tamper input
+        if (type === "TAMPER_OPENED" || type === "INPUT3_OPENED") {
+          tamperOpen = true;
+          alerts.tamper = true;
+          updateOkButtonUI();
+          flash(okMsg, "Tamper!", 999999, true);
+          return;
+        }
+        if (type === "TAMPER_CLOSED" || type === "INPUT3_CLOSED") {
+          tamperOpen = false;
+          // don’t auto-clear alert; OK clears once closed
+          return;
+        }
+
+        // Forced / Ajar (alerts)
+        if (type === "GATE_FORCED_OPEN" || type === "GATE_FORCED") {
+          alerts.gateForced = true;
+          updateOkButtonUI();
+          flash(openMsg, "Gate Forced", 999999, true);
+          return;
+        }
+        if (type === "DOOR_FORCED_OPEN" || type === "DOOR_FORCED") {
+          alerts.doorForced = true;
+          updateOkButtonUI();
+          flash(aux1Msg, "Door Forced", 999999, true);
+          return;
+        }
+        if (type === "GATE_OPEN_TOO_LONG" || type === "GATE_AJAR") {
+          alerts.gateAjar = true;
+          updateOkButtonUI();
+          flash(openMsg, "Gate Ajar", 999999, true);
+          return;
+        }
+
+        // Relay result messages from CMD_COMPLETED details (example: "AUX1 result=ON")
+        if (type === "CMD_COMPLETED") {
+          const d = details.toUpperCase();
+          if (
+            d.includes("AUX1") &&
+            (d.includes("RESULT=ON") || d.includes("RESULT=OFF"))
+          ) {
+            const isOn = d.includes("RESULT=ON");
+            flash(aux1Msg, isOn ? "RLA ON" : "OFF", 3000, false);
+          }
+          return;
+        }
+      }
+
+      // -------------------------
+      // Events / UI wiring
+      // -------------------------
+      loginBtn.addEventListener("click", login);
+      logoutBtn.addEventListener("click", logout);
+      refreshBtn.addEventListener("click", async () => {
+        try {
+          await loadMeAndDevices();
+        } catch (e) {}
+      });
+
+      deviceSelect.addEventListener("change", async () => {
+        selectedDeviceId = deviceSelect.value || "";
+        localStorage.setItem("geata_deviceId", selectedDeviceId);
+
+        lastSeenEventId = 0;
+        gateOpen = false;
+        doorOpen = false;
+        tamperOpen = false;
+
+        alerts = {
+          gateForced: false,
+          doorForced: false,
+          gateAjar: false,
+          tamper: false,
+        };
+
+        applyDeviceRoleFromList();
+        await loadDeviceSettingsSafe();
+        updateControlsEnabled();
+        startPolling();
+      });
+
+      openBtn.addEventListener("click", sendOpen);
+      aux1Btn.addEventListener("click", sendAux1);
+      okBtn.addEventListener("click", pressOk);
+      modeBtn.addEventListener("click", toggleEngineerMode);
+
+      // -------------------------
+      // Boot
+      // -------------------------
+      (async function boot() {
+        if (token) {
+          logoutBtn.disabled = false;
+          try {
+            await loadMeAndDevices();
+          } catch (err) {
+            token = "";
+            localStorage.removeItem("geata_token");
+            setStatus(authStatus, "Session expired. Please login again.", true);
+          }
+        } else {
+          setStatus(authStatus, "Not logged in", false);
+        }
+        updateControlsEnabled();
+        updateModeButtonUI();
+        updateAux1UI();
+      })();
+    </script>
+  </body>
 </html>

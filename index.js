@@ -1,28 +1,28 @@
-// ======================================================
-// Geata API - index.js
-// Node.js + Express + Postgres (Supabase Postgres via DATABASE_URL)
-// ------------------------------------------------------
-// This is a single-file backend (monolithic) for simplicity.
-// It provides:
-//  - Admin API (x-api-key protected): manage users, gates, schedules, events, alerts
-//  - User API (JWT Bearer token): login, list devices, send OPEN/AUX commands, read alerts/events
-//  - Device poll API (ESP32): pull queued commands + report command results
+// index.js (Postgres / Supabase + Email Notifications)
+// Profile-driven admin endpoint: GET /profiles/users/:id (no N+1 queries)
 //
-// NOTE: Email is intentionally REMOVED in this version.
-//       Alerts are delivered via polling endpoints (e.g. /me/alerts, /admin/alerts).
-// ======================================================
+// Requires: npm i pg nodemailer bcryptjs jsonwebtoken express
 
 const express = require("express");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
+const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
+
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
 const crypto = require("crypto");
 const ExcelJS = require("exceljs");
-
-// ======================================================
-// 1) App + config
-// ======================================================
+const { createClient } = require("@supabase/supabase-js");
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY, // <-- IMPORTANT
+  { auth: { persistSession: false } },
+);
 
 const app = express();
 app.use(express.json());
@@ -30,40 +30,33 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const BUILD_TAG = process.env.BUILD_TAG || "local-dev";
 
+// Root -> serve admin UI
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "dev-only-admin-key";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-only-jwt-secret";
 const PORT = process.env.PORT || 3000;
-
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
-  console.warn("*** WARNING: DATABASE_URL is not set (Postgres will not connect). ***");
+  console.warn(
+    "*** WARNING: DATABASE_URL is not set (Postgres will not connect). ***",
+  );
 }
 
-// PGSSL=true in Render env is a common pattern
+// ---- Postgres pool (Supabase) ----
 const PGSSL = String(process.env.PGSSL || "").toLowerCase() === "true";
 const useSSL = PGSSL || process.env.NODE_ENV === "production";
 
-// Create a Postgres connection pool (Supabase Postgres is still "normal Postgres")
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: useSSL ? { rejectUnauthorized: false } : false,
 });
 
-// Serve admin UI at /
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
-});
-
-// ======================================================
-// 2) Small utility helpers
-// ======================================================
-
-// Wrap async route handlers so errors go to Express error handler
 function asyncHandler(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }
-
-// Query helpers
 async function q(text, params = []) {
   return pool.query(text, params);
 }
@@ -71,8 +64,232 @@ async function one(text, params = []) {
   const r = await q(text, params);
   return r.rows[0] || null;
 }
+// =========================
+// Alerts (derived from device_events + subscriptions)
+// =========================
 
-// Misc helpers
+async function getUserAlerts({
+  userId,
+  deviceId = null,
+  since = null,
+  limit = 200,
+}) {
+  const params = [userId];
+  let p = 2;
+
+  let where = `
+    s.user_id = $1
+    AND s.enabled = true
+    AND e.event_type = s.event_type
+    AND e.device_id = s.device_id
+  `;
+
+  if (deviceId) {
+    where += ` AND e.device_id = $${p}`;
+    params.push(deviceId);
+    p++;
+  }
+  if (since) {
+    where += ` AND e.at > $${p}`;
+    params.push(since);
+    p++;
+  }
+
+  params.push(limit);
+
+  const sql = `
+    SELECT
+      e.id,
+      e.device_id,
+      d.name AS device_name,
+      e.user_id,
+      u.name AS user_name,
+      u.email AS user_email,
+      u.phone AS user_phone,
+      e.event_type,
+      e.at,
+      e.details
+    FROM device_events e
+    JOIN device_notifications_subscriptions s
+      ON s.device_id = e.device_id
+     AND s.user_id   = $1
+     AND s.event_type = e.event_type
+     AND s.enabled = true
+    LEFT JOIN devices d ON d.id = e.device_id
+    LEFT JOIN users u   ON u.id = e.user_id
+    WHERE ${where}
+    ORDER BY e.at DESC
+    LIMIT $${p}
+  `;
+  return q(sql, params);
+}
+
+async function getAdminAlerts({
+  deviceId = null,
+  userId = null,
+  from = null,
+  to = null,
+  limit = 500,
+}) {
+  const params = [];
+  let p = 1;
+  let where = `1=1`;
+
+  if (deviceId) {
+    where += ` AND e.device_id = $${p}`;
+    params.push(deviceId);
+    p++;
+  }
+  if (userId) {
+    where += ` AND e.user_id = $${p}`;
+    params.push(userId);
+    p++;
+  }
+  if (from) {
+    where += ` AND e.at >= $${p}`;
+    params.push(from);
+    p++;
+  }
+  if (to) {
+    where += ` AND e.at <= $${p}`;
+    params.push(to);
+    p++;
+  }
+
+  params.push(limit);
+
+  const sql = `
+    SELECT
+      e.id,
+      e.device_id,
+      d.name AS device_name,
+      e.user_id,
+      u.name AS user_name,
+      u.email AS user_email,
+      u.phone AS user_phone,
+      e.event_type,
+      e.at,
+      e.details
+    FROM device_events e
+    LEFT JOIN devices d ON d.id = e.device_id
+    LEFT JOIN users u   ON u.id = e.user_id
+    WHERE ${where}
+    ORDER BY e.at DESC
+    LIMIT $${p}
+  `;
+  return q(sql, params);
+}
+
+// ---- SMTP / Email ----
+const SMTP_HOST = process.env.SMTP_HOST || "";
+const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465;
+const SMTP_SECURE =
+  String(process.env.SMTP_SECURE || "true").toLowerCase() === "true";
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+const SMTP_FROM =
+  process.env.SMTP_FROM || (SMTP_USER ? `Geata <${SMTP_USER}>` : "Geata");
+
+const mailer =
+  SMTP_HOST && SMTP_USER && SMTP_PASS
+    ? nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_SECURE,
+        auth: { user: SMTP_USER, pass: SMTP_PASS },
+      })
+    : null;
+console.log("Supabase env present:", {
+  url: !!process.env.SUPABASE_URL,
+  serviceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+});
+
+console.log("SMTP env present:", {
+  host: !!SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_SECURE,
+  user: !!SMTP_USER,
+  pass: !!SMTP_PASS,
+});
+
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
+const SENDGRID_FROM = process.env.SENDGRID_FROM || process.env.SMTP_FROM || "";
+const EMAIL_FROM = process.env.EMAIL_FROM || process.env.SENDGRID_FROM || null;
+const USE_SENDGRID = !!SENDGRID_API_KEY;
+
+function parseFrom(from) {
+  const m = String(from || "").match(/^(.*)<([^>]+)>$/);
+  if (m) return { name: m[1].trim() || "Geata", email: m[2].trim() };
+  return { name: "Geata", email: String(from || "").trim() };
+}
+
+async function sendEmail(to, subject, text) {
+  if (!to) return false;
+
+  if (USE_SENDGRID) {
+    try {
+      const from = parseFrom(SENDGRID_FROM);
+      const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SENDGRID_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: to }] }],
+          from: { email: from.email, name: from.name },
+          subject,
+          content: [{ type: "text/plain", value: text }],
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.warn("SendGrid send failed:", res.status, body);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn("SendGrid send exception:", err?.message || err);
+      return false;
+    }
+  }
+
+  if (!mailer) return false;
+  try {
+    await mailer.sendMail({ from: SMTP_FROM, to, subject, text });
+    return true;
+  } catch (err) {
+    console.warn("Email send failed:", err?.message || err);
+    return false;
+  }
+}
+
+async function verifyMailer() {
+  if (USE_SENDGRID) {
+    console.log("Email enabled: SendGrid", {
+      fromSet: !!SENDGRID_FROM,
+      apiKeySet: !!SENDGRID_API_KEY,
+    });
+    return;
+  }
+
+  if (!mailer) {
+    console.log("Email disabled: SMTP_* env vars not set");
+    return;
+  }
+
+  try {
+    await mailer.verify();
+    console.log(
+      `Email enabled: SMTP OK as ${SMTP_USER} via ${SMTP_HOST}:${SMTP_PORT} secure=${SMTP_SECURE}`,
+    );
+  } catch (err) {
+    console.log("Email configured but verify FAILED:", err?.message || err);
+  }
+}
+
+// ---- Helpers ----
 function normalizePhone(raw) {
   if (!raw) return null;
   return String(raw).trim();
@@ -83,46 +300,14 @@ function randomId(prefix) {
 }
 
 function shortHash(s) {
-  return crypto.createHash("sha256").update(String(s || "")).digest("hex").slice(0, 10);
+  return crypto
+    .createHash("sha256")
+    .update(String(s || ""))
+    .digest("hex")
+    .slice(0, 10);
 }
 
-// ======================================================
-// 3) Middleware: Admin key + User JWT
-// ======================================================
-
-// Admin endpoints require x-api-key header
-function requireAdminKey(req, res, next) {
-  const key = req.header("x-api-key");
-  if (!key || key !== ADMIN_API_KEY) {
-    return res.status(401).json({ error: "Unauthorized: missing or invalid API key" });
-  }
-  next();
-}
-
-// User endpoints require Authorization: Bearer <token>
-function requireUser(req, res, next) {
-  const auth = req.header("authorization") || "";
-  if (!auth.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing auth token" });
-  }
-  const token = auth.slice(7);
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = { id: payload.userId };
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
-}
-
-// ======================================================
-// 4) DB init (creates tables if missing)
-// ------------------------------------------------------
-// In Supabase, you normally create tables via SQL editor.
-// This initDb is safe (CREATE TABLE IF NOT EXISTS) and
-// helps local-dev or fresh installs.
-// ======================================================
-
+// ---- DB INIT ----
 async function initDb() {
   await q(`
     CREATE TABLE IF NOT EXISTS devices (
@@ -205,41 +390,35 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_notify_device_event ON device_notifications_subscriptions(device_id, event_type);
   `);
 
-  // Optional seed devices if table is empty (handy for local testing)
   const row = await one("SELECT COUNT(*)::int AS c FROM devices");
   if ((row?.c || 0) === 0) {
     await q(
       `INSERT INTO devices (id, name) VALUES ($1,$2),($3,$4)
        ON CONFLICT (id) DO NOTHING`,
-      ["gate1", "Example Gate 1", "gate2", "Example Gate 2"]
+      ["gate1", "Example Gate 1", "gate2", "Example Gate 2"],
     );
   }
 }
 
-// ======================================================
-// 5) Data access functions (Devices / Users / Membership / Schedules)
-// ======================================================
+// ---- Data Access ----
 
-// ---------- Devices ----------
+// Devices
 async function getDevices() {
   const r = await q("SELECT id, name FROM devices ORDER BY id");
   return r.rows;
 }
-
 async function getDeviceById(id) {
   return one("SELECT id, name FROM devices WHERE id = $1", [id]);
 }
-
-// Case-insensitive compare on trimmed name
 async function getDeviceByName(name) {
   const nm = (name || "").trim();
   if (!nm) return null;
 
-  const r = await q(
-    "SELECT id, name FROM devices WHERE lower(trim(name)) = lower(trim($1)) LIMIT 1",
-    [nm]
+  const { rows } = await q(
+    "SELECT * FROM devices WHERE lower(trim(name)) = lower(trim($1)) LIMIT 1",
+    [nm],
   );
-  return r.rows[0] || null;
+  return rows[0] || null;
 }
 
 async function createDevice(id, name) {
@@ -247,25 +426,19 @@ async function createDevice(id, name) {
   return getDeviceById(id);
 }
 
-// NOTE: delete gate should be implemented later (soft-delete recommended).
-// For now, you can delete directly from DB if needed.
-
-// ---------- Users ----------
+// Users
 async function getUserById(id) {
   return one("SELECT * FROM users WHERE id = $1", [id]);
 }
-
 async function getUserByEmail(email) {
   if (!email) return null;
   return one("SELECT * FROM users WHERE email = $1", [email]);
 }
-
 async function getUserByPhone(phone) {
   const p = normalizePhone(phone);
   if (!p) return null;
   return one("SELECT * FROM users WHERE phone = $1", [p]);
 }
-
 async function createUser({ name, email, phone, password }) {
   const id = randomId("u");
   const normalizedPhone = normalizePhone(phone);
@@ -273,19 +446,24 @@ async function createUser({ name, email, phone, password }) {
 
   await q(
     "INSERT INTO users (id, name, email, phone, password_hash) VALUES ($1,$2,$3,$4,$5)",
-    [id, name || email || normalizedPhone || id, email || null, normalizedPhone || null, hash]
+    [
+      id,
+      name || email || normalizedPhone || id,
+      email || null,
+      normalizedPhone || null,
+      hash,
+    ],
   );
-
   return getUserById(id);
 }
-
 async function updateUser(id, { name, email, phone, password }) {
   const user = await getUserById(id);
   if (!user) return null;
 
   const newName = name != null && name !== "" ? name : user.name;
   const newEmail = email != null && email !== "" ? email : user.email;
-  const newPhone = phone != null && phone !== "" ? normalizePhone(phone) : user.phone;
+  const newPhone =
+    phone != null && phone !== "" ? normalizePhone(phone) : user.phone;
 
   let newHash = user.password_hash;
   if (password && password.length > 0) {
@@ -294,26 +472,99 @@ async function updateUser(id, { name, email, phone, password }) {
 
   await q(
     "UPDATE users SET name=$1, email=$2, phone=$3, password_hash=$4 WHERE id=$5",
-    [newName, newEmail, newPhone, newHash, id]
+    [newName, newEmail, newPhone, newHash, id],
   );
 
   return getUserById(id);
 }
+async function deleteUser(userId) {
+  // 1) Gate memberships
+  {
+    const { error } = await supabase
+      .from("device_users")
+      .delete()
+      .eq("user_id", userId);
+    if (error) throw new Error("device_users: " + error.message);
+  }
 
-// HARD delete user (you asked earlier for soft delete, but you’re currently deleting).
-// We keep this for now because you said it “works now”.
-// When you’re ready for SOFT delete, we’ll add users.deleted_at and filter.
-async function deleteUserHard(userId) {
-  // delete dependencies first (order matters)
-  await q("DELETE FROM device_users WHERE user_id = $1", [userId]);
-  await q("DELETE FROM device_notifications_subscriptions WHERE user_id = $1", [userId]);
-  await q("DELETE FROM notification_outbox WHERE user_id = $1").catch(() => {}); // optional table
-  await q("DELETE FROM commands WHERE user_id = $1", [userId]);
+  // 2) Notification subscriptions (your real table name)
+  {
+    const { error } = await supabase
+      .from("device_notifications_subscriptions")
+      .delete()
+      .eq("user_id", userId);
+    if (error)
+      throw new Error("device_notifications_subscriptions: " + error.message);
+  }
 
-  // If you want to preserve history, DO NOT delete device_events here.
-  // await q("DELETE FROM device_events WHERE user_id = $1", [userId]);
+  // 3) Outbox rows (only if this table really exists + has user_id)
+  {
+    const { error } = await supabase
+      .from("notification_outbox")
+      .delete()
+      .eq("user_id", userId);
+    if (error) throw new Error("notification_outbox: " + error.message);
+  }
 
-  await q("DELETE FROM users WHERE id = $1", [userId]);
+  // 4) Optional: purge commands + device events for this user
+  // (uncomment if you want "delete user" to remove all traces)
+
+  {
+    const { error } = await supabase
+      .from("commands")
+      .delete()
+      .eq("user_id", userId);
+    if (error) throw new Error("commands: " + error.message);
+  }
+  /* {
+    const { error } = await supabase.from("device_events").delete().eq("user_id", userId);
+    if (error) throw new Error("device_events: " + error.message);
+  }
+  */
+
+  // 5) Finally delete the user row
+  {
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+    if (error) throw new Error("users: " + error.message);
+  }
+}
+async function getAlertSubscriptions(deviceId, userId) {
+  const { data, error } = await supabase
+    .from("device_notifications_subscriptions")
+    .select("event_type, enabled")
+    .eq("device_id", deviceId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+
+  // return enabled list
+  return (data || []).filter((r) => r.enabled).map((r) => r.event_type);
+}
+
+async function replaceAlertSubscriptions(deviceId, userId, enabledEventTypes) {
+  // wipe existing rows for this user+device
+  const del = await supabase
+    .from("device_notifications_subscriptions")
+    .delete()
+    .eq("device_id", deviceId)
+    .eq("user_id", userId);
+
+  if (del.error) throw new Error(del.error.message);
+
+  const rows = (enabledEventTypes || []).map((ev) => ({
+    device_id: deviceId,
+    user_id: userId,
+    event_type: String(ev),
+    enabled: true,
+  }));
+
+  if (!rows.length) return;
+
+  const ins = await supabase
+    .from("device_notifications_subscriptions")
+    .insert(rows);
+
+  if (ins.error) throw new Error(ins.error.message);
 }
 
 async function searchUsers(qstr) {
@@ -332,12 +583,12 @@ async function searchUsers(qstr) {
        OR id    ILIKE $1
     ORDER BY LOWER(name)
     `,
-    [pattern]
+    [pattern],
   );
   return r.rows;
 }
 
-// ---------- Device Users ----------
+// Device-users
 async function attachUserToDevice(deviceId, userId, role) {
   const rRole = role || "operator";
   await q(
@@ -346,16 +597,17 @@ async function attachUserToDevice(deviceId, userId, role) {
     VALUES ($1,$2,$3)
     ON CONFLICT (device_id, user_id) DO NOTHING
     `,
-    [deviceId, userId, rRole]
+    [deviceId, userId, rRole],
   );
   return { deviceId, userId, role: rRole };
 }
-
 async function detachUserFromDevice(deviceId, userId) {
-  const r = await q("DELETE FROM device_users WHERE device_id=$1 AND user_id=$2", [deviceId, userId]);
+  const r = await q(
+    "DELETE FROM device_users WHERE device_id=$1 AND user_id=$2",
+    [deviceId, userId],
+  );
   return r.rowCount > 0;
 }
-
 async function setDeviceUserSchedule(deviceId, userId, scheduleId) {
   await q(
     `
@@ -363,10 +615,9 @@ async function setDeviceUserSchedule(deviceId, userId, scheduleId) {
     SET schedule_id = $1
     WHERE device_id = $2 AND user_id = $3
     `,
-    [scheduleId || null, deviceId, userId]
+    [scheduleId || null, deviceId, userId],
   );
 }
-
 async function listDeviceUsers(deviceId) {
   const r = await q(
     `
@@ -382,11 +633,10 @@ async function listDeviceUsers(deviceId) {
     WHERE du.device_id = $1
     ORDER BY LOWER(u.name)
     `,
-    [deviceId]
+    [deviceId],
   );
   return r.rows;
 }
-
 async function listUserDevices(userId) {
   const r = await q(
     `
@@ -396,22 +646,26 @@ async function listUserDevices(userId) {
     WHERE du.user_id = $1
     ORDER BY du.device_id
     `,
-    [userId]
+    [userId],
   );
   return r.rows;
 }
-
 async function isUserOnDevice(deviceId, userId) {
-  const row = await one("SELECT 1 AS present FROM device_users WHERE device_id=$1 AND user_id=$2", [deviceId, userId]);
+  const row = await one(
+    "SELECT 1 AS present FROM device_users WHERE device_id=$1 AND user_id=$2",
+    [deviceId, userId],
+  );
   return !!row;
 }
-
 async function getDeviceUserScheduleId(deviceId, userId) {
-  const row = await one("SELECT schedule_id FROM device_users WHERE device_id=$1 AND user_id=$2", [deviceId, userId]);
+  const row = await one(
+    "SELECT schedule_id FROM device_users WHERE device_id=$1 AND user_id=$2",
+    [deviceId, userId],
+  );
   return row ? row.schedule_id : null;
 }
 
-// ---------- Schedules ----------
+// Schedules
 async function getScheduleSlots(scheduleId) {
   const r = await q(
     `
@@ -420,13 +674,15 @@ async function getScheduleSlots(scheduleId) {
     WHERE schedule_id = $1
     ORDER BY id
     `,
-    [scheduleId]
+    [scheduleId],
   );
   return r.rows;
 }
-
 async function getScheduleById(id) {
-  const row = await one("SELECT id, name, description, created_at FROM schedules WHERE id = $1", [id]);
+  const row = await one(
+    "SELECT id, name, description, created_at FROM schedules WHERE id = $1",
+    [id],
+  );
   if (!row) return null;
 
   const slotsRows = await getScheduleSlots(id);
@@ -438,11 +694,18 @@ async function getScheduleById(id) {
     end: s.end,
   }));
 
-  return { id: row.id, name: row.name, description: row.description, createdAt: row.created_at, slots };
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    createdAt: row.created_at,
+    slots,
+  };
 }
-
 async function listSchedules() {
-  const r = await q("SELECT id, name, description, created_at FROM schedules ORDER BY LOWER(name)");
+  const r = await q(
+    "SELECT id, name, description, created_at FROM schedules ORDER BY LOWER(name)",
+  );
   const out = [];
   for (const sched of r.rows) {
     const slotsRows = await getScheduleSlots(sched.id);
@@ -453,11 +716,16 @@ async function listSchedules() {
       start: s.start,
       end: s.end,
     }));
-    out.push({ id: sched.id, name: sched.name, description: sched.description, createdAt: sched.created_at, slots });
+    out.push({
+      id: sched.id,
+      name: sched.name,
+      description: sched.description,
+      createdAt: sched.created_at,
+      slots,
+    });
   }
   return out;
 }
-
 async function createSchedule({ name, description, slots }) {
   const createdAt = new Date().toISOString();
   const info = await one(
@@ -466,59 +734,67 @@ async function createSchedule({ name, description, slots }) {
     VALUES ($1,$2,$3)
     RETURNING id
     `,
-    [name, description || null, createdAt]
+    [name, description || null, createdAt],
   );
   const scheduleId = info.id;
 
   if (Array.isArray(slots)) {
     for (const s of slots) {
-      const daysJson = Array.isArray(s.daysOfWeek) && s.daysOfWeek.length > 0 ? JSON.stringify(s.daysOfWeek) : null;
-      await q(`INSERT INTO schedule_slots (schedule_id, days_of_week, start, "end") VALUES ($1,$2,$3,$4)`, [
-        scheduleId,
-        daysJson,
-        s.start,
-        s.end,
-      ]);
+      const daysJson =
+        Array.isArray(s.daysOfWeek) && s.daysOfWeek.length > 0
+          ? JSON.stringify(s.daysOfWeek)
+          : null;
+
+      await q(
+        `INSERT INTO schedule_slots (schedule_id, days_of_week, start, "end") VALUES ($1,$2,$3,$4)`,
+        [scheduleId, daysJson, s.start, s.end],
+      );
     }
   }
   return getScheduleById(scheduleId);
 }
-
 async function updateSchedule(id, { name, description, slots }) {
   const existing = await getScheduleById(id);
   if (!existing) return null;
 
-  await q("UPDATE schedules SET name=$1, description=$2 WHERE id=$3", [name || existing.name, description || null, id]);
+  await q("UPDATE schedules SET name=$1, description=$2 WHERE id=$3", [
+    name || existing.name,
+    description || null,
+    id,
+  ]);
   await q("DELETE FROM schedule_slots WHERE schedule_id = $1", [id]);
 
   if (Array.isArray(slots)) {
     for (const s of slots) {
-      const daysJson = Array.isArray(s.daysOfWeek) && s.daysOfWeek.length > 0 ? JSON.stringify(s.daysOfWeek) : null;
-      await q(`INSERT INTO schedule_slots (schedule_id, days_of_week, start, "end") VALUES ($1,$2,$3,$4)`, [
-        id,
-        daysJson,
-        s.start,
-        s.end,
-      ]);
+      const daysJson =
+        Array.isArray(s.daysOfWeek) && s.daysOfWeek.length > 0
+          ? JSON.stringify(s.daysOfWeek)
+          : null;
+
+      await q(
+        `INSERT INTO schedule_slots (schedule_id, days_of_week, start, "end") VALUES ($1,$2,$3,$4)`,
+        [id, daysJson, s.start, s.end],
+      );
     }
   }
   return getScheduleById(id);
 }
-
 async function deleteSchedule(id) {
-  await q("UPDATE device_users SET schedule_id = NULL WHERE schedule_id = $1", [id]);
+  await q("UPDATE device_users SET schedule_id = NULL WHERE schedule_id = $1", [
+    id,
+  ]);
   await q("DELETE FROM schedule_slots WHERE schedule_id = $1", [id]);
   await q("DELETE FROM schedules WHERE id = $1", [id]);
 }
 
-// ---------- Schedule check (enforces access windows) ----------
+// Schedule check
 async function isUserAllowedNow(deviceId, userId, now) {
   now = now || new Date();
 
   if (!(await isUserOnDevice(deviceId, userId))) return false;
 
   const scheduleId = await getDeviceUserScheduleId(deviceId, userId);
-  if (!scheduleId) return true; // no schedule means 24/7
+  if (!scheduleId) return true; // 24/7
 
   const sched = await getScheduleById(scheduleId);
   if (!sched || !sched.slots || sched.slots.length === 0) return false;
@@ -539,286 +815,69 @@ async function isUserAllowedNow(deviceId, userId, now) {
   return false;
 }
 
-// ======================================================
-// 6) Alerts + Events reporting helpers
-// ------------------------------------------------------
-// Alerts are "derived" from device_events + subscriptions table.
-// No email: clients poll /me/alerts (user) or /admin/alerts (admin).
-// ======================================================
-
-async function getUserAlerts({ userId, deviceId = null, since = null, limit = 200 }) {
-  const params = [userId];
-  let p = 2;
-
-  let where = `1=1`;
-  if (deviceId) {
-    where += ` AND e.device_id = $${p}`;
-    params.push(deviceId);
-    p++;
-  }
-  if (since) {
-    where += ` AND e.at > $${p}`;
-    params.push(since);
-    p++;
-  }
-
-  params.push(limit);
-
-  const sql = `
-    SELECT
-      e.id,
-      e.device_id,
-      d.name AS device_name,
-      e.user_id,
-      u.name AS user_name,
-      u.email AS user_email,
-      u.phone AS user_phone,
-      e.event_type,
-      e.at,
-      e.details
-    FROM device_events e
-    JOIN device_notifications_subscriptions s
-      ON s.device_id = e.device_id
-     AND s.user_id   = $1
-     AND s.event_type = e.event_type
-     AND s.enabled = true
-    LEFT JOIN devices d ON d.id = e.device_id
-    LEFT JOIN users u   ON u.id = e.user_id
-    WHERE ${where}
-    ORDER BY e.at DESC
-    LIMIT $${p}
-  `;
-
-  const r = await q(sql, params);
-  return r.rows;
-}
-
-async function getAdminAlerts({ deviceId = null, userId = null, from = null, to = null, limit = 500 }) {
-  const params = [];
-  let p = 1;
-  let where = `1=1`;
-
-  if (deviceId) {
-    where += ` AND e.device_id = $${p}`;
-    params.push(deviceId);
-    p++;
-  }
-  if (userId) {
-    where += ` AND e.user_id = $${p}`;
-    params.push(userId);
-    p++;
-  }
-  if (from) {
-    where += ` AND e.at >= $${p}`;
-    params.push(from);
-    p++;
-  }
-  if (to) {
-    where += ` AND e.at <= $${p}`;
-    params.push(to);
-    p++;
-  }
-
-  params.push(limit);
-
-  const sql = `
-    SELECT
-      e.id,
-      e.device_id,
-      d.name AS device_name,
-      e.user_id,
-      u.name AS user_name,
-      u.email AS user_email,
-      u.phone AS user_phone,
-      e.event_type,
-      e.at,
-      e.details
-    FROM device_events e
-    LEFT JOIN devices d ON d.id = e.device_id
-    LEFT JOIN users u   ON u.id = e.user_id
-    WHERE ${where}
-    ORDER BY e.at DESC
-    LIMIT $${p}
-  `;
-
-  const r = await q(sql, params);
-  return r.rows;
-}
-
-// Fetch device events (simple recent list)
-async function getDeviceEvents(deviceId, limit) {
-  const lim = limit || 50;
-  const r = await q(
-    `
-    SELECT
-      e.id, e.device_id, e.user_id, e.event_type, e.at, e.details,
-      u.name  AS user_name,
-      u.phone AS user_phone
-    FROM device_events e
-    LEFT JOIN users u ON u.id = e.user_id
-    WHERE e.device_id = $1
-    ORDER BY e.at DESC
-    LIMIT $2
-    `,
-    [deviceId, lim]
+// ---- Notifications (subscriptions) ----
+async function setUserSubscriptions(deviceId, userId, eventTypes) {
+  const evs = Array.isArray(eventTypes) ? eventTypes.map(String) : [];
+  await q(
+    "DELETE FROM device_notifications_subscriptions WHERE device_id=$1 AND user_id=$2",
+    [deviceId, userId],
   );
-  return r.rows;
-}
 
-// General report query for events screen
-async function getEventsForReport(filters) {
-  const deviceId = filters.deviceId || null;
-  const userId = filters.userId || null;
-  const from = filters.from || null;
-  const to = filters.to || null;
-  const limit = filters.limit || 500;
-
-  let sql = `
-    SELECT
-      e.id, e.device_id, e.user_id, e.event_type, e.at, e.details,
-      u.name  AS user_name,
-      u.phone AS user_phone,
-      u.email AS user_email,
-      d.name  AS device_name
-    FROM device_events e
-    LEFT JOIN users   u ON u.id = e.user_id
-    LEFT JOIN devices d ON d.id = e.device_id
-    WHERE 1=1
-  `;
-
-  const params = [];
-  let i = 1;
-
-  if (deviceId) {
-    sql += ` AND e.device_id = $${i++}`;
-    params.push(deviceId);
-  }
-  if (userId) {
-    sql += ` AND e.user_id = $${i++}`;
-    params.push(userId);
-  }
-  if (from) {
-    sql += ` AND e.at >= $${i++}`;
-    params.push(from);
-  }
-  if (to) {
-    sql += ` AND e.at <= $${i++}`;
-    params.push(to);
-  }
-
-  sql += ` ORDER BY e.at DESC LIMIT $${i++}`;
-  params.push(limit);
-
-  const r = await q(sql, params);
-  return r.rows;
-}
-
-// CSV helper
-function toCsv(rows) {
-  const header = ["at", "device_id", "device_name", "user_id", "user_name", "user_phone", "event_type", "details"];
-  const esc = (v) => {
-    const s = (v ?? "").toString();
-    if (s.includes('"') || s.includes(",") || s.includes("\n")) return `"${s.replace(/"/g, '""')}"`;
-    return s;
-  };
-
-  const lines = [header.join(",")];
-  for (const r of rows || []) {
-    lines.push(
-      [
-        esc(r.at),
-        esc(r.device_id),
-        esc(r.device_name),
-        esc(r.user_id),
-        esc(r.user_name),
-        esc(r.user_phone),
-        esc(r.event_type),
-        esc(r.details),
-      ].join(",")
+  for (const ev of evs) {
+    const clean = (ev || "").trim();
+    if (!clean) continue;
+    await q(
+      `
+      INSERT INTO device_notifications_subscriptions (device_id, user_id, event_type, enabled)
+      VALUES ($1,$2,$3,TRUE)
+      ON CONFLICT (device_id, user_id, event_type) DO UPDATE SET enabled = TRUE
+      `,
+      [deviceId, userId, clean],
     );
   }
-  return lines.join("\n");
 }
 
-// ======================================================
-// 7) Commands (queued actions for ESP32) + event logging
-// ======================================================
-
-// Log an event (no email side effects)
-async function logDeviceEvent(deviceId, eventType, opts) {
-  opts = opts || {};
-  const userId = opts.userId || null;
-  const details = opts.details || null;
-  const at = new Date().toISOString();
-
-  await q(
-    `INSERT INTO device_events (device_id, user_id, event_type, at, details)
-     VALUES ($1,$2,$3,$4,$5)`,
-    [deviceId, userId, eventType, at, details]
-  );
-}
-
-// Create a queued command (device will fetch these via /device/poll)
-async function createCommand(deviceId, userId, type, durationMs) {
-  const id = randomId("cmd");
-  const nowIso = new Date().toISOString();
-
-  await q(
-    `INSERT INTO commands
-      (id, device_id, user_id, type, status, requested_at, completed_at, result, duration_ms)
-     VALUES ($1,$2,$3,$4,'queued',$5,NULL,NULL,$6)`,
-    [id, deviceId, userId || null, type, nowIso, durationMs]
-  );
-
-  await logDeviceEvent(deviceId, "CMD_REQUESTED", {
-    userId: userId || null,
-    details: `type=${type};durationMs=${durationMs}`,
-  });
-
-  return {
-    id,
-    deviceId,
-    userId: userId || null,
-    type,
-    status: "queued",
-    requestedAt: nowIso,
-    completedAt: null,
-    result: null,
-    durationMs,
-  };
-}
-
-async function getQueuedCommands(deviceId) {
+async function getSubscribedEmails(deviceId, eventType) {
   const r = await q(
-    `SELECT * FROM commands
-     WHERE device_id=$1 AND status='queued'
-     ORDER BY requested_at ASC`,
-    [deviceId]
+    `
+    SELECT DISTINCT u.email
+    FROM device_notifications_subscriptions ns
+    JOIN users u ON u.id = ns.user_id
+    WHERE ns.device_id = $1
+      AND ns.enabled = TRUE
+      AND u.email IS NOT NULL
+      AND (ns.event_type = $2 OR ns.event_type = '*')
+    `,
+    [deviceId, eventType],
   );
-  return r.rows;
+  return r.rows.map((x) => x.email).filter(Boolean);
+}
+async function isUserSubscribed(deviceId, userId, eventType) {
+  const row = await one(
+    `
+    SELECT 1
+    FROM device_notifications_subscriptions
+    WHERE device_id=$1
+      AND user_id=$2
+      AND enabled=TRUE
+      AND (event_type=$3 OR event_type='*')
+    LIMIT 1
+    `,
+    [deviceId, userId, eventType],
+  );
+  return !!row;
 }
 
-async function completeCommand(deviceId, commandId, result) {
-  const nowIso = new Date().toISOString();
-  await q(
-    `UPDATE commands
-     SET status='completed', completed_at=$1, result=$2
-     WHERE id=$3 AND device_id=$4 AND status='queued'`,
-    [nowIso, result || null, commandId, deviceId]
-  );
-  return one("SELECT * FROM commands WHERE id = $1", [commandId]);
-}
-
-// ======================================================
-// 8) Profile endpoint for admin UI (no N+1 loops)
-// ======================================================
-
+// ---- Profile (admin) ----
+// Efficient, stable profile payload for admin.html.
+// Returns:
+// { user:{id,name,email,phone}, devices:[{deviceId,deviceName,role,scheduleAssignment,schedule,notifications}] }
 async function getUserProfile(userId) {
   const user = await one(
     `SELECT id, name, email, phone
      FROM users
      WHERE id = $1`,
-    [userId]
+    [userId],
   );
   if (!user) return null;
 
@@ -902,15 +961,235 @@ async function getUserProfile(userId) {
     LEFT JOIN subs sb ON sb.device_id = dr.device_id
     LEFT JOIN sched sc ON sc.id = dr.schedule_id
     `,
-    [userId]
+    [userId],
   );
 
   return { user, devices: row?.devices || [] };
 }
 
-// ======================================================
-// 9) Routes
-// ======================================================
+// ---- Commands & events ----
+async function logDeviceEvent(deviceId, eventType, opts) {
+  opts = opts || {};
+  const userId = opts.userId || null;
+  const details = opts.details || null;
+  const at = new Date().toISOString();
+
+  await q(
+    `INSERT INTO device_events (device_id, user_id, event_type, at, details)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [deviceId, userId, eventType, at, details],
+  );
+
+  setImmediate(() => {
+    notifyEventByEmail({ deviceId, eventType, at, userId, details }).catch(
+      (err) => console.warn("notifyEventByEmail failed:", err?.message || err),
+    );
+  });
+}
+
+function buildEmailSubject(ev) {
+  return `Geata: ${ev.deviceId} ${ev.eventType}`;
+}
+function buildEmailBody(ev) {
+  const lines = [
+    `Device: ${ev.deviceId}`,
+    `Event: ${ev.eventType}`,
+    `Time (UTC): ${ev.at}`,
+    ev.details ? `Details: ${ev.details}` : "",
+  ].filter(Boolean);
+  return lines.join("\n");
+}
+
+const ALWAYS_NOTIFY_USER_EVENTS = new Set([
+  "OPEN_REQUESTED",
+  "AUX1_REQUESTED",
+  "AUX2_REQUESTED",
+  "CMD_COMPLETED",
+  "ACCESS_DENIED_NOT_ASSIGNED",
+  "ACCESS_DENIED_SCHEDULE",
+  "AUX1_DENIED_NOT_ASSIGNED",
+  "AUX1_DENIED_SCHEDULE",
+  "AUX2_DENIED_NOT_ASSIGNED",
+  "AUX2_DENIED_SCHEDULE",
+]);
+
+function emailEnabled() {
+  if (USE_SENDGRID) return !!SENDGRID_API_KEY && !!SENDGRID_FROM;
+  return !!mailer;
+}
+
+async function notifyEventByEmail(ev) {
+  if (!emailEnabled()) return;
+
+  const recipients = new Set();
+
+  const subscribed = await getSubscribedEmails(ev.deviceId, ev.eventType);
+  subscribed.forEach((e) => recipients.add(e));
+
+  if (ev.userId && ALWAYS_NOTIFY_USER_EVENTS.has(ev.eventType)) {
+    const wantsIt = await isUserSubscribed(
+      ev.deviceId,
+      ev.userId,
+      ev.eventType,
+    );
+    if (wantsIt) {
+      const u = await getUserById(ev.userId);
+      if (u?.email) recipients.add(u.email);
+    }
+  }
+
+  if (recipients.size === 0) return;
+
+  const subject = buildEmailSubject(ev);
+  const text = buildEmailBody(ev);
+
+  for (const to of recipients) {
+    await sendEmail(to, subject, text);
+  }
+}
+
+async function createCommand(deviceId, userId, type, durationMs) {
+  const id = randomId("cmd");
+  const nowIso = new Date().toISOString();
+
+  await q(
+    `INSERT INTO commands
+      (id, device_id, user_id, type, status, requested_at, completed_at, result, duration_ms)
+     VALUES ($1,$2,$3,$4,'queued',$5,NULL,NULL,$6)`,
+    [id, deviceId, userId || null, type, nowIso, durationMs],
+  );
+
+  await logDeviceEvent(deviceId, "CMD_REQUESTED", {
+    userId: userId || null,
+    details: `type=${type};durationMs=${durationMs}`,
+  });
+
+  return {
+    id,
+    deviceId,
+    userId: userId || null,
+    type,
+    status: "queued",
+    requestedAt: nowIso,
+    completedAt: null,
+    result: null,
+    durationMs,
+  };
+}
+
+async function getQueuedCommands(deviceId) {
+  const r = await q(
+    `SELECT * FROM commands
+     WHERE device_id=$1 AND status='queued'
+     ORDER BY requested_at ASC`,
+    [deviceId],
+  );
+  return r.rows;
+}
+
+async function completeCommand(deviceId, commandId, result) {
+  const nowIso = new Date().toISOString();
+  await q(
+    `UPDATE commands
+     SET status='completed', completed_at=$1, result=$2
+     WHERE id=$3 AND device_id=$4 AND status='queued'`,
+    [nowIso, result || null, commandId, deviceId],
+  );
+  return one("SELECT * FROM commands WHERE id = $1", [commandId]);
+}
+
+async function getDeviceEvents(deviceId, limit) {
+  const lim = limit || 50;
+  const r = await q(
+    `
+    SELECT
+      e.id, e.device_id, e.user_id, e.event_type, e.at, e.details,
+      u.name  AS user_name,
+      u.phone AS user_phone
+    FROM device_events e
+    LEFT JOIN users u ON u.id = e.user_id
+    WHERE e.device_id = $1
+    ORDER BY e.at DESC
+    LIMIT $2
+    `,
+    [deviceId, lim],
+  );
+  return r.rows;
+}
+
+async function getEventsForReport(filters) {
+  const deviceId = filters.deviceId || null;
+  const userId = filters.userId || null;
+  const from = filters.from || null;
+  const to = filters.to || null;
+  const limit = filters.limit || 500;
+
+  let sql = `
+    SELECT
+      e.id, e.device_id, e.user_id, e.event_type, e.at, e.details,
+      u.name  AS user_name,
+      u.phone AS user_phone,
+      u.email AS user_email,
+      d.name  AS device_name
+    FROM device_events e
+    LEFT JOIN users   u ON u.id = e.user_id
+    LEFT JOIN devices d ON d.id = e.device_id
+    WHERE 1=1
+  `;
+  const params = [];
+  let i = 1;
+
+  if (deviceId) {
+    sql += ` AND e.device_id = $${i++}`;
+    params.push(deviceId);
+  }
+  if (userId) {
+    sql += ` AND e.user_id = $${i++}`;
+    params.push(userId);
+  }
+  if (from) {
+    sql += ` AND e.at >= $${i++}`;
+    params.push(from);
+  }
+  if (to) {
+    sql += ` AND e.at <= $${i++}`;
+    params.push(to);
+  }
+
+  sql += ` ORDER BY e.at DESC LIMIT $${i++}`;
+  params.push(limit);
+
+  const r = await q(sql, params);
+  return r.rows;
+}
+
+// ---- Middleware ----
+function requireAdminKey(req, res, next) {
+  const key = req.header("x-api-key");
+  if (!key || key !== ADMIN_API_KEY) {
+    return res
+      .status(401)
+      .json({ error: "Unauthorized: missing or invalid API key" });
+  }
+  next();
+}
+
+function requireUser(req, res, next) {
+  const auth = req.header("authorization") || "";
+  if (!auth.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing auth token" });
+  }
+  const token = auth.slice(7);
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = { id: payload.userId };
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+// ---- Routes ----
 
 // ---- Build Tag ----
 app.get("/__build", (req, res) => {
@@ -921,38 +1200,69 @@ app.get("/__build", (req, res) => {
   });
 });
 
-// -------------------------
-// Auth (Admin-controlled register)
-// -------------------------
+// Admin test email
+app.post(
+  "/admin/test-email",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const to = (req.body && req.body.to) || SMTP_USER;
+    const ok = await sendEmail(
+      to,
+      "Geata SMTP test",
+      "If you got this, SMTP is working. Time: " + new Date().toISOString(),
+    );
+    res.json({ ok, to });
+  }),
+);
+
+// Auth
 app.post(
   "/auth/register",
   requireAdminKey,
   asyncHandler(async (req, res) => {
     const { name, email, phone, password } = req.body || {};
     if (!password || (!email && !phone)) {
-      return res.status(400).json({ error: "password and at least phone or email are required" });
+      return res
+        .status(400)
+        .json({ error: "password and at least phone or email are required" });
     }
 
     const normalizedPhone = normalizePhone(phone);
-
-    // Prevent duplicates
     if (normalizedPhone) {
       const existingByPhone = await getUserByPhone(normalizedPhone);
-      if (existingByPhone) return res.status(409).json({ error: "User with this phone already exists" });
+      if (existingByPhone)
+        return res
+          .status(409)
+          .json({ error: "User with this phone already exists" });
     }
     if (email) {
       const existingByEmail = await getUserByEmail(email);
-      if (existingByEmail) return res.status(409).json({ error: "User with this email already exists" });
+      if (existingByEmail)
+        return res
+          .status(409)
+          .json({ error: "User with this email already exists" });
     }
 
-    const user = await createUser({ name, email, phone: normalizedPhone, password });
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "30d" });
+    const user = await createUser({
+      name,
+      email,
+      phone: normalizedPhone,
+      password,
+    });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+      expiresIn: "30d",
+    });
 
     res.status(201).json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
     });
-  })
+  }),
 );
 
 app.post(
@@ -960,7 +1270,9 @@ app.post(
   asyncHandler(async (req, res) => {
     const { phone, email, password } = req.body || {};
     if ((!phone && !email) || !password) {
-      return res.status(400).json({ error: "phone or email and password are required" });
+      return res
+        .status(400)
+        .json({ error: "phone or email and password are required" });
     }
 
     let user = null;
@@ -972,72 +1284,87 @@ app.post(
     }
 
     const ok = bcrypt.compareSync(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: "Invalid login or password" });
+    if (!ok)
+      return res.status(401).json({ error: "Invalid login or password" });
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+      expiresIn: "30d",
+    });
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
     });
-  })
+  }),
 );
 
-// -------------------------
-// Me (User endpoints)
-// -------------------------
+// Me
 app.get(
   "/me",
   requireUser,
   asyncHandler(async (req, res) => {
     const user = await getUserById(req.user.id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone });
-  })
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+    });
+  }),
 );
-
 app.get(
   "/me/devices",
   requireUser,
   asyncHandler(async (req, res) => {
     const userId = req.user.id;
+
     const r = await q(
       `
-      SELECT d.id, d.name, du.role
-      FROM device_users du
-      JOIN devices d ON d.id = du.device_id
-      WHERE du.user_id = $1
-      ORDER BY d.id
-      `,
-      [userId]
+    SELECT d.id, d.name, du.role
+    FROM device_users du
+    JOIN devices d ON d.id = du.device_id
+    WHERE du.user_id = $1
+    ORDER BY d.id
+    `,
+      [userId],
     );
-    res.json(r.rows);
-  })
-);
 
-// User alerts feed (derived)
+    res.json(r.rows);
+  }),
+);
+// =========================
+// Me: alerts feed (no email)
+// GET /me/alerts?deviceId=&since=&limit=
+// =========================
 app.get(
   "/me/alerts",
   requireUser,
   asyncHandler(async (req, res) => {
     const userId = req.user.id;
+
     const deviceId = (req.query.deviceId || "").trim() || null;
     const since = (req.query.since || "").trim() || null;
-    const limit = req.query.limit ? Math.max(1, Math.min(5000, Number(req.query.limit) || 200)) : 200;
+    const limit = req.query.limit
+      ? Math.max(1, Math.min(5000, Number(req.query.limit) || 200))
+      : 200;
 
     const rows = await getUserAlerts({ userId, deviceId, since, limit });
     res.json(rows || []);
-  })
+  }),
 );
 
-// -------------------------
-// Devices (Admin)
-// -------------------------
+// Devices (admin-only)
 app.get(
   "/devices",
   requireAdminKey,
   asyncHandler(async (req, res) => {
     res.json(await getDevices());
-  })
+  }),
 );
 
 app.post(
@@ -1048,27 +1375,77 @@ app.post(
     const id = (body.id || "").trim();
     const name = (body.name || "").trim();
 
-    if (!id) return res.status(400).json({ error: "id is required" });
-    if (!name) return res.status(400).json({ error: "name is required" });
+    if (!id) {
+      return res.status(400).json({ error: "id is required" });
+    }
+    if (!name) {
+      return res.status(400).json({ error: "name is required" });
+    }
 
     // Check ID uniqueness
     const existing = await getDeviceById(id);
-    if (existing) return res.status(409).json({ error: "Device with this id already exists" });
+    if (existing) {
+      return res
+        .status(409)
+        .json({ error: "Device with this id already exists" });
+    }
 
-    // Check NAME uniqueness (case-insensitive / trimmed)
+    // ✅ Check NAME uniqueness
     const existingByName = await getDeviceByName(name);
-    if (existingByName) return res.status(409).json({ error: "Device with this name already exists" });
+    if (existingByName) {
+      return res
+        .status(409)
+        .json({ error: "Device with this name already exists" });
+    }
 
     const device = await createDevice(id, name);
     res.status(201).json(device);
-  })
+  }),
 );
+// PUT /devices/:id/alert-subs
+// Body: { userId, enabledEventTypes: ["TAMPER_OPENED", ...] }
+app.put(
+  "/devices/:id/alert-subs",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const userId = (req.body?.userId || "").trim();
+    const enabledEventTypes = Array.isArray(req.body?.enabledEventTypes)
+      ? req.body.enabledEventTypes
+      : [];
 
-// -------------------------
-// Alert subscriptions (Admin) - ONE canonical GET + PUT
-// -------------------------
+    if (!userId) return res.status(400).json({ error: "userId is required" });
 
-// GET enabled/disabled rows for one user on one gate
+    // Remove existing rows for that device/user
+    await q(
+      `DELETE FROM device_notifications_subscriptions WHERE device_id=$1 AND user_id=$2`,
+      [deviceId, userId],
+    );
+
+    // Insert enabled ones
+    for (const ev of enabledEventTypes) {
+      const eventType = String(ev || "").trim();
+      if (!eventType) continue;
+      await q(
+        `INSERT INTO device_notifications_subscriptions (device_id, user_id, event_type, enabled)
+       VALUES ($1, $2, $3, true)`,
+        [deviceId, userId, eventType],
+      );
+    }
+
+    res.json({
+      status: "ok",
+      deviceId,
+      userId,
+      enabledCount: enabledEventTypes.length,
+    });
+  }),
+);
+// ======================================================
+// Alert subscriptions per gate+user (admin)
+// GET  /devices/:id/alert-subs?userId=...
+// PUT  /devices/:id/alert-subs   { userId, enabledEventTypes:[] }
+// ======================================================
 app.get(
   "/devices/:id/alert-subs",
   requireAdminKey,
@@ -1077,48 +1454,31 @@ app.get(
     const userId = (req.query.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
-    const r = await q(
-      `SELECT device_id, user_id, event_type, enabled
-       FROM device_notifications_subscriptions
-       WHERE device_id = $1 AND user_id = $2
-       ORDER BY event_type`,
-      [deviceId, userId]
-    );
-
-    res.json(r.rows);
-  })
+    // optional: verify device exists / membership exists (can add later)
+    const enabledEventTypes = await getAlertSubscriptions(deviceId, userId);
+    res.json({ deviceId, userId, enabledEventTypes });
+  }),
 );
 
-// PUT replaces enabled event types (simple UX: send enabled list)
 app.put(
   "/devices/:id/alert-subs",
   requireAdminKey,
   asyncHandler(async (req, res) => {
     const deviceId = req.params.id;
-    const userId = (req.body?.userId || "").trim();
-    const enabledEventTypes = Array.isArray(req.body?.enabledEventTypes) ? req.body.enabledEventTypes : [];
-
+    const body = req.body || {};
+    const userId = (body.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
-    await q(`DELETE FROM device_notifications_subscriptions WHERE device_id=$1 AND user_id=$2`, [deviceId, userId]);
-
-    for (const ev of enabledEventTypes) {
-      const eventType = String(ev || "").trim();
-      if (!eventType) continue;
-      await q(
-        `INSERT INTO device_notifications_subscriptions (device_id, user_id, event_type, enabled)
-         VALUES ($1, $2, $3, true)`,
-        [deviceId, userId, eventType]
-      );
-    }
+    const enabledEventTypes = Array.isArray(body.enabledEventTypes)
+      ? body.enabledEventTypes
+      : [];
+    await replaceAlertSubscriptions(deviceId, userId, enabledEventTypes);
 
     res.json({ status: "ok", deviceId, userId, enabledEventTypes });
-  })
+  }),
 );
 
-// -------------------------
-// Device users (Admin)
-// -------------------------
+// Device users (admin-only)
 app.get(
   "/devices/:id/users",
   requireAdminKey,
@@ -1126,9 +1486,8 @@ app.get(
     const deviceId = req.params.id;
     const device = await getDeviceById(deviceId);
     if (!device) return res.status(404).json({ error: "Device not found" });
-
     res.json(await listDeviceUsers(deviceId));
-  })
+  }),
 );
 
 app.post(
@@ -1144,22 +1503,32 @@ app.post(
 
     let user = null;
 
-    // If UI sends userId (most common), attach existing user
     if (userId) {
       user = await getUserById(userId);
-      if (!user) return res.status(404).json({ error: "User not found for given userId" });
+      if (!user)
+        return res
+          .status(404)
+          .json({ error: "User not found for given userId" });
       await attachUserToDevice(deviceId, user.id, rRole);
       return res.status(201).json({
         deviceId,
         userId: user.id,
         role: rRole,
-        user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+        },
       });
     }
 
-    // Otherwise allow “create or find” by email/phone
     if (!email && !phone) {
-      return res.status(400).json({ error: "At least email or phone is required (or provide userId)" });
+      return res
+        .status(400)
+        .json({
+          error: "At least email or phone is required (or provide userId)",
+        });
     }
 
     const normalizedPhone = normalizePhone(phone);
@@ -1167,7 +1536,12 @@ app.post(
     if (!user && email) user = await getUserByEmail(email);
 
     if (!user) {
-      user = await createUser({ name, email, phone: normalizedPhone, password });
+      user = await createUser({
+        name,
+        email,
+        phone: normalizedPhone,
+        password,
+      });
     } else if (password && password.length > 0) {
       user = await updateUser(user.id, {
         name: name || user.name,
@@ -1190,19 +1564,31 @@ app.post(
       deviceId,
       userId: user.id,
       role: rRole,
-      user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
     });
-  })
+  }),
 );
 
 app.delete(
   "/devices/:id/users/:userId",
   requireAdminKey,
   asyncHandler(async (req, res) => {
-    const removed = await detachUserFromDevice(req.params.id, req.params.userId);
+    const removed = await detachUserFromDevice(
+      req.params.id,
+      req.params.userId,
+    );
     if (!removed) return res.status(404).json({ error: "Not found" });
-    res.json({ status: "removed", deviceId: req.params.id, userId: req.params.userId });
-  })
+    res.json({
+      status: "removed",
+      deviceId: req.params.id,
+      userId: req.params.userId,
+    });
+  }),
 );
 
 app.put(
@@ -1218,7 +1604,8 @@ app.put(
     const user = await getUserById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const scheduleId = req.body && req.body.scheduleId ? Number(req.body.scheduleId) : null;
+    const scheduleId =
+      req.body && req.body.scheduleId ? Number(req.body.scheduleId) : null;
     if (scheduleId) {
       const sched = await getScheduleById(scheduleId);
       if (!sched) return res.status(404).json({ error: "Schedule not found" });
@@ -1226,29 +1613,29 @@ app.put(
 
     await setDeviceUserSchedule(deviceId, userId, scheduleId || null);
     res.json({ deviceId, userId, scheduleId: scheduleId || null });
-  })
+  }),
 );
 
-// -------------------------
 // Device Settings (Admin)
-// -------------------------
-app.get(
-  "/devices/:deviceId/settings",
-  requireAdminKey,
-  asyncHandler(async (req, res) => {
-    const deviceId = req.params.deviceId;
-    const r = await pool.query("select settings from public.device_settings where device_id = $1", [deviceId]);
+app.get("/devices/:deviceId/settings", requireAdminKey, async (req, res) => {
+  const deviceId = req.params.deviceId;
+  try {
+    const r = await pool.query(
+      "select settings from public.device_settings where device_id = $1",
+      [deviceId],
+    );
     if (r.rows.length === 0) return res.json({});
     return res.json(r.rows[0].settings || {});
-  })
-);
+  } catch (err) {
+    console.error("GET /devices/:deviceId/settings failed", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
-app.put(
-  "/devices/:deviceId/settings",
-  requireAdminKey,
-  asyncHandler(async (req, res) => {
-    const deviceId = req.params.deviceId;
-    const settings = req.body || {};
+app.put("/devices/:deviceId/settings", requireAdminKey, async (req, res) => {
+  const deviceId = req.params.deviceId;
+  const settings = req.body || {};
+  try {
     const r = await pool.query(
       `
       insert into public.device_settings (device_id, settings, updated_at)
@@ -1257,43 +1644,65 @@ app.put(
       do update set settings = excluded.settings, updated_at = now()
       returning settings
       `,
-      [deviceId, JSON.stringify(settings)]
+      [deviceId, JSON.stringify(settings)],
     );
     return res.json(r.rows[0].settings || {});
-  })
-);
+  } catch (err) {
+    console.error("PUT /devices/:deviceId/settings failed", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
-// -------------------------
 // Purge old events (Admin)
-// -------------------------
-app.post(
-  "/admin/purge-events",
-  requireAdminKey,
-  asyncHandler(async (req, res) => {
-    const olderThanDays = Number(req.body?.olderThanDays);
-    if (!Number.isFinite(olderThanDays) || olderThanDays < 1) {
-      return res.status(400).json({ error: "olderThanDays must be a number >= 1" });
-    }
+app.post("/admin/purge-events", requireAdminKey, async (req, res) => {
+  const olderThanDays = Number(req.body?.olderThanDays);
+  if (!Number.isFinite(olderThanDays) || olderThanDays < 1) {
+    return res
+      .status(400)
+      .json({ error: "olderThanDays must be a number >= 1" });
+  }
+  try {
     const r = await pool.query(
       `delete from public.device_events
        where at < (now() - make_interval(days => $1))`,
-      [olderThanDays]
+      [olderThanDays],
     );
     return res.json({ ok: true, deleted: r.rowCount });
-  })
+  } catch (err) {
+    console.error("POST /admin/purge-events failed", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Notification subscriptions (Admin)
+app.put(
+  "/devices/:id/users/:userId/notifications",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const userId = req.params.userId;
+
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+
+    const user = await getUserById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const eventTypes = (req.body && req.body.eventTypes) || [];
+    await setUserSubscriptions(deviceId, userId, eventTypes);
+
+    res.json({ deviceId, userId, eventTypes });
+  }),
 );
 
-// -------------------------
 // Schedules (Admin)
-// -------------------------
 app.get(
   "/schedules",
   requireAdminKey,
   asyncHandler(async (req, res) => {
     res.json(await listSchedules());
-  })
+  }),
 );
-
 app.post(
   "/schedules",
   requireAdminKey,
@@ -1312,11 +1721,14 @@ app.post(
         end: s.end,
       }));
 
-    const sched = await createSchedule({ name, description, slots: cleanSlots });
+    const sched = await createSchedule({
+      name,
+      description,
+      slots: cleanSlots,
+    });
     res.status(201).json(sched);
-  })
+  }),
 );
-
 app.put(
   "/schedules/:id",
   requireAdminKey,
@@ -1338,12 +1750,15 @@ app.put(
         end: s.end,
       }));
 
-    const sched = await updateSchedule(id, { name, description, slots: cleanSlots });
+    const sched = await updateSchedule(id, {
+      name,
+      description,
+      slots: cleanSlots,
+    });
     if (!sched) return res.status(404).json({ error: "Schedule not found" });
     res.json(sched);
-  })
+  }),
 );
-
 app.delete(
   "/schedules/:id",
   requireAdminKey,
@@ -1352,14 +1767,16 @@ app.delete(
     if (!id) return res.status(400).json({ error: "Invalid schedule id" });
     await deleteSchedule(id);
     res.json({ status: "deleted", id });
-  })
+  }),
 );
 
-// -------------------------
 // Users (Admin)
-// -------------------------
+// ======================================================
+// Admin Users (Alias + Create)
+// Build: render-2026-01-08-e
+// ======================================================
 
-// GET /admin/users (alias)
+// Alias GET /admin/users -> same as GET /users
 app.get(
   "/admin/users",
   requireAdminKey,
@@ -1370,13 +1787,20 @@ app.get(
     const result = [];
     for (const u of rows) {
       const devices = await listUserDevices(u.id);
-      result.push({ id: u.id, name: u.name, email: u.email, phone: u.phone, devices });
+      result.push({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        devices,
+      });
     }
     res.json(result);
-  })
+  }),
 );
 
-// POST /admin/users (admin create)
+// Create user (admin-only) + optionally attach to multiple devices
+// Body: { name, email, phone, password, devices:[{deviceId, role, scheduleId?}] }
 app.post(
   "/admin/users",
   requireAdminKey,
@@ -1387,16 +1811,766 @@ app.post(
     const phone = normalizePhone(body.phone || null);
     const password = body.password || "";
 
-    if (!password) return res.status(400).json({ error: "password is required" });
-    if (!email && !phone) return res.status(400).json({ error: "Provide at least email or phone" });
+    if (!password)
+      return res.status(400).json({ error: "password is required" });
+    if (!email && !phone)
+      return res.status(400).json({ error: "Provide at least email or phone" });
 
+    // Prevent duplicates (nice error messages, DB also enforces)
     if (phone) {
       const existingByPhone = await getUserByPhone(phone);
-      if (existingByPhone) return res.status(409).json({ error: "User with this phone already exists" });
+      if (existingByPhone)
+        return res
+          .status(409)
+          .json({ error: "User with this phone already exists" });
     }
     if (email) {
       const existingByEmail = await getUserByEmail(email);
-      if (existingByEmail) return res.status(409).json({ error: "User with this email already exists" });
+      if (existingByEmail)
+        return res
+          .status(409)
+          .json({ error: "User with this email already exists" });
     }
 
-    const user = await createUser({ name, email, phone
+    // Create
+    const user = await createUser({ name, email, phone, password });
+
+    // Optional attach to devices
+    const devices = Array.isArray(body.devices) ? body.devices : [];
+    for (const d of devices) {
+      const deviceId = (d?.deviceId || "").trim();
+      if (!deviceId) continue;
+
+      const role = (d?.role || "operator").trim() || "operator";
+      await attachUserToDevice(deviceId, user.id, role);
+
+      const scheduleId = d?.scheduleId ? Number(d.scheduleId) : null;
+      if (scheduleId) {
+        const sched = await getScheduleById(scheduleId);
+        if (!sched)
+          return res
+            .status(404)
+            .json({ error: `Schedule not found: ${scheduleId}` });
+        await setDeviceUserSchedule(deviceId, user.id, scheduleId);
+      }
+    }
+
+    res.status(201).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
+    });
+  }),
+);
+
+app.get(
+  "/users",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const qstr = (req.query.q || "").trim();
+    const rows = await searchUsers(qstr || null);
+
+    const result = [];
+    for (const u of rows) {
+      const devices = await listUserDevices(u.id);
+      result.push({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        devices,
+      });
+    }
+    res.json(result);
+  }),
+);
+app.get(
+  "/users/:id",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const id = req.params.id;
+    const u = await getUserById(id);
+    if (!u) return res.status(404).json({ error: "User not found" });
+    const devices = await listUserDevices(u.id);
+    res.json({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone,
+      devices,
+    });
+  }),
+);
+
+app.put(
+  "/users/:id",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const id = req.params.id;
+    const user = await getUserById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const name = (req.body?.name ?? "").toString().trim();
+    const email = (req.body?.email ?? "").toString().trim() || null;
+    const phone = normalizePhone(req.body?.phone ?? null);
+    const password = req.body?.password || "";
+
+    // Duplicate protection (exclude self)
+    if (phone) {
+      const existing = await getUserByPhone(phone);
+      if (existing && existing.id !== id) {
+        return res
+          .status(409)
+          .json({ error: "User with this phone already exists" });
+      }
+    }
+    if (email) {
+      const existing = await getUserByEmail(email);
+      if (existing && existing.id !== id) {
+        return res
+          .status(409)
+          .json({ error: "User with this email already exists" });
+      }
+    }
+
+    const updated = await updateUser(id, { name, email, phone, password });
+
+    res.json({
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      phone: updated.phone,
+    });
+  }),
+);
+
+app.delete(
+  "/users/:id",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const id = req.params.id;
+
+    const user = await getUserById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    await deleteUser(id);
+
+    res.json({ status: "deleted", id });
+  }),
+);
+
+// Profile (Admin) - profile-driven UI endpoint
+app.get(
+  "/profiles/users/:id",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const userId = req.params.id;
+    const profile = await getUserProfile(userId);
+    if (!profile) return res.status(404).json({ error: "User not found" });
+    res.json(profile);
+  }),
+);
+
+// User-facing device settings (non-secret)
+app.get(
+  "/devices/:id/user-settings",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const userId = req.user.id;
+
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+
+    if (!(await isUserOnDevice(deviceId, userId))) {
+      return res.status(403).json({ error: "Not allowed on this device" });
+    }
+
+    const r = await q(
+      "select settings from public.device_settings where device_id = $1",
+      [deviceId],
+    );
+    if (!r.rows.length) return res.json({});
+    res.json(r.rows[0].settings || {});
+  }),
+);
+
+// User-accessible device events feed
+app.get(
+  "/devices/:id/user-events",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const userId = req.user.id;
+    const limit = req.query.limit
+      ? Math.min(Number(req.query.limit) || 30, 100)
+      : 30;
+
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+
+    if (!(await isUserOnDevice(deviceId, userId))) {
+      return res.status(403).json({ error: "Not allowed on this device" });
+    }
+
+    const r = await q(
+      `
+    select id, device_id, user_id, event_type, at, details
+    from public.device_events
+    where device_id = $1
+    order by at desc
+    limit $2
+    `,
+      [deviceId, limit],
+    );
+
+    res.json(r.rows);
+  }),
+);
+
+// User-facing open/aux
+app.post(
+  "/devices/:id/open",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+
+    const userId = req.user.id;
+    const durationMs =
+      req.body && req.body.durationMs ? Number(req.body.durationMs) : 1000;
+
+    if (!(await isUserOnDevice(deviceId, userId))) {
+      await logDeviceEvent(deviceId, "ACCESS_DENIED_NOT_ASSIGNED", {
+        userId,
+        details: "open",
+      });
+      return res.status(403).json({ error: "User not allowed on this device" });
+    }
+
+    if (!(await isUserAllowedNow(deviceId, userId, new Date()))) {
+      await logDeviceEvent(deviceId, "ACCESS_DENIED_SCHEDULE", {
+        userId,
+        details: "open",
+      });
+      return res.status(403).json({ error: "Access not allowed at this time" });
+    }
+
+    const cmd = await createCommand(deviceId, userId, "OPEN", durationMs);
+    await logDeviceEvent(deviceId, "OPEN_REQUESTED", {
+      userId,
+      details: "durationMs=" + durationMs,
+    });
+    res.status(201).json(cmd);
+  }),
+);
+
+app.post(
+  "/devices/:id/aux1",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+
+    const userId = req.user.id;
+    const durationMs =
+      req.body && req.body.durationMs ? Number(req.body.durationMs) : 1000;
+
+    if (!(await isUserOnDevice(deviceId, userId))) {
+      await logDeviceEvent(deviceId, "AUX1_DENIED_NOT_ASSIGNED", {
+        userId,
+        details: "aux1",
+      });
+      return res.status(403).json({ error: "User not allowed on this device" });
+    }
+
+    if (!(await isUserAllowedNow(deviceId, userId, new Date()))) {
+      await logDeviceEvent(deviceId, "AUX1_DENIED_SCHEDULE", {
+        userId,
+        details: "aux1",
+      });
+      return res.status(403).json({ error: "Access not allowed at this time" });
+    }
+
+    const cmd = await createCommand(deviceId, userId, "AUX1", durationMs);
+    await logDeviceEvent(deviceId, "AUX1_REQUESTED", {
+      userId,
+      details: "durationMs=" + durationMs,
+    });
+    res.status(201).json(cmd);
+  }),
+);
+
+app.post(
+  "/devices/:id/aux2",
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+
+    const userId = req.user.id;
+    const durationMs =
+      req.body && req.body.durationMs ? Number(req.body.durationMs) : 1000;
+
+    if (!(await isUserOnDevice(deviceId, userId))) {
+      await logDeviceEvent(deviceId, "AUX2_DENIED_NOT_ASSIGNED", {
+        userId,
+        details: "aux2",
+      });
+      return res.status(403).json({ error: "User not allowed on this device" });
+    }
+
+    if (!(await isUserAllowedNow(deviceId, userId, new Date()))) {
+      await logDeviceEvent(deviceId, "AUX2_DENIED_SCHEDULE", {
+        userId,
+        details: "aux2",
+      });
+      return res.status(403).json({ error: "Access not allowed at this time" });
+    }
+
+    const cmd = await createCommand(deviceId, userId, "AUX2", durationMs);
+    await logDeviceEvent(deviceId, "AUX2_REQUESTED", {
+      userId,
+      details: "durationMs=" + durationMs,
+    });
+    res.status(201).json(cmd);
+  }),
+);
+
+// AUX tests (admin)
+app.post(
+  "/devices/:id/aux1-test",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+    const durationMs =
+      req.body && req.body.durationMs ? Number(req.body.durationMs) : 1000;
+    const cmd = await createCommand(deviceId, null, "AUX1", durationMs);
+    await logDeviceEvent(deviceId, "AUX1_TRIGGER", {
+      details: "durationMs=" + durationMs,
+    });
+    res.status(201).json(cmd);
+  }),
+);
+
+app.post(
+  "/devices/:id/aux2-test",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+    const durationMs =
+      req.body && req.body.durationMs ? Number(req.body.durationMs) : 1000;
+    const cmd = await createCommand(deviceId, null, "AUX2", durationMs);
+    await logDeviceEvent(deviceId, "AUX2_TRIGGER", {
+      details: "durationMs=" + durationMs,
+    });
+    res.status(201).json(cmd);
+  }),
+);
+
+// Simulated events (admin)
+app.post(
+  "/devices/:id/simulate-event",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+    const type = (req.body && req.body.type) || "UNKNOWN";
+    await logDeviceEvent(deviceId, type, { details: "simulated=true" });
+    res.json({ status: "ok", deviceId, type });
+  }),
+);
+function toCsv(rows) {
+  const header = [
+    "at",
+    "device_id",
+    "device_name",
+    "user_id",
+    "user_name",
+    "user_phone",
+    "event_type",
+    "details",
+  ];
+  const esc = (v) => {
+    const s = (v ?? "").toString();
+    if (s.includes('"') || s.includes(",") || s.includes("\n"))
+      return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+
+  const lines = [header.join(",")];
+  for (const r of rows || []) {
+    lines.push(
+      [
+        esc(r.at),
+        esc(r.device_id),
+        esc(r.device_name),
+        esc(r.user_id),
+        esc(r.user_name),
+        esc(r.user_phone),
+        esc(r.event_type),
+        esc(r.details),
+      ].join(","),
+    );
+  }
+  return lines.join("\n");
+}
+
+async function fetchReportEventsFromQuery(req) {
+  const deviceId = (req.query.deviceId || "").trim() || null;
+  const userId = (req.query.userId || "").trim() || null;
+  const from = (req.query.from || "").trim() || null;
+  const to = (req.query.to || "").trim() || null;
+  const limit = req.query.limit ? Number(req.query.limit) || 500 : 500;
+
+  return await getEventsForReport({ deviceId, userId, from, to, limit });
+}
+// =========================
+// Admin: alerts (derived)
+// GET /admin/alerts?deviceId=&userId=&from=&to=&limit=
+// =========================
+app.get(
+  "/admin/alerts",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = (req.query.deviceId || "").trim() || null;
+    const userId = (req.query.userId || "").trim() || null;
+    const from = (req.query.from || "").trim() || null;
+    const to = (req.query.to || "").trim() || null;
+    const limit = req.query.limit
+      ? Math.max(10, Math.min(50000, Number(req.query.limit) || 500))
+      : 500;
+
+    const rows = await getAdminAlerts({ deviceId, userId, from, to, limit });
+    res.json(rows || []);
+  }),
+);
+// GET /devices/:id/alert-subs?userId=...
+app.get(
+  "/devices/:id/alert-subs",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const userId = (req.query.userId || "").trim();
+    if (!userId) return res.status(400).json({ error: "userId is required" });
+
+    const rows = await q(
+      `SELECT device_id, user_id, event_type, enabled
+     FROM device_notifications_subscriptions
+     WHERE device_id = $1 AND user_id = $2
+     ORDER BY event_type`,
+      [deviceId, userId],
+    );
+
+    res.json(rows || []);
+  }),
+);
+
+// Recent events per device (admin)
+app.get(
+  "/devices/:id/events",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = req.params.id;
+    const device = await getDeviceById(deviceId);
+    if (!device) return res.status(404).json({ error: "Device not found" });
+    const limit = req.query.limit ? Number(req.query.limit) || 50 : 50;
+    res.json(await getDeviceEvents(deviceId, limit));
+  }),
+);
+
+// Global events / reports (admin)
+app.get(
+  "/events",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const deviceId = (req.query.deviceId || "").trim() || null;
+    const userId = (req.query.userId || "").trim() || null;
+    const from = (req.query.from || "").trim() || null;
+    const to = (req.query.to || "").trim() || null;
+    const limit = req.query.limit ? Number(req.query.limit) || 500 : 500;
+
+    const events = await getEventsForReport({
+      deviceId,
+      userId,
+      from,
+      to,
+      limit,
+    });
+    res.json(events);
+  }),
+);
+// Export events as CSV (admin)
+app.get(
+  "/events/export.csv",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const events = await fetchReportEventsFromQuery(req);
+    const csv = toCsv(events);
+
+    const filename = `events-report-${Date.now()}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(csv);
+  }),
+);
+
+// Export events as XLSX (admin)
+app.get(
+  "/events/export.xlsx",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const events = await fetchReportEventsFromQuery(req);
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Events");
+
+    ws.columns = [
+      { header: "Time (UTC)", key: "at", width: 24 },
+      { header: "Device ID", key: "device_id", width: 16 },
+      { header: "Device Name", key: "device_name", width: 22 },
+      { header: "User ID", key: "user_id", width: 22 },
+      { header: "User Name", key: "user_name", width: 18 },
+      { header: "User Phone", key: "user_phone", width: 16 },
+      { header: "Event Type", key: "event_type", width: 26 },
+      { header: "Details", key: "details", width: 60 },
+    ];
+
+    (events || []).forEach((e) => ws.addRow(e));
+    ws.getRow(1).font = { bold: true };
+
+    const filename = `events-report-${Date.now()}.xlsx`;
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    await wb.xlsx.write(res);
+    res.end();
+  }),
+);
+
+// ======================================================
+// Email events report (admin)
+// POST /events/email
+// Body: { to, deviceId?, userId?, from?, toDate?, limit? }
+// ======================================================
+app.post(
+  "/events/email",
+  requireAdminKey,
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+
+    // --- Provider (SendGrid) ---
+    const sendgridMailer = typeof sgMail !== "undefined" ? sgMail : null;
+    const usingSendgrid = !!(sendgridMailer && process.env.SENDGRID_API_KEY);
+
+    if (!usingSendgrid) {
+      return res
+        .status(500)
+        .json({ error: "Email not configured (SendGrid not enabled)" });
+    }
+
+    // --- Recipient email (ONLY from body.to) ---
+    const toEmail =
+      (typeof body.to === "string" ? body.to : body.to && body.to.email) || "";
+    const toEmailTrimmed = String(toEmail).trim();
+
+    if (!toEmailTrimmed)
+      return res.status(400).json({ error: "to is required" });
+    if (!toEmailTrimmed.includes("@")) {
+      return res
+        .status(400)
+        .json({ error: `Invalid recipient email: ${toEmailTrimmed}` });
+    }
+
+    // --- Report filters ---
+    const deviceId = (body.deviceId || "").trim() || null;
+    const userId = (body.userId || "").trim() || null;
+    const from = (body.from || "").trim() || null; // YYYY-MM-DD ok
+    const toDate = (body.toDate || "").trim() || null; // YYYY-MM-DD ok
+    const limit = body.limit ? Number(body.limit) || 500 : 500;
+
+    // IMPORTANT: report end date is toDate (NOT body.to)
+    const to = toDate;
+
+    // --- Sender (EMAIL ONLY in env var) ---
+    // If someone accidentally put "Name<email@x.com>" in env, extract the email part.
+    const rawFrom = (
+      process.env.SENDGRID_FROM ||
+      process.env.EMAIL_FROM ||
+      ""
+    ).trim();
+    const m = rawFrom.match(/<([^>]+)>/);
+    const fromEmail = (m ? m[1] : rawFrom).trim();
+
+    if (!fromEmail || !fromEmail.includes("@")) {
+      return res
+        .status(500)
+        .json({
+          error:
+            "Missing/invalid sender address (set SENDGRID_FROM to a real email)",
+        });
+    }
+
+    // Pull events
+    const events = await getEventsForReport({
+      deviceId,
+      userId,
+      from,
+      to,
+      limit,
+    });
+
+    // Convert to CSV (expects your existing toCsv(rows) helper)
+    const csv = toCsv(events || []);
+    const subject = `Geata Events Report`;
+    const filename = `events_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    // Debug log (safe)
+    console.log("[events/email] sendgrid using:", {
+      hasKey: !!process.env.SENDGRID_API_KEY,
+      fromEmail,
+      toEmailTrimmed,
+      rows: (events || []).length,
+    });
+
+    try {
+      await sendgridMailer.send({
+        to: toEmailTrimmed,
+        from: { email: fromEmail, name: "Geata Reports" },
+        subject,
+        text: `Attached: events report\nRows: ${(events || []).length}\n`,
+        attachments: [
+          {
+            filename,
+            type: "text/csv",
+            disposition: "attachment",
+            content: Buffer.from(csv, "utf-8").toString("base64"),
+          },
+        ],
+      });
+
+      return res.json({
+        status: "sent",
+        via: "sendgrid",
+        to: toEmailTrimmed,
+        rows: (events || []).length,
+      });
+    } catch (e) {
+      const sgBody = e?.response?.body;
+      console.error(
+        "SendGrid send failed:",
+        JSON.stringify(sgBody || e, null, 2),
+      );
+      return res.status(400).json({
+        error: "SendGrid rejected request",
+        details: sgBody?.errors || e.message || "Unknown SendGrid error",
+      });
+    }
+  }),
+);
+
+// ESP poll endpoint (no auth yet)
+app.post(
+  "/device/poll",
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const deviceId = body.deviceId;
+    const lastResults = Array.isArray(body.lastResults) ? body.lastResults : [];
+
+    if (!deviceId)
+      return res.status(400).json({ error: "deviceId is required" });
+
+    const device = await getDeviceById(deviceId);
+    if (!device)
+      return res.status(404).json({ error: "Device not registered" });
+
+    for (const r of lastResults) {
+      if (!r || !r.commandId) continue;
+      const cmdRow = await completeCommand(
+        deviceId,
+        r.commandId,
+        r.result || "",
+      );
+      if (cmdRow) {
+        await logDeviceEvent(deviceId, "CMD_COMPLETED", {
+          userId: cmdRow.user_id || null,
+          details: cmdRow.type + " result=" + (r.result || ""),
+        });
+      }
+    }
+
+    const queued = await getQueuedCommands(deviceId);
+    const toSend = queued.map((c) => ({
+      commandId: c.id,
+      type: c.type,
+      durationMs: c.duration_ms,
+    }));
+
+    res.json({ commands: toSend });
+  }),
+);
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error("*** UNHANDLED ERROR ***", err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
+// ---- Start server ----
+let server = null;
+
+async function start() {
+  await initDb();
+  await verifyMailer();
+
+  server = app.listen(PORT, () => {
+    console.log(`Geata API listening on port ${PORT}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`Admin API key is: ${ADMIN_API_KEY}`);
+      console.log(
+        `Admin key fingerprint: ${shortHash(process.env.ADMIN_API_KEY)}`,
+      );
+    }
+  });
+
+  return server;
+}
+
+if (require.main === module) {
+  start().catch((err) => {
+    console.error("*** STARTUP FAILED ***", err);
+    process.exit(1);
+  });
+}
+
+// graceful shutdown
+async function shutdown() {
+  try {
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+      server = null;
+    }
+  } catch (_) {}
+  try {
+    await pool.end();
+  } catch (_) {}
+}
+
+process.on("SIGTERM", () => shutdown().finally(() => process.exit(0)));
+process.on("SIGINT", () => shutdown().finally(() => process.exit(0)));
+
+module.exports = { app, start, initDb, shutdown, pool };

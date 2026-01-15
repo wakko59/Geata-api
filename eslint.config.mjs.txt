@@ -1,0 +1,43 @@
+// eslint.config.mjs — ESLint v9 flat config for Node/Express
+
+import js from '@eslint/js';
+import importPlugin from 'eslint-plugin-import';
+import n from 'eslint-plugin-n';
+import security from 'eslint-plugin-security';
+import prettier from 'eslint-config-prettier';
+
+export default [
+  // Base recommended rules
+  js.configs.recommended,
+
+  // Plugins' recommended rules
+  importPlugin.configs.recommended,
+  n.configs['flat/recommended'],
+  security.configs.recommended,
+
+  // Turn off formatting rules so Prettier takes over
+  prettier,
+
+  // Project-wide settings & custom rules
+  {
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'script',
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_|^next$' }],
+      eqeqeq: ['error', 'always'],
+      'prefer-const': 'warn',
+
+      // We’re in a Node app and manage deps ourselves
+      'n/no-missing-import': 'off',
+      'n/no-unpublished-import': 'off',
+      'n/no-unsupported-features/es-syntax': 'off',
+    },
+  },
+
+  // Ignore paths (same idea as .eslintignore)
+  {
+    ignores: ['node_modules', 'dist', 'public'],
+  },
+];
