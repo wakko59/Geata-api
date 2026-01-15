@@ -472,6 +472,46 @@ async function deleteUser(userId) {
     if (error) throw new Error("users: " + error.message);
   }
 }
+async function getAlertSubscriptions(deviceId, userId) {
+  const { data, error } = await supabase
+    .from("device_notifications_subscriptions")
+    .select("event_type, enabled")
+    .eq("device_id", deviceId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+
+  // return enabled list
+  return (data || [])
+    .filter(r => r.enabled)
+    .map(r => r.event_type);
+}
+
+async function replaceAlertSubscriptions(deviceId, userId, enabledEventTypes) {
+  // wipe existing rows for this user+device
+  const del = await supabase
+    .from("device_notifications_subscriptions")
+    .delete()
+    .eq("device_id", deviceId)
+    .eq("user_id", userId);
+
+  if (del.error) throw new Error(del.error.message);
+
+  const rows = (enabledEventTypes || []).map(ev => ({
+    device_id: deviceId,
+    user_id: userId,
+    event_type: String(ev),
+    enabled: true
+  }));
+
+  if (!rows.length) return;
+
+  const ins = await supabase
+    .from("device_notifications_subscriptions")
+    .insert(rows);
+
+  if (ins.error) throw new Error(ins.error.message);
+}
 
 
 
@@ -1218,6 +1258,32 @@ app.put("/devices/:id/alert-subs", requireAdminKey, asyncHandler(async (req, res
   }
 
   res.json({ status: "ok", deviceId, userId, enabledCount: enabledEventTypes.length });
+}));
+// ======================================================
+// Alert subscriptions per gate+user (admin)
+// GET  /devices/:id/alert-subs?userId=...
+// PUT  /devices/:id/alert-subs   { userId, enabledEventTypes:[] }
+// ======================================================
+app.get("/devices/:id/alert-subs", requireAdminKey, asyncHandler(async (req, res) => {
+  const deviceId = req.params.id;
+  const userId = (req.query.userId || "").trim();
+  if (!userId) return res.status(400).json({ error: "userId is required" });
+
+  // optional: verify device exists / membership exists (can add later)
+  const enabledEventTypes = await getAlertSubscriptions(deviceId, userId);
+  res.json({ deviceId, userId, enabledEventTypes });
+}));
+
+app.put("/devices/:id/alert-subs", requireAdminKey, asyncHandler(async (req, res) => {
+  const deviceId = req.params.id;
+  const body = req.body || {};
+  const userId = (body.userId || "").trim();
+  if (!userId) return res.status(400).json({ error: "userId is required" });
+
+  const enabledEventTypes = Array.isArray(body.enabledEventTypes) ? body.enabledEventTypes : [];
+  await replaceAlertSubscriptions(deviceId, userId, enabledEventTypes);
+
+  res.json({ status: "ok", deviceId, userId, enabledEventTypes });
 }));
 
 

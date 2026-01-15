@@ -512,6 +512,7 @@
             <th>Phone</th>
             <th>Role</th>
             <th>Schedule</th>
+			<th>Alerts</th>
             <th>Remove</th>
           </tr>
         </thead>
@@ -569,6 +570,22 @@
     Attaches an existing user to the selected gate via <code>POST /devices/:id/users</code>.
   </div>
 </div>
+<div id="gateAlertsPanel" class="whitebox" style="display:none; margin-top:10px;">
+  <div class="pill-title">Alert Subscriptions</div>
+
+  <div class="small" id="gateAlertsMeta" style="margin-bottom:8px; opacity:.85;"></div>
+
+  <div class="device-label-big" style="margin-top:6px;">Enable alerts for this user on this gate</div>
+  <div id="gateAlertsTypesPanel"></div>
+
+  <div class="inline-actions">
+    <button id="gateAlertsSaveBtn" class="btn-small">Save Alerts</button>
+    <button id="gateAlertsCancelBtn" class="btn-secondary btn-small">Cancel</button>
+  </div>
+
+  <div id="gateAlertsStatus" class="status"></div>
+</div>
+
 <div id="gateCreatePanel" class="whitebox" style="display:none; margin-top:10px;">
   <div class="pill-title">Create New Gate</div>
 
@@ -923,6 +940,74 @@ function getCheckedDevices(containerEl) {
       containerEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => out.push(cb.value));
       return out;
     }
+// =========================
+// Gate Alerts UI (admin)
+// =========================
+
+// IMPORTANT: These MUST match your ESP32 event_type strings
+const ALERT_EVENT_TYPES = [
+  "GATE_OPEN_TOO_LONG",
+  "GATE_FORCED_OPEN",
+  "TAMPER_OPENED",
+  "GATE_OPENED",
+  "GATE_CLOSED"
+];
+
+let gateAlertsDeviceId = null;
+let gateAlertsUserId = null;
+
+function showGateAlertsPanel(show){
+  const el = $("gateAlertsPanel");
+  if (el) el.style.display = show ? "block" : "none";
+}
+
+async function openGateAlerts(deviceId, userId, userLabel){
+  gateAlertsDeviceId = deviceId;
+  gateAlertsUserId = userId;
+
+  $("gateAlertsMeta").textContent = `Gate: ${deviceId} · User: ${userLabel} [${userId}]`;
+  setStatus($("gateAlertsStatus"), "Loading…", false);
+
+  // render checkboxes
+  renderEventCheckboxPanel($("gateAlertsTypesPanel"), ALERT_EVENT_TYPES);
+
+  try{
+    const data = await apiJson(`/devices/${encodeURIComponent(deviceId)}/alert-subs?userId=${encodeURIComponent(userId)}`);
+    const enabled = data?.enabledEventTypes || [];
+    setPanelChecked($("gateAlertsTypesPanel"), enabled);
+    setStatus($("gateAlertsStatus"), "", false);
+    showGateAlertsPanel(true);
+  }catch(e){
+    setStatus($("gateAlertsStatus"), "Load failed: " + e.message, true);
+    showGateAlertsPanel(true);
+  }
+}
+
+async function saveGateAlerts(){
+  const deviceId = gateAlertsDeviceId;
+  const userId = gateAlertsUserId;
+  if(!deviceId || !userId) return;
+
+  const enabledEventTypes = getPanelChecked($("gateAlertsTypesPanel"));
+  setStatus($("gateAlertsStatus"), "Saving…", false);
+
+  try{
+    await apiJson(`/devices/${encodeURIComponent(deviceId)}/alert-subs`, {
+      method: "PUT",
+      body: JSON.stringify({ userId, enabledEventTypes })
+    });
+    setStatus($("gateAlertsStatus"), `Saved (${enabledEventTypes.length} enabled)`, false);
+    // keep panel open; operator can close
+  }catch(e){
+    setStatus($("gateAlertsStatus"), "Save failed: " + e.message, true);
+  }
+}
+
+function initGateAlertsUI(){
+  $("gateAlertsSaveBtn")?.addEventListener("click", saveGateAlerts);
+  $("gateAlertsCancelBtn")?.addEventListener("click", () => showGateAlertsPanel(false));
+  showGateAlertsPanel(false);
+}
 
     function fillDeviceSelect(selectEl, includeBlank=true, blankText="-- Select a gate --"){
       if(!selectEl) return;
@@ -1664,6 +1749,18 @@ function initCreateUserUI() {
               setStatus($("gatesUsersStatus"), "Remove error: " + e.message, true);
             }
           });
+const btnAlerts = document.createElement("button");
+btnAlerts.textContent = "Alerts";
+btnAlerts.className = "btn-secondary btn-small";
+btnAlerts.addEventListener("click", async ()=> {
+  // user label used in the panel title
+  const userLabel = (u.name || "(no name)");
+  try {
+    await openGateAlerts(gateId, u.userId, userLabel);
+  } catch (e) {
+    setStatus($("gatesUsersStatus"), "Alerts open error: " + e.message, true);
+  }
+});
 
           tr.innerHTML = `
             <td>${u.userId || ""}</td>
@@ -1673,6 +1770,10 @@ function initCreateUserUI() {
             <td>${u.role || ""}</td>
           `;
           tr.appendChild(tdSched);
+		  
+			const tdAlerts = document.createElement("td");
+			tdAlerts.appendChild(btnAlerts);
+			tr.appendChild(tdAlerts);
 
           const tdRemove = document.createElement("td");
           tdRemove.appendChild(btnRemove);
@@ -2199,6 +2300,10 @@ async function showBuildInfo() {
   initUserCredEditor();
   initGates();
   initGateAddUserUI();
+  const tdAlerts = document.createElement("td");
+tdAlerts.appendChild(btnAlerts);
+tr.appendChild(tdAlerts);
+
   initGateCreateUI();
   initSchedulesUI();
   initEventsUI();
