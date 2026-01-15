@@ -2066,7 +2066,7 @@ if (require.main === module) {
   });
 }
 
-// graceful shutdown
+// graceful shutdown etc
 async function shutdown() {
   try {
     if (server) {
