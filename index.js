@@ -64,6 +64,87 @@ async function one(text, params = []) {
   const r = await q(text, params);
   return r.rows[0] || null;
 }
+// =========================
+// Alerts (derived from device_events + subscriptions)
+// =========================
+
+async function getUserAlerts({ userId, deviceId=null, since=null, limit=200 }) {
+  const params = [userId];
+  let p = 2;
+
+  let where = `
+    s.user_id = $1
+    AND s.enabled = true
+    AND e.event_type = s.event_type
+    AND e.device_id = s.device_id
+  `;
+
+  if (deviceId) { where += ` AND e.device_id = $${p}`; params.push(deviceId); p++; }
+  if (since)    { where += ` AND e.at > $${p}`;      params.push(since);   p++; }
+
+  params.push(limit);
+
+  const sql = `
+    SELECT
+      e.id,
+      e.device_id,
+      d.name AS device_name,
+      e.user_id,
+      u.name AS user_name,
+      u.email AS user_email,
+      u.phone AS user_phone,
+      e.event_type,
+      e.at,
+      e.details
+    FROM device_events e
+    JOIN device_notifications_subscriptions s
+      ON s.device_id = e.device_id
+     AND s.user_id   = $1
+     AND s.event_type = e.event_type
+     AND s.enabled = true
+    LEFT JOIN devices d ON d.id = e.device_id
+    LEFT JOIN users u   ON u.id = e.user_id
+    WHERE ${where}
+    ORDER BY e.at DESC
+    LIMIT $${p}
+  `;
+  return q(sql, params);
+}
+
+async function getAdminAlerts({ deviceId=null, userId=null, from=null, to=null, limit=500 }) {
+  const params = [];
+  let p = 1;
+  let where = `1=1`;
+
+  if (deviceId) { where += ` AND e.device_id = $${p}`; params.push(deviceId); p++; }
+  if (userId)   { where += ` AND e.user_id = $${p}`;   params.push(userId);   p++; }
+  if (from)     { where += ` AND e.at >= $${p}`;       params.push(from);     p++; }
+  if (to)       { where += ` AND e.at <= $${p}`;       params.push(to);       p++; }
+
+  params.push(limit);
+
+  const sql = `
+    SELECT
+      e.id,
+      e.device_id,
+      d.name AS device_name,
+      e.user_id,
+      u.name AS user_name,
+      u.email AS user_email,
+      u.phone AS user_phone,
+      e.event_type,
+      e.at,
+      e.details
+    FROM device_events e
+    LEFT JOIN devices d ON d.id = e.device_id
+    LEFT JOIN users u   ON u.id = e.user_id
+    WHERE ${where}
+    ORDER BY e.at DESC
+    LIMIT $${p}
+  `;
+  return q(sql, params);
+}
+
 
 // ---- SMTP / Email ----
 const SMTP_HOST = process.env.SMTP_HOST || "";
@@ -1066,6 +1147,20 @@ app.get("/me/devices", requireUser, asyncHandler(async (req, res) => {
 
   res.json(r.rows);
 }));
+// =========================
+// Me: alerts feed (no email)
+// GET /me/alerts?deviceId=&since=&limit=
+// =========================
+app.get("/me/alerts", requireUser, asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const deviceId = (req.query.deviceId || "").trim() || null;
+  const since = (req.query.since || "").trim() || null;
+  const limit = req.query.limit ? Math.max(1, Math.min(5000, Number(req.query.limit) || 200)) : 200;
+
+  const rows = await getUserAlerts({ userId, deviceId, since, limit });
+  res.json(rows || []);
+}));
 
 // Devices (admin-only)
 app.get("/devices", requireAdminKey, asyncHandler(async (req, res) => {
@@ -1099,6 +1194,32 @@ app.post("/devices", requireAdminKey, asyncHandler(async (req, res) => {
   const device = await createDevice(id, name);
   res.status(201).json(device);
 }));
+// PUT /devices/:id/alert-subs
+// Body: { userId, enabledEventTypes: ["TAMPER_OPENED", ...] }
+app.put("/devices/:id/alert-subs", requireAdminKey, asyncHandler(async (req, res) => {
+  const deviceId = req.params.id;
+  const userId = (req.body?.userId || "").trim();
+  const enabledEventTypes = Array.isArray(req.body?.enabledEventTypes) ? req.body.enabledEventTypes : [];
+
+  if (!userId) return res.status(400).json({ error: "userId is required" });
+
+  // Remove existing rows for that device/user
+  await q(`DELETE FROM device_notifications_subscriptions WHERE device_id=$1 AND user_id=$2`, [deviceId, userId]);
+
+  // Insert enabled ones
+  for (const ev of enabledEventTypes) {
+    const eventType = String(ev || "").trim();
+    if (!eventType) continue;
+    await q(
+      `INSERT INTO device_notifications_subscriptions (device_id, user_id, event_type, enabled)
+       VALUES ($1, $2, $3, true)`,
+      [deviceId, userId, eventType]
+    );
+  }
+
+  res.json({ status: "ok", deviceId, userId, enabledCount: enabledEventTypes.length });
+}));
+
 
 
 // Device users (admin-only)
@@ -1628,6 +1749,37 @@ async function fetchReportEventsFromQuery(req) {
 
   return await getEventsForReport({ deviceId, userId, from, to, limit });
 }
+// =========================
+// Admin: alerts (derived)
+// GET /admin/alerts?deviceId=&userId=&from=&to=&limit=
+// =========================
+app.get("/admin/alerts", requireAdminKey, asyncHandler(async (req, res) => {
+  const deviceId = (req.query.deviceId || "").trim() || null;
+  const userId = (req.query.userId || "").trim() || null;
+  const from = (req.query.from || "").trim() || null;
+  const to = (req.query.to || "").trim() || null;
+  const limit = req.query.limit ? Math.max(10, Math.min(50000, Number(req.query.limit) || 500)) : 500;
+
+  const rows = await getAdminAlerts({ deviceId, userId, from, to, limit });
+  res.json(rows || []);
+}));
+// GET /devices/:id/alert-subs?userId=...
+app.get("/devices/:id/alert-subs", requireAdminKey, asyncHandler(async (req, res) => {
+  const deviceId = req.params.id;
+  const userId = (req.query.userId || "").trim();
+  if (!userId) return res.status(400).json({ error: "userId is required" });
+
+  const rows = await q(
+    `SELECT device_id, user_id, event_type, enabled
+     FROM device_notifications_subscriptions
+     WHERE device_id = $1 AND user_id = $2
+     ORDER BY event_type`,
+    [deviceId, userId]
+  );
+
+  res.json(rows || []);
+}));
+
 // Recent events per device (admin)
 app.get("/devices/:id/events", requireAdminKey, asyncHandler(async (req, res) => {
   const deviceId = req.params.id;
