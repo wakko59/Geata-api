@@ -21,8 +21,12 @@ async function createDevice(deviceId) {
 async function registerAndLogin() {
   const email = `flow_${Date.now()}@example.com`;
   const password = "Passw0rd!";
-  await request(app).post("/auth/register").send({ name: "Flow User", email, password });
-  const login = await request(app).post("/auth/login").send({ email, password });
+  await request(app)
+    .post("/auth/register")
+    .send({ name: "Flow User", email, password });
+  const login = await request(app)
+    .post("/auth/login")
+    .send({ email, password });
   return { token: login.body.token, user: login.body.user };
 }
 
@@ -57,7 +61,9 @@ describe("Geata command lifecycle", () => {
       .send({ deviceId, lastResults: [] });
 
     expect(poll1.status).toBe(200);
-    expect(poll1.body.commands.some(c => c.commandId === commandId)).toBe(true);
+    expect(poll1.body.commands.some((c) => c.commandId === commandId)).toBe(
+      true,
+    );
 
     // device completes command
     const poll2 = await request(app)
