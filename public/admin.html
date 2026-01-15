@@ -851,9 +851,71 @@
     function fillGateAddUserSelect(){ const sel = $('gateAddUserSelect'); if(!sel) return; sel.innerHTML = `<option value="">-- Select a user --</option>`; (allUsers || []).forEach((u)=>{ const opt = document.createElement('option'); opt.value = u.id; const label = `${u.name || '(no name)'}${u.email ? ' · ' + u.email : ''}${u.phone ? ' · ' + u.phone : ''} [${u.id}]`; opt.textContent = label; sel.appendChild(opt); }); }
     async function gateAddUserConfirm(){ const gateId = $('gatesSelect').value || ''; const userId = $('gateAddUserSelect').value || ''; const role = $('gateAddUserRole').value || 'operator'; if(!gateId) return setStatus($('gatesStatus'), 'Select a gate first', true); if(!userId) return setStatus($('gateAddUserStatus'), 'Select a user', true); try{ await apiJson(`/devices/${encodeURIComponent(gateId)}/users`, { method:'POST', body: JSON.stringify({ userId, role }) }); setStatus($('gateAddUserStatus'), 'User added to gate', false); await loadGateUsers(gateId); await loadGateSettings(gateId); showGateAddUserPanel(false); }catch(e){ setStatus($('gateAddUserStatus'), 'Add failed: ' + e.message, true); } }
     function initGateAddUserUI(){ const openBtn = $('gatesAddUserBtn'); if(!openBtn) return; openBtn.addEventListener('click', async ()=>{ const gateId = $('gatesSelect').value || ''; if(!gateId) return setStatus($('gatesStatus'), 'Select a gate first', true); if(!allUsers || !allUsers.length){ try{ await loadUsers(null); }catch(_){} } fillGateAddUserSelect(); showGateAddUserPanel(true); setStatus($('gateAddUserStatus'), '', false); }); $('gateAddUserCancelBtn')?.addEventListener('click', ()=> showGateAddUserPanel(false)); $('gateAddUserConfirmBtn')?.addEventListener('click', gateAddUserConfirm); showGateAddUserPanel(false); }
+    // ================ Gates screen initializer ================
+    function initGatesUI(){
+      // Load gate data (users + settings)
+      $('gatesLoadBtn')?.addEventListener('click', async ()=>{
+        const gateId = $('gatesSelect').value || '';
+        currentGateId = gateId;
+        $('gatesPickedGate').textContent = gateId || '(none)';
+        setStatus($('gatesStatus'), '', false);
+        setStatus($('gatesUsersStatus'), '', false);
+        setStatus($('gatesSettingsStatus'), '', false);
+        if(!gateId){ setStatus($('gatesStatus'), 'Select a gate', true); return; }
+        setStatus($('gatesStatus'), 'Loading gate data…', false);
+        try{
+          await loadGateUsers(gateId);
+          await loadGateSettings(gateId);
+          $('gatesSaveSettingsBtn').disabled = false;
+          setStatus($('gatesStatus'), 'Gate loaded', false);
+        }catch(e){ setStatus($('gatesStatus'), 'Load error: ' + e.message, true); }
+      });
+
+      // Explicit settings load/save
+      $('gatesLoadSettingsBtn')?.addEventListener('click', async ()=>{
+        const gateId = $('gatesSelect').value || '';
+        currentGateId = gateId;
+        if(!gateId){ setStatus($('gatesSettingsStatus'), 'Select a gate', true); return; }
+        await loadGateSettings(gateId);
+      });
+      $('gatesSaveSettingsBtn')?.addEventListener('click', async ()=>{
+        const gateId = $('gatesSelect').value || '';
+        currentGateId = gateId;
+        if(!gateId){ setStatus($('gatesSettingsStatus'), 'Select a gate', true); return; }
+        await saveGateSettings(gateId);
+      });
+
+      // I/O pulse buttons
+      $('gatesAux1PulseBtn')?.addEventListener('click', ()=>{
+        const gateId = $('gatesSelect').value || '';
+        ioPulse(gateId, 'aux1-test', 1000, $('gatesIoStatus'));
+      });
+      $('gatesAux2PulseBtn')?.addEventListener('click', ()=>{
+        const gateId = $('gatesSelect').value || '';
+        ioPulse(gateId, 'aux2-test', 2000, $('gatesIoStatus'));
+      });
+
+      // Simulation buttons
+      $('simGateOpenedBtn')?.addEventListener('click', ()=>{
+        const gateId = $('gatesSelect').value || '';
+        ioSim(gateId, 'GATE_OPENED');
+      });
+      $('simGateClosedBtn')?.addEventListener('click', ()=>{
+        const gateId = $('gatesSelect').value || '';
+        ioSim(gateId, 'GATE_CLOSED');
+      });
+      $('simForcedBtn')?.addEventListener('click', ()=>{
+        const gateId = $('gatesSelect').value || '';
+        ioSim(gateId, 'GATE_FORCED_OPEN');
+      });
+      $('simTamperBtn')?.addEventListener('click', ()=>{
+        const gateId = $('gatesSelect').value || '';
+        ioSim(gateId, 'TAMPER_OPENED', true);
+      });
+    }
 
     // ================ Schedules screen ================
-    function parseDaysString(str){ const result=[]; const s=(str||'').trim(); if(!s) return []; const parts=s.split(','); parts.forEach((part)=>{ const t=part.trim(); if(!t) return; if(t.includes('-')){ const [aS,bS]=t.split('-'); const a=parseInt(aS.trim(),10); const b=parseInt(bS.trim(),10); if(Number.isFinite(a) && Number.isFinite(b)){ const step=a<=b?1:-1; for(let d=a; step>0?d<=b:d>=b; d+=step){ if(d>=0 && d<=6 && !result.includes(d)) result.push(d); } } } else { const n=parseInt(t,10); if(Number.isFinite(n) && n>=0 && n<=6 && !result.includes(n)) result.push(n); } }); result.sort((x,y)=>x-y); return result; }
+function parseDaysString(str){ const result=[]; const s=(str||'').trim(); if(!s) return []; const parts=s.split(','); parts.forEach((part)=>{ const t=part.trim(); if(!t) return; if(t.includes('-')){ const [aS,bS]=t.split('-'); const a=parseInt(aS.trim(),10); const b=parseInt(bS.trim(),10); if(Number.isFinite(a) && Number.isFinite(b)){ const step=a<=b?1:-1; for(let d=a; step>0?d<=b:d>=b; d+=step){ if(d>=0 && d<=6 && !result.includes(d)) result.push(d); } } } else { const n=parseInt(t,10); if(Number.isFinite(n) && n>=0 && n<=6 && !result.includes(n)) result.push(n); } }); result.sort((x,y)=>x-y); return result; }
     let editingScheduleId = null;
     function setScheduleEditing(enabled){ $('scheduleNameInput').disabled = !enabled; $('scheduleDescInput').disabled = !enabled; for(let i=1;i<=6;i++){ $(`slot${i}Days`).disabled = !enabled; $(`slot${i}Start`).disabled = !enabled; $(`slot${i}End`).disabled = !enabled; } $('scheduleSaveTopBtn').disabled = !enabled; }
     function resetScheduleForm(){ editingScheduleId = null; $('scheduleFormTitle').textContent = 'Create / Edit Schedule'; $('scheduleNameInput').value = ''; $('scheduleDescInput').value = ''; for(let i=1;i<=6;i++){ $(`slot${i}Days`).value = ''; $(`slot${i}Start`).value = ''; $(`slot${i}End`).value = ''; } setScheduleEditing(false); }
