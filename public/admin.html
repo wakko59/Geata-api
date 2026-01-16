@@ -1,62 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Geata Admin</title>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-    header { background: #333; color: white; padding: 1rem; text-align: center; font-size: 1.4rem; }
-    .container { padding: 1rem; }
-    .hidden { display: none; }
-    .section { margin-bottom: 2rem; }
-    button { margin: .2rem; }
-    input, select { margin: .2rem; }
-    label { font-weight: bold; display: block; margin-top: .5rem; }
+    body{
+      font-family: Arial, sans-serif;
+      margin:0; padding:0;
+      background: #f0f2f5;
+    }
+    header{
+      background: #004d99;
+      color:white;
+      padding: 1rem;
+      text-align:center;
+      font-size:1.6rem;
+    }
+    .navbtn{
+      margin:0 .3rem;
+      padding:.5rem 1rem;
+      background:#007bff;
+      color:white;
+      border:none;
+      cursor:pointer;
+      font-size:1rem;
+    }
+    .navbtn.active { background:#0056b3; }
+    .screen { display:none; padding:1rem; }
+    .section{ margin-bottom:2rem; }
+    .status{ font-size:.9rem; margin-top:.3rem; }
+    .status.err{ color:#c00; }
+    .status.ok{ color:#060; }
+    .btn-small{ font-size:.85rem; padding:.3rem .6rem; }
+    .btn-danger{ background:#c00; color:white; }
+    input, select { margin:.3rem 0; padding:.3rem; width:100%; }
+    button{ margin:.5rem .2rem; }
+    table{ width:100%; border-collapse:collapse;}
+    td,th{ border:1px solid #ccc; padding:.4rem; }
+    .grid{ display:grid; grid-gap:1rem; }
   </style>
+
 </head>
 <body>
-<header>Geata Admin Dashboard</header>
+<header>
+  <span>Geata Admin Dashboard</span>
+  <span id="buildInfo" style="font-size:.9rem; margin-left:1rem; color:#ddd;"></span>
+</header>
 
-<div class="container">
+<nav style="padding:1rem; text-align:center;">
+  <button class="navbtn" data-screen="screen-auth">Auth</button>
+  <button class="navbtn" data-screen="screen-users">Users</button>
+  <button class="navbtn" data-screen="screen-gates">Gates</button>
+  <button class="navbtn" data-screen="screen-schedules">Schedules</button>
+  <button class="navbtn" data-screen="screen-events">Events</button>
+</nav>
 
-  <!-- ⚙️ API Key Entry -->
-  <div id="authSection" class="section">
-    <label for="adminApiKeyInput">Enter Admin API Key:</label>
-    <input type="password" id="adminApiKeyInput" placeholder="Admin API Key" />
-    <button id="saveApiKeyBtn">Save API Key</button>
-    <div id="authStatus"></div>
+<div id="screen-auth" class="screen">
+  <h2>Admin API Key</h2>
+  <label>API Key</label>
+  <input id="authApiKey" type="password" placeholder="Enter admin API key">
+  <button id="authSaveKey">Save Key</button>
+  <button id="authClearKey">Clear Key</button>
+  <div id="authStatus" class="status"></div>
+
+  <h3>Bootstrap Data</h3>
+  <button id="bootstrapBtn">Load Devices, Users, Schedules</button>
+  <div id="bootstrapStatus" class="status"></div>
+</div>
+
+<div id="screen-users" class="screen">
+  <h2>Users</h2>
+  <div class="section">
+    <input id="usersSearch" placeholder="Search users...">
+    <button id="usersSearchBtn">Search</button>
+    <button id="usersShowAllBtn">Show All</button>
+    <div id="usersListStatus" class="status"></div>
   </div>
 
-  <!-- 🧑 Users -->
-  <div id="usersSection" class="section hidden">
-    <h2>Users</h2>
-    <input type="text" id="userSearchInput" placeholder="Search users..." />
-    <button id="userSearchBtn">Search</button>
-    <div id="usersList"></div>
+  <div class="section">
+    <select id="usersSelect"></select>
+    <button id="usersLoadProfileBtn">Load Profile</button>
+    <button id="usersDeleteBtn">Delete User</button>
   </div>
 
-  <!-- 🚪 Devices -->
-  <div id="devicesSection" class="section hidden">
-    <h2>Devices</h2>
-    <button id="loadDevicesBtn">Reload Devices</button>
-    <div id="devicesList"></div>
+  <div id="usersProfilePanel" class="section">
+    <h3>Profile</h3>
+    <pre id="usersProfileJson"></pre>
   </div>
 
-  <!-- 📅 Schedules -->
-  <div id="schedulesSection" class="section hidden">
-    <h2>Schedules</h2>
-    <button id="loadSchedulesBtn">Reload Schedules</button>
-    <div id="schedulesList"></div>
+  <div class="section">
+    <label>Gate</label>
+    <select id="usersDeviceSelect"></select>
+
+    <label>Schedule</label>
+    <select id="usersScheduleSelect"></select>
+    <button id="usersSaveScheduleBtn">Save Schedule</button>
+    <div id="usersScheduleStatus" class="status"></div>
+
+    <label>Email Alerts</label> <div id="usersEmailPanel"></div>
+    <button id="usersSaveEmailBtn">Save Email Subscriptions</button>
+    <div id="usersEmailStatus" class="status"></div>
   </div>
 
-  <!-- 🧾 Raw API Response -->
-  <div id="rawOutputSection" class="section">
-    <h2>Raw Output</h2>
-    <pre id="rawOutput"></pre>
+  <div class="section">
+    <h3>User Credentials</h3>
+    <div>
+      <label>ID: <span id="userCredId"></span></label>
+      <label>Name <input id="userCredName"></label>
+      <label>Email <input id="userCredEmail"></label>
+      <label>Phone <input id="userCredPhone"></label>
+      <label>Password <input id="userCredPassword"></label>
+    </div>
+    <button id="editUserBtn">Edit User</button>
+    <button id="saveUserBtn">Save User</button>
+    <div id="userCredStatus" class="status"></div>
+  </div>
+
+  <div class="section">
+    <button id="addUserBtn">Add New User</button>
+    <div id="createUserPanel" style="display:none;">
+      <h3>Create User</h3>
+      <label>Name <input id="newUserName"></label>
+      <label>Email <input id="newUserEmail"></label>
+      <label>Phone <input id="newUserPhone"></label>
+      <label>Password <input id="newUserPassword"></label>
+      <label>Attach Role <select id="newUserAttachRole">
+        <option value="administrator">administrator</option>
+        <option value="operator">operator</option>
+      </select></label>
+      <div id="newUserDevicesPanel"></div>
+      <button id="createUserSaveBtn">Save</button>
+      <button id="createUserCancelBtn">Cancel</button>
+      <div id="createUserStatus" class="status"></div>
+    </div>
   </div>
 </div>
 
+<div id="screen-gates" class="screen">
+  <h2>Gates</h2>
+  <label>Select a gate</label>
+  <select id="gatesSelect"></select>
+  <button id="gatesLoadBtn">Load Gate</button>
+
+  <div style="margin-top:.8rem;">
+    <table>
+      <tr><td>Users in Gate</td><td>Actions</td></tr>
+      <tbody id="gatesUsersTable"></tbody>
+    </table>
+    <div id="gatesUsersStatus" class="status"></div>
+  </div>
+
+  <div style="margin-top:1rem;">
+    <label>Aux1 Mode</label>
+    <label><input type="radio" name="aux1ModeGate" value="relay"> Relay</label>
+    <label><input type="radio" name="aux1ModeGate" value="gate2"> Gate2</label>
+    <button id="gatesSaveSettingsBtn">Save Settings</button>
+    <div id="gatesSettingsStatus" class="status"></div>
+  </div>
+
+  <div style="margin-top:1rem;">
+    <button id="gatesAux1PulseBtn">Aux1 Pulse</button>
+    <button id="gatesAux2PulseBtn">Aux2 Pulse</button>
+    <div id="gatesIoStatus" class="status"></div>
+  </div>
+
+  <div style="margin-top:1rem;">
+    <button id="simGateOpenedBtn">Sim Gate Opened</button>
+    <button id="simGateClosedBtn">Sim Gate Closed</button>
+    <button id="simForcedBtn">Sim Forced</button>
+    <button id="simTamperBtn">Sim Tamper</button>
+    <div id="gatesSimStatus" class="status"></div>
+  </div>
+
+  <div style="margin-top:1rem;">
+    <button id="gatesAddUserBtn">Add User to Gate</button>
+    <div id="gateAddUserPanel" style="display:none;">
+      <label>Select User</label><select id="gateAddUserSelect"></select>
+      <label>Role</label><select id="gateAddUserRole">
+        <option value="operator">operator</option>
+        <option value="administrator">administrator</option>
+      </select>
+      <button id="gateAddUserConfirmBtn">Confirm</button>
+      <button id="gateAddUserCancelBtn">Cancel</button>
+      <div id="gateAddUserStatus" class="status"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- STILL NEED admin.js generation — truncated for brevity -->
 <script type="module" src="admin.js"></script>
 </body>
 </html>
