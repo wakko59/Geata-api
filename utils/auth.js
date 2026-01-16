@@ -1,6 +1,11 @@
 // utils/auth.js
 import jwt from "jsonwebtoken";
-import { JWT_SECRET, ADMIN_API_KEY } from "../config.js";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.test" });
+
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "";
+
 
 export function requireAdminKey(req, res, next) {
   const key = req.header("x-api-key");
