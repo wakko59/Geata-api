@@ -180,7 +180,7 @@ export async function loadAndRenderUserProfile(userId) {
 
     $("usersPickedUser")?.textContent = `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`;
     $("usersPickedEmail")?.textContent = profile.user?.email || "(none)";
-    $("usersPickedPhone")?.textContent = profile.user?.phone || "(none)";
+    $("usersPickedPhone")?.textContent = profile.user?.phone || "(none)`;
 
     // Populate deviceSelect
     const sel = $("usersDeviceSelect");
@@ -195,7 +195,7 @@ export async function loadAndRenderUserProfile(userId) {
     $("usersScheduleSelect").disabled = false;
     $("usersSaveScheduleBtn").disabled = false;
 
-    setPanelChecked($("usersEmailPanel"), profile.devices?.length ? [] : []); // initial empty
+    setPanelChecked($("usersEmailPanel"), profile.devices?.length ? [] : []);
 
     $("usersProfileJson").textContent = JSON.stringify(profile, null, 2);
     setStatus($("usersProfileStatus"), "Profile loaded", false);
@@ -204,6 +204,7 @@ export async function loadAndRenderUserProfile(userId) {
     setStatus($("usersProfileStatus"), "Load error: " + e.message, true);
   }
 }
+
 
 export function onUsersGateChanged() {
   const deviceId = $("usersDeviceSelect").value || "";
