@@ -180,7 +180,7 @@ export async function loadAndRenderUserProfile(userId) {
 
     $("usersPickedUser")?.textContent = `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`;
     $("usersPickedEmail")?.textContent = profile.user?.email || "(none)";
-    $("usersPickedPhone")?.textContent = profile.user?.phone || "(none)`;
+    $("usersPickedPhone")?.textContent = profile.user?.phone || "(none)";
 
     // Populate deviceSelect
     const sel = $("usersDeviceSelect");
