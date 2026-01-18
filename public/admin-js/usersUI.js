@@ -178,9 +178,14 @@ export async function loadAndRenderUserProfile(userId) {
     const profile = await loadUserProfile(currentUserId, { force:true });
     currentUserProfile = profile;
 
-    $("usersPickedUser")?.textContent = `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`;
-    $("usersPickedEmail")?.textContent = profile.user?.email || "(none)";
-    $("usersPickedPhone")?.textContent = profile.user?.phone || "(none)";
+    const pickedUserEl = $("usersPickedUser");
+if (pickedUserEl) pickedUserEl.textContent = `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`;
+
+const emailEl = $("usersPickedEmail");
+if (emailEl) emailEl.textContent = profile.user?.email || "(none)";
+
+const phoneEl = $("usersPickedPhone");
+if (phoneEl) phoneEl.textContent = profile.user?.phone || "(none)";
 
     // Populate deviceSelect
     const sel = $("usersDeviceSelect");
