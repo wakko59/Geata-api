@@ -68,10 +68,28 @@ export function initUsersUI() {
   });
 
   // Load Profile
-  $("usersLoadProfileBtn")?.addEventListener("click", async ()=>{
-    const userId = $("usersSelect").value;
-    await loadAndRenderUserProfile(userId);
-  });
+  $("usersLoadProfileBtn")?.addEventListener("click", async () => {
+  const userId = $("usersSelect").value;
+  if (!userId) {
+    setStatus($("usersProfileStatus"), "Select a user first", true);
+    return;
+  }
+  setStatus($("usersProfileStatus"), "Loading user...", false);
+
+  try {
+    // Fetch basic user info
+    const user = await apiJson(`/users/${encodeURIComponent(userId)}`);
+    // Render returned data
+    $("usersProfileJson").textContent = JSON.stringify(user, null, 2);
+
+    // Show a friendly status
+    setStatus($("usersProfileStatus"), "User loaded", false);
+
+  } catch (e) {
+    setStatus($("usersProfileStatus"), "Error loading user: " + e.message, true);
+  }
+});
+
 
  // Remove auto‑load on select change; only Load Profile button triggers profile load
 $("usersSelect")?.addEventListener("change", ()=> {
@@ -150,7 +168,7 @@ $("usersSelect")?.addEventListener("change", ()=> {
 // Profile Load + Render
 // ==========================
 
-export async function loadUserProfile(userId, { force=false }={}) {
+/*export async function loadUserProfile(userId, { force=false }={}) {
   if (!userId) return null;
   if (!force && window.profilesByUserId?.has(userId)) return window.profilesByUserId.get(userId);
   const profile = await apiJson(`/profiles/users/${encodeURIComponent(userId)}`);
@@ -210,7 +228,7 @@ if (phoneEl) phoneEl.textContent = profile.user?.phone || "(none)";
   }catch(e){
     setStatus($("usersProfileStatus"), "Load error: " + e.message, true);
   }
-}
+}*/
 
 
 export function onUsersGateChanged() {
