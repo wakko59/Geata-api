@@ -18,4 +18,4 @@ export function initNavUI() {
     const hash = location.hash.replace("#", "");
     if (hash) showScreen(hash);
   });
-}
+
