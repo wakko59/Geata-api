@@ -1,5 +1,7 @@
 // admin-js/navUI.js
 
+import { showScreen } from "./screenUI.js";
+
 export function initNavUI() {
   document.querySelectorAll(".navbtn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -8,6 +10,8 @@ export function initNavUI() {
       history.replaceState(null, "", "#" + id);
     });
   });
+}
+
 
   // On hash change, show screen
   window.addEventListener("popstate", () => {
