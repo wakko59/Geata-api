@@ -197,55 +197,61 @@
   <div class="section">
     <h3 id="scheduleFormTitle">Create / Edit Schedule</h3>
 
-    <label for="schedulesName">Schedule Name</label>
-    <input id="schedulesName" type="text">
+    <label>Schedule Name</label>
+    <input id="scheduleNameInput" type="text">
 
-    <label for="schedulesDesc">Description</label>
-    <input id="schedulesDesc" type="text">
+    <label>Description</label>
+    <input id="scheduleDescInput" type="text">
 
+    <!-- Slot rows -->
     <div class="section">
       <h4>Time Slots</h4>
 
-      <!-- Slot 1 -->
-      <label>Days (0–6)</label>
-      <input id="slot1Days" placeholder="e.g. 1,2,3">
-      <label>Start</label>
-      <input id="slot1Start" type="time">
-      <label>End</label>
-      <input id="slot1End" type="time">
+      <!-- Repeat for 6 -->
+      <label>Days (0–6)</label><input id="slot1Days" placeholder="e.g. 1,2,3">
+      <label>Start</label><input id="slot1Start" type="time">
+      <label>End</label><input id="slot1End" type="time">
 
-      <!-- Slot 2 -->
-      <label>Days</label>
-      <input id="slot2Days">
-      <label>Start</label>
-      <input id="slot2Start" type="time">
-      <label>End</label>
-      <input id="slot2End" type="time">
+      <label>Days</label><input id="slot2Days">
+      <label>Start</label><input id="slot2Start" type="time">
+      <label>End</label><input id="slot2End" type="time">
+
+      <label>Days</label><input id="slot3Days">
+      <label>Start</label><input id="slot3Start" type="time">
+      <label>End</label><input id="slot3End" type="time">
+
+      <label>Days</label><input id="slot4Days">
+      <label>Start</label><input id="slot4Start" type="time">
+      <label>End</label><input id="slot4End" type="time">
+
+      <label>Days</label><input id="slot5Days">
+      <label>Start</label><input id="slot5Start" type="time">
+      <label>End</label><input id="slot5End" type="time">
+
+      <label>Days</label><input id="slot6Days">
+      <label>Start</label><input id="slot6Start" type="time">
+      <label>End</label><input id="slot6End" type="time">
     </div>
 
-    <button id="scheduleSaveTopBtn">Save Schedule</button>
+    <button id="scheduleSaveTopBtn">Save</button>
     <button id="resetScheduleFormBtn">Reset</button>
+
     <div id="scheduleStatus" class="status"></div>
   </div>
 
+  <!-- Table for existing schedules -->
   <div class="section">
     <h3>Existing Schedules</h3>
     <button id="refreshSchedulesBtn">Refresh</button>
-
     <table>
       <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Slots</th>
-          <th>Edit</th>
-          <th>Delete</th>
-        </tr>
+        <tr><th>ID</th><th>Name</th><th>Slots</th><th>Edit</th><th>Delete</th></tr>
       </thead>
       <tbody id="schedulesTableBody"></tbody>
     </table>
   </div>
 </div>
+
 
 
 <!-- STILL NEED admin.js generation — truncated for brevity -->
