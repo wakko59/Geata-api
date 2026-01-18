@@ -68,7 +68,7 @@ export function initUsersUI() {
   });
 
   // Load Profile
-  $("usersLoadProfileBtn")?.addEventListener("click", async () => {
+$("usersLoadProfileBtn")?.addEventListener("click", async () => {
   const userId = $("usersSelect").value;
   if (!userId) {
     setStatus($("usersProfileStatus"), "Select a user first", true);
@@ -77,18 +77,33 @@ export function initUsersUI() {
   setStatus($("usersProfileStatus"), "Loading user...", false);
 
   try {
-    // Fetch basic user info
     const user = await apiJson(`/users/${encodeURIComponent(userId)}`);
-    // Render returned data
-    $("usersProfileJson").textContent = JSON.stringify(user, null, 2);
+    currentUserProfile = user;
 
-    // Show a friendly status
+    $("usersProfileJson").textContent = JSON.stringify(user, null, 2);
     setStatus($("usersProfileStatus"), "User loaded", false);
 
+    const devSel = $("usersDeviceSelect");
+    devSel.innerHTML = `<option value="">-- Select a gate --</option>`;
+    if (Array.isArray(user.devices)) {
+      user.devices.forEach(d => {
+        const o = document.createElement("option");
+        o.value = d.deviceId;
+        o.textContent = d.deviceName
+          ? `${d.deviceName} (${d.deviceId})`
+          : d.deviceId;
+        devSel.appendChild(o);
+      });
+    }
+    devSel.disabled = false;
+
+    $("usersScheduleSelect").innerHTML = "";
+    setPanelChecked($("usersEmailPanel"), []);
   } catch (e) {
     setStatus($("usersProfileStatus"), "Error loading user: " + e.message, true);
   }
 });
+
 
 
  // Remove auto‑load on select change; only Load Profile button triggers profile load
@@ -117,7 +132,10 @@ $("usersSelect")?.addEventListener("change", ()=> {
   });
 
   // Device select change
-  $("usersDeviceSelect")?.addEventListener("change", onUsersGateChanged);
+  $("usersDeviceSelect")?.addEventListener("change", () => {
+  onUsersGateChanged();
+});
+
 
   // Save Schedule
   $("usersSaveScheduleBtn")?.addEventListener("click", async ()=>{
@@ -132,7 +150,7 @@ $("usersSelect")?.addEventListener("change", ()=> {
         method:"PUT",
         body: { scheduleId }
       });
-      await loadAndRenderUserProfile(currentUserId);
+      onUsersGateChanged();
       setStatus($("usersScheduleStatus"), "Saved schedule", false);
     }catch(e){
       setStatus($("usersScheduleStatus"), "Save error: " + e.message, true);
@@ -152,7 +170,7 @@ $("usersSelect")?.addEventListener("change", ()=> {
         method:"PUT",
         body: { eventTypes }
       });
-      await loadAndRenderUserProfile(currentUserId);
+      onUsersGateChanged();
       setStatus($("usersEmailStatus"), "Saved email subscriptions", false);
     }catch(e){
       setStatus($("usersEmailStatus"), "Save error: " + e.message, true);
@@ -234,14 +252,34 @@ if (phoneEl) phoneEl.textContent = profile.user?.phone || "(none)";
 export function onUsersGateChanged() {
   const deviceId = $("usersDeviceSelect").value || "";
   currentUserDeviceId = deviceId;
+
   $("usersSaveScheduleBtn").disabled = !deviceId;
   $("usersSaveEmailBtn").disabled = !deviceId;
 
-  if (!currentUserProfile || !deviceId) return;
+  if (!currentUserProfile || !deviceId) {
+    $("usersScheduleSelect").innerHTML = "";
+    setPanelChecked($("usersEmailPanel"), []);
+    return;
+  }
 
-  const dev = currentUserProfile.devices.find(d => d.deviceId === deviceId) || {};
+  const dev = (currentUserProfile.devices || []).find(d => d.deviceId === deviceId) || {};
+
+  $("usersScheduleSelect").innerHTML = "";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "24/7 (no schedule)";
+  $("usersScheduleSelect").appendChild(blank);
+
+  (allSchedules || []).forEach(s => {
+    const o = document.createElement("option");
+    o.value = String(s.id);
+    o.textContent = s.name;
+    $("usersScheduleSelect").appendChild(o);
+  });
+
   $("usersScheduleSelect").value = dev.scheduleId || "";
 
+  renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
   setPanelChecked($("usersEmailPanel"), dev.notifications?.eventTypes || []);
 }
-export { fillUserSelect };
+
