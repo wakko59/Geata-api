@@ -224,3 +224,4 @@ export function onUsersGateChanged() {
 
   setPanelChecked($("usersEmailPanel"), dev.notifications?.eventTypes || []);
 }
+export { fillUserSelect };
