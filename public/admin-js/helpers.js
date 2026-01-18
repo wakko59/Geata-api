@@ -43,3 +43,25 @@ export function setPanelChecked(containerEl, selectedList) {
     cb.checked = set.has(cb.value);
   });
 }
+export function renderDeviceCheckboxPanel(container, devices) {
+  if (!container) return;
+  container.innerHTML = "";
+  devices.forEach((device) => {
+    const id = "cb_" + Math.random().toString(36).substring(2, 9);
+    const label = document.createElement("label");
+    label.htmlFor = id;
+    label.className = "checkbox-label";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = device.id;
+    input.id = id;
+
+    const span = document.createElement("span");
+    span.textContent = device.name || device.id;
+
+    label.appendChild(input);
+    label.appendChild(span);
+    container.appendChild(label);
+  });
+}
