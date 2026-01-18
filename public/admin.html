@@ -103,10 +103,7 @@
     <button id="usersSaveEmailBtn">Save Email Subscriptions</button>
     <div id="usersEmailStatus" class="status"></div>
   </div>
-  <div>
-  <label for="schedulesName">Schedule Name:</label>
-  <input id="schedulesName" type="text">
-</div>
+  
 
 
   <div class="section">
@@ -194,6 +191,62 @@
   </div>
 
 </div>
+<div id="screen-schedules" class="screen">
+  <h2>Schedules</h2>
+
+  <div class="section">
+    <h3 id="scheduleFormTitle">Create / Edit Schedule</h3>
+
+    <label for="schedulesName">Schedule Name</label>
+    <input id="schedulesName" type="text">
+
+    <label for="schedulesDesc">Description</label>
+    <input id="schedulesDesc" type="text">
+
+    <div class="section">
+      <h4>Time Slots</h4>
+
+      <!-- Slot 1 -->
+      <label>Days (0–6)</label>
+      <input id="slot1Days" placeholder="e.g. 1,2,3">
+      <label>Start</label>
+      <input id="slot1Start" type="time">
+      <label>End</label>
+      <input id="slot1End" type="time">
+
+      <!-- Slot 2 -->
+      <label>Days</label>
+      <input id="slot2Days">
+      <label>Start</label>
+      <input id="slot2Start" type="time">
+      <label>End</label>
+      <input id="slot2End" type="time">
+    </div>
+
+    <button id="scheduleSaveTopBtn">Save Schedule</button>
+    <button id="resetScheduleFormBtn">Reset</button>
+    <div id="scheduleStatus" class="status"></div>
+  </div>
+
+  <div class="section">
+    <h3>Existing Schedules</h3>
+    <button id="refreshSchedulesBtn">Refresh</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Slots</th>
+          <th>Edit</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody id="schedulesTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
 
 <!-- STILL NEED admin.js generation — truncated for brevity -->
 <script type="module" src="admin-js/main.js"></script>
