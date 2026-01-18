@@ -73,11 +73,13 @@ export function initUsersUI() {
     await loadAndRenderUserProfile(userId);
   });
 
-  // On selection change
-  $("usersSelect")?.addEventListener("change", async ()=>{
-    const userId = $("usersSelect").value;
-    await loadAndRenderUserProfile(userId);
-  });
+ // Remove auto‑load on select change; only Load Profile button triggers profile load
+$("usersSelect")?.addEventListener("change", ()=> {
+  // Optionally clear the profile panel when changing selection
+  $("usersProfileJson").textContent = "";
+  setStatus($("usersProfileStatus"), "", false);
+});
+
 
   // Delete user
   $("usersDeleteBtn")?.addEventListener("click", async ()=>{
