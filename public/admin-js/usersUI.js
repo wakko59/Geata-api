@@ -194,7 +194,7 @@ $("usersSelect")?.addEventListener("change", ()=> {
 // Profile Load + Render
 // ==========================
 
-/*export async function loadUserProfile(userId, { force=false }={}) {
+export async function loadUserProfile(userId, { force=false }={}) {
   if (!userId) return null;
   if (!force && window.profilesByUserId?.has(userId)) return window.profilesByUserId.get(userId);
   const profile = await apiJson(`/profiles/users/${encodeURIComponent(userId)}`);
@@ -207,35 +207,42 @@ export async function loadAndRenderUserProfile(userId) {
   currentUserProfile = null;
   currentUserDeviceId = "";
 
-  $("usersDeviceSelect").innerHTML = `<option value="">-- Select a gate --</option>`;
+  // Reset UI fields
+  $("usersDeviceSelect").innerHTML = "";
+  $("usersScheduleSelect").innerHTML = "";
   $("usersScheduleSelect").disabled = true;
   $("usersSaveScheduleBtn").disabled = true;
   setPanelChecked($("usersEmailPanel"), []);
   $("usersSaveEmailBtn").disabled = true;
   $("usersProfileJson").textContent = "";
+  $("usersPickedUser") && ($("usersPickedUser").textContent = "");
+  $("usersPickedEmail") && ($("usersPickedEmail").textContent = "");
+  $("usersPickedPhone") && ($("usersPickedPhone").textContent = "");
 
-  if (!currentUserId){
+  if (!currentUserId) {
     setStatus($("usersProfileStatus"), "No user selected", true);
     return;
   }
 
   setStatus($("usersProfileStatus"), "Loading profile…", false);
-  try{
+
+  try {
     const profile = await loadUserProfile(currentUserId, { force:true });
     currentUserProfile = profile;
 
-    const pickedUserEl = $("usersPickedUser");
-if (pickedUserEl) pickedUserEl.textContent = `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`;
+    // Update static user info
+    $("usersPickedUser") && ($("usersPickedUser").textContent = `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`);
+    $("usersPickedEmail") && ($("usersPickedEmail").textContent = profile.user?.email || "(none)");
+    $("usersPickedPhone") && ($("usersPickedPhone").textContent = profile.user?.phone || "(none)");
 
-const emailEl = $("usersPickedEmail");
-if (emailEl) emailEl.textContent = profile.user?.email || "(none)";
-
-const phoneEl = $("usersPickedPhone");
-if (phoneEl) phoneEl.textContent = profile.user?.phone || "(none)";
-
-    // Populate deviceSelect
+    // Populate gate dropdown
     const sel = $("usersDeviceSelect");
-    sel.innerHTML = `<option value="">-- Select a gate --</option>`;
+    sel.innerHTML = "";
+    const defaultGateOpt = document.createElement("option");
+    defaultGateOpt.value = "";
+    defaultGateOpt.textContent = "-- Select a gate --";
+    sel.appendChild(defaultGateOpt);
+
     (profile.devices || []).forEach(d => {
       const o = document.createElement("option");
       o.value = d.deviceId;
@@ -243,18 +250,19 @@ if (phoneEl) phoneEl.textContent = profile.user?.phone || "(none)";
       sel.appendChild(o);
     });
 
-    $("usersScheduleSelect").disabled = false;
-    $("usersSaveScheduleBtn").disabled = false;
+    sel.disabled = false;
+    sel.onchange = onUsersGateChanged; // bind
 
-    setPanelChecked($("usersEmailPanel"), profile.devices?.length ? [] : []);
-
+    // Profile JSON display
     $("usersProfileJson").textContent = JSON.stringify(profile, null, 2);
+
     setStatus($("usersProfileStatus"), "Profile loaded", false);
 
-  }catch(e){
-    setStatus($("usersProfileStatus"), "Load error: " + e.message, true);
+  } catch (e) {
+    setStatus($("usersProfileStatus"), "Profile load error: " + e.message, true);
   }
-}*/
+}
+
 
 
 export async function onUsersGateChanged() {
