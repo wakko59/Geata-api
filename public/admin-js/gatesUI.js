@@ -1,6 +1,6 @@
 // admin-js/gatesUI.js
 
-import { $, setStatus, renderDeviceCheckboxPanel } from "./helpers.js";
+import { $, setStatus } from "./helpers.js";
 import { apiJson } from "./api.js";
 import { fillUserSelect, loadUsers } from "./usersUI.js";
 import { openGateAlerts } from "./alertsUI.js";
