@@ -37,6 +37,7 @@ function fillUserSelect(selectEl, users) {
   });
 }
 
+
 export function initUsersUI() {
 
   renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
@@ -182,6 +183,7 @@ $("usersSelect")?.addEventListener("change", ()=> {
 
   // Render event checkboxes
   renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
+  initUserCredEditor();
 }
 
 
@@ -308,6 +310,97 @@ export async function onUsersGateChanged() {
     setPanelChecked($("usersEmailPanel"), []);
   }
 }
+async function loadSelectedUserIntoCredForm() {
+  const userId = $("usersSelect") ? $("usersSelect").value : "";
+  if (!userId) {
+    currentUserIdForCreds = null;
+    $("userCredId").textContent = "(none)";
+    $("userCredName").value = "";
+    $("userCredEmail").value = "";
+    $("userCredPhone").value = "";
+    $("userCredPassword").value = "";
+    setUserCredEditing(false);
+    return;
+  }
+
+  try {
+    const profile = await apiJson(`/users/${encodeURIComponent(userId)}`);
+    currentUserIdForCreds = profile.id;
+
+    $("userCredId").textContent = profile.id || "(none)";
+    $("userCredName").value = profile.name || "";
+    $("userCredEmail").value = profile.email || "";
+    $("userCredPhone").value = profile.phone || "";
+    $("userCredPassword").value = ""; // never show existing password
+
+    setUserCredEditing(false);
+    setStatus($("userCredStatus"), "Loaded user credentials. Click Edit User to modify.", false);
+
+  } catch (e) {
+    setStatus($("userCredStatus"), "Profile load error: " + e.message, true);
+  }
+}
+
+function initUserCredEditor() {
+  $("editUserBtn")?.addEventListener("click", async () => {
+    if (!currentUserIdForCreds) {
+      await loadSelectedUserIntoCredForm(); // load first if needed
+      if (!currentUserIdForCreds) return;
+    }
+    setUserCredEditing(true);
+    setStatus($("userCredStatus"), "Edit enabled. Change fields and click Save User.", false);
+  });
+
+  $("saveUserBtn")?.addEventListener("click", saveUserCreds);
+
+  $("usersSelect")?.addEventListener("change", async () => {
+    await loadSelectedUserIntoCredForm();
+  });
+
+  setUserCredEditing(false);
+}
+// SAVE USERS CREDENTIALS
+async function saveUserCreds() {
+  if (!currentUserIdForCreds) {
+    setStatus($("userCredStatus"), "No user loaded", true);
+    return;
+  }
+
+  try {
+    const payload = {
+      name: $("userCredName").value.trim(),
+      email: $("userCredEmail").value.trim(),
+      phone: $("userCredPhone").value.trim(),
+    };
+
+    // Only send password if something was entered
+    const pwd = $("userCredPassword").value;
+    if (pwd) payload.password = pwd;
+
+    await apiJson(`/users/${encodeURIComponent(currentUserIdForCreds)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    $("userCredPassword").value = "";
+    setUserCredEditing(false);
+    setStatus($("userCredStatus"), "Saved user credentials", false);
+
+  } catch (e) {
+    setStatus($("userCredStatus"), "Save error: " + e.message, true);
+  }
+}
+//Edge Case No user selected
+function setUserCredEditing(enabled) {
+  userCredEditing = enabled;
+
+  $("userCredName").disabled = !enabled;
+  $("userCredEmail").disabled = !enabled;
+  $("userCredPhone").disabled = !enabled;
+  $("userCredPassword").disabled = !enabled;
+  $("saveUserBtn").disabled = !enabled || !currentUserIdForCreds;
+}
+
 
 
 
