@@ -20,18 +20,21 @@ router.get("/profiles/users/:id", requireAdminKey, async (req, res) => {
     }
     const user = userResult.rows[0];
 
-    // Load devices this user has access to
-    const devResult = await q(
-      `SELECT
-         du.device_id,
-         d.name AS device_name,
-         du.role,
-         du.schedule_id
-       FROM device_users du
-       JOIN devices d ON d.id = du.device_id
-       WHERE du.user_id = $1`,
-      [id]
-    );
+   // Load enrolled devices for this user
+const devResult = await q(
+  `SELECT
+     du.device_id        AS device_id,
+     d.name              AS device_name,
+     du.role             AS role,
+     du.schedule_id      AS schedule_id
+   FROM device_users du
+   INNER JOIN devices d
+      ON d.id = du.device_id
+   WHERE du.user_id = $1
+   ORDER BY du.device_id`,
+  [id]
+);
+
 
     const devices = devResult.rows.map((r) => ({
       deviceId: r.device_id,
