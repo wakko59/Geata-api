@@ -261,58 +261,56 @@ export async function onUsersGateChanged() {
   const deviceId = $("usersDeviceSelect").value || "";
   currentUserDeviceId = deviceId;
 
+  // Always clear status messages
+  setStatus($("usersScheduleStatus"), "", false);
+  setStatus($("usersEmailStatus"), "", false);
+
+  // Disable buttons if no gate
   $("usersSaveScheduleBtn").disabled = !deviceId;
   $("usersSaveEmailBtn").disabled = !deviceId;
 
-  if (!currentUserId || !deviceId) {
+  if (!currentUserProfile || !deviceId) {
+    // Clear dropdown and checkboxes if no gate is picked
     $("usersScheduleSelect").innerHTML = "";
     setPanelChecked($("usersEmailPanel"), []);
     return;
   }
 
-  const schedSelect = $("usersScheduleSelect");
-  schedSelect.innerHTML = "";
+  // -------------------------------
+  // Populate Schedule Dropdown
+  // -------------------------------
+  const sel = $("usersScheduleSelect");
+  sel.innerHTML = "";
 
-  // ALWAYS add the “no schedule” option
+  // Add default schedule option (NULL in DB → 24/7)
   const blankOpt = document.createElement("option");
   blankOpt.value = "";
   blankOpt.textContent = "24/7 (no schedule)";
-  schedSelect.appendChild(blankOpt);
+  sel.appendChild(blankOpt);
 
-  // Populate with all schedules loaded earlier
-  if (Array.isArray(window.appSchedules)) {
-    window.appSchedules.forEach(s => {
-      const o = document.createElement("option");
-      o.value = String(s.id);
-      o.textContent = s.name;
-      schedSelect.appendChild(o);
-    });
-  }
+  // Add all named schedules from global list
+  (window.appSchedules || []).forEach(s => {
+    const o = document.createElement("option");
+    o.value = String(s.id);
+    o.textContent = s.name;
+    sel.appendChild(o);
+  });
 
-  // Now load the user’s schedule for this gate from backend
-  try {
-    const resp = await apiJson(
-      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(currentUserId)}/schedule-assignment`
-    );
-    schedSelect.value = resp.scheduleId ?? "";
-  } catch (e) {
-    console.warn("schedule load failed:", e);
-    schedSelect.value = "";
-  }
+  // Set the selected value based on the profile, if present
+  const dev = currentUserProfile.devices.find(d => d.deviceId === deviceId) || {};
+  sel.value = dev.scheduleId ? String(dev.scheduleId) : "";
 
-  // Now update email alerts as before
-  try {
-    const notifsResp = await apiJson(
-      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(currentUserId)}/notifications`
-    );
-    renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
-    setPanelChecked($("usersEmailPanel"), notifsResp.eventTypes || []);
-  } catch (e) {
-    console.warn("notifications load failed:", e);
-    renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
-    setPanelChecked($("usersEmailPanel"), []);
-  }
+  // -------------------------------
+  // Populate Email Alerts
+  // -------------------------------
+  renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
+
+  const eventTypes = (dev.notifications && Array.isArray(dev.notifications.eventTypes))
+    ? dev.notifications.eventTypes
+    : [];
+  setPanelChecked($("usersEmailPanel"), eventTypes);
 }
+
 async function loadSelectedUserIntoCredForm() {
   const userId = $("usersSelect") ? $("usersSelect").value : "";
   if (!userId) {
