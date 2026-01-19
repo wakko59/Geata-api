@@ -252,21 +252,20 @@ if (phoneEl) phoneEl.textContent = profile.user?.phone || "(none)";
 }*/
 
 
-export function onUsersGateChanged() {
+export async function onUsersGateChanged() {
   const deviceId = $("usersDeviceSelect").value || "";
   currentUserDeviceId = deviceId;
 
   $("usersSaveScheduleBtn").disabled = !deviceId;
   $("usersSaveEmailBtn").disabled = !deviceId;
 
-  if (!currentUserProfile || !deviceId) {
+  if (!currentUserId || !deviceId) {
     $("usersScheduleSelect").innerHTML = "";
     setPanelChecked($("usersEmailPanel"), []);
     return;
   }
 
-  const dev = (currentUserProfile.devices || []).find(d => d.deviceId === deviceId) || {};
-
+  // Populate schedule dropdown (all schedules)
   $("usersScheduleSelect").innerHTML = "";
   const blank = document.createElement("option");
   blank.value = "";
@@ -280,10 +279,31 @@ export function onUsersGateChanged() {
     $("usersScheduleSelect").appendChild(o);
   });
 
-  $("usersScheduleSelect").value = dev.scheduleId || "";
+  try {
+    // FETCH schedule assignment from backend
+    const schedResp = await apiJson(
+      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(currentUserId)}/schedule-assignment`
+    );
+    $("usersScheduleSelect").value = schedResp.scheduleId || "";
+  } catch (e) {
+    console.warn("schedule load failed:", e);
+    $("usersScheduleSelect").value = "";
+  }
 
-  renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
-  setPanelChecked($("usersEmailPanel"), dev.notifications?.eventTypes || []);
+  try {
+    // FETCH alert subscriptions from backend
+    const notifsResp = await apiJson(
+      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(currentUserId)}/notifications`
+    );
+    const eventTypes = Array.isArray(notifsResp.eventTypes) ? notifsResp.eventTypes : [];
+    renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
+    setPanelChecked($("usersEmailPanel"), eventTypes);
+  } catch (e) {
+    console.warn("notifications load failed:", e);
+    renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
+    setPanelChecked($("usersEmailPanel"), []);
+  }
 }
+
 
 export { fillUserSelect };
