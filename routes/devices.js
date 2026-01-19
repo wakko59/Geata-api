@@ -138,24 +138,47 @@ router.put(
   requireAdminKey,
   async (req, res) => {
     const { deviceId, userId } = req.params;
-    const { scheduleId } = req.body;
+    let { scheduleId } = req.body || {};
+    const sid =
+      scheduleId === "" || scheduleId === null ? null : scheduleId;
 
     try {
-      await q(
-        `INSERT INTO device_users (device_id, user_id, schedule_id)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (device_id, user_id)
-         DO UPDATE SET schedule_id = EXCLUDED.schedule_id`,
-        [deviceId, userId, scheduleId]
+      console.log("Saving schedule assignment:", {
+        deviceId,
+        userId,
+        scheduleId: sid,
+      });
+
+      // First try to UPDATE if row exists
+      const result = await q(
+        `UPDATE device_users
+           SET schedule_id = $1
+         WHERE device_id = $2
+           AND user_id = $3
+         RETURNING device_id`,
+        [sid, deviceId, userId]
       );
 
-      res.json({ deviceId, userId, scheduleId });
+      if (result.rowCount === 0) {
+        // Row did not exist, so INSERT with a default role
+        const defaultRole = "operator"; // or "administrator" if you prefer
+        await q(
+          `INSERT INTO device_users (device_id, user_id, role, schedule_id)
+           VALUES ($1, $2, $3, $4)`,
+          [deviceId, userId, defaultRole, sid]
+        );
+      }
+
+      res.json({ deviceId, userId, scheduleId: sid });
     } catch (err) {
       console.error("PUT schedule-assignment failed:", err);
-      res.status(500).json({ error: "Failed to save schedule assignment" });
+      res
+        .status(500)
+        .json({ error: "Failed to save schedule assignment" });
     }
   }
 );
+
 
 
 // GET current notifications (event types) for a user at a gate
