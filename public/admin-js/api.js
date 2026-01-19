@@ -1,17 +1,12 @@
-// admin-js/api.js
-import { setStatus } from "./helpers.js";
+// admin‑js/api.js
 
-export function getApiKey() {
-  return localStorage.getItem("geata_admin_api_key") || "";
-}
+import { setStatus } from "./helpers.js"; // import setStatus for error handling
 
 export function requireAuthHeaders() {
-  const key = getApiKey();
-  if (!key) throw new Error("Missing admin API key");
-  return {
-    "Content-Type": "application/json",
-    "x-api-key": key
-  };
+  const headers = { "Content-Type": "application/json" };
+  const key = localStorage.getItem("geata_admin_api_key");
+  if (key) headers["x-api-key"] = key;
+  return headers;
 }
 
 export async function apiJson(path, { method="GET", body=null, statusEl=null }={}) {
@@ -21,6 +16,7 @@ export async function apiJson(path, { method="GET", body=null, statusEl=null }={
       headers: requireAuthHeaders(),
       body: body ? JSON.stringify(body) : null
     });
+
     const text = await res.text().catch(() => "");
     const data = text ? JSON.parse(text) : null;
 
