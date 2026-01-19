@@ -215,9 +215,18 @@ export async function loadAndRenderUserProfile(userId) {
   setPanelChecked($("usersEmailPanel"), []);
   $("usersSaveEmailBtn").disabled = true;
   $("usersProfileJson").textContent = "";
+
   $("usersPickedUser") && ($("usersPickedUser").textContent = "");
   $("usersPickedEmail") && ($("usersPickedEmail").textContent = "");
   $("usersPickedPhone") && ($("usersPickedPhone").textContent = "");
+
+  // Reset credentials editor
+  $("userCredId").textContent = "";
+  $("userCredName").value = "";
+  $("userCredEmail").value = "";
+  $("userCredPhone").value = "";
+  $("userCredPassword").value = "";
+  setUserCredEditing(false);
 
   if (!currentUserId) {
     setStatus($("usersProfileStatus"), "No user selected", true);
@@ -227,41 +236,75 @@ export async function loadAndRenderUserProfile(userId) {
   setStatus($("usersProfileStatus"), "Loading profile…", false);
 
   try {
-    const profile = await loadUserProfile(currentUserId, { force:true });
+    const profile = await loadUserProfile(currentUserId, { force: true });
     currentUserProfile = profile;
 
-    // Update static user info
-    $("usersPickedUser") && ($("usersPickedUser").textContent = `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`);
-    $("usersPickedEmail") && ($("usersPickedEmail").textContent = profile.user?.email || "(none)");
-    $("usersPickedPhone") && ($("usersPickedPhone").textContent = profile.user?.phone || "(none)");
+    /* ============================
+       Static profile header fields
+       ============================ */
+    $("usersPickedUser") &&
+      ($("usersPickedUser").textContent =
+        `${profile.user?.name || "(no name)"} [${profile.user?.id || currentUserId}]`);
 
-    // Populate gate dropdown
+    $("usersPickedEmail") &&
+      ($("usersPickedEmail").textContent = profile.user?.email || "(none)");
+
+    $("usersPickedPhone") &&
+      ($("usersPickedPhone").textContent = profile.user?.phone || "(none)");
+
+    /* ============================
+       Populate credentials editor
+       ============================ */
+    $("userCredId").textContent = profile.user.id || "";
+    $("userCredName").value = profile.user.name || "";
+    $("userCredEmail").value = profile.user.email || "";
+    $("userCredPhone").value = profile.user.phone || "";
+    $("userCredPassword").value = ""; // never prefill password
+
+    $("editUserBtn").disabled = false;
+    $("saveUserBtn").disabled = false;
+    setUserCredEditing(false);
+
+    /* ============================
+       Populate gate dropdown
+       ============================ */
     const sel = $("usersDeviceSelect");
     sel.innerHTML = "";
-    const defaultGateOpt = document.createElement("option");
-    defaultGateOpt.value = "";
-    defaultGateOpt.textContent = "-- Select a gate --";
-    sel.appendChild(defaultGateOpt);
+
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = "-- Select a gate --";
+    sel.appendChild(defaultOpt);
 
     (profile.devices || []).forEach(d => {
       const o = document.createElement("option");
       o.value = d.deviceId;
-      o.textContent = d.deviceName ? `${d.deviceId} – ${d.deviceName}` : d.deviceId;
+      o.textContent = d.deviceName
+        ? `${d.deviceId} – ${d.deviceName}`
+        : d.deviceId;
       sel.appendChild(o);
     });
 
     sel.disabled = false;
-    sel.onchange = onUsersGateChanged; // bind
+    sel.onchange = onUsersGateChanged;
 
-    // Profile JSON display
-    $("usersProfileJson").textContent = JSON.stringify(profile, null, 2);
+    /* ============================
+       Debug JSON view
+       ============================ */
+    $("usersProfileJson").textContent =
+      JSON.stringify(profile, null, 2);
 
     setStatus($("usersProfileStatus"), "Profile loaded", false);
 
   } catch (e) {
-    setStatus($("usersProfileStatus"), "Profile load error: " + e.message, true);
+    setStatus(
+      $("usersProfileStatus"),
+      "Profile load error: " + e.message,
+      true
+    );
   }
 }
+
 
 
 
