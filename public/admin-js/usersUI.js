@@ -333,7 +333,7 @@ async function loadSelectedUserIntoCredForm() {
   }
 
   try {
-    const profile = await apiJson(`/users/${encodeURIComponent(userId)}`);
+    const profile = await apiJson(`/profiles/users/${encodeURIComponent(userId)}`);
     currentUserIdForCreds = profile.id;
 
     $("userCredId").textContent = profile.id || "(none)";
