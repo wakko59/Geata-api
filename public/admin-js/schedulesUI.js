@@ -66,12 +66,24 @@ export async function loadSchedules() {
   try {
     const data = await apiJson("/schedules");
     allSchedules = Array.isArray(data) ? data : [];
+
+    window.appSchedules = allSchedules; // ✅ ADD THIS LINE
+
     await renderSchedules();
-    setStatus($("scheduleStatus"), `Loaded ${allSchedules.length} schedules`, false);
+    setStatus(
+      $("scheduleStatus"),
+      `Loaded ${allSchedules.length} schedules`,
+      false
+    );
   } catch (e) {
-    setStatus($("scheduleStatus"), "Error loading schedules: " + e.message, true);
+    setStatus(
+      $("scheduleStatus"),
+      "Error loading schedules: " + e.message,
+      true
+    );
   }
 }
+
 
 export async function renderSchedules() {
   const tbody = document.querySelector("#schedulesTable tbody");

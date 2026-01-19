@@ -265,45 +265,50 @@ export async function onUsersGateChanged() {
     return;
   }
 
-  // Populate schedule dropdown (all schedules)
-  $("usersScheduleSelect").innerHTML = "";
-  const blank = document.createElement("option");
-  blank.value = "";
-  blank.textContent = "24/7 (no schedule)";
-  $("usersScheduleSelect").appendChild(blank);
+  const schedSelect = $("usersScheduleSelect");
+  schedSelect.innerHTML = "";
 
-  (allSchedules || []).forEach(s => {
-    const o = document.createElement("option");
-    o.value = String(s.id);
-    o.textContent = s.name;
-    $("usersScheduleSelect").appendChild(o);
-  });
+  // ALWAYS add the “no schedule” option
+  const blankOpt = document.createElement("option");
+  blankOpt.value = "";
+  blankOpt.textContent = "24/7 (no schedule)";
+  schedSelect.appendChild(blankOpt);
 
-  try {
-    // FETCH schedule assignment from backend
-    const schedResp = await apiJson(
-      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(currentUserId)}/schedule-assignment`
-    );
-    $("usersScheduleSelect").value = schedResp.scheduleId || "";
-  } catch (e) {
-    console.warn("schedule load failed:", e);
-    $("usersScheduleSelect").value = "";
+  // Populate with all schedules loaded earlier
+  if (Array.isArray(window.appSchedules)) {
+    window.appSchedules.forEach(s => {
+      const o = document.createElement("option");
+      o.value = String(s.id);
+      o.textContent = s.name;
+      schedSelect.appendChild(o);
+    });
   }
 
+  // Now load the user’s schedule for this gate from backend
   try {
-    // FETCH alert subscriptions from backend
+    const resp = await apiJson(
+      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(currentUserId)}/schedule-assignment`
+    );
+    schedSelect.value = resp.scheduleId ?? "";
+  } catch (e) {
+    console.warn("schedule load failed:", e);
+    schedSelect.value = "";
+  }
+
+  // Now update email alerts as before
+  try {
     const notifsResp = await apiJson(
       `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(currentUserId)}/notifications`
     );
-    const eventTypes = Array.isArray(notifsResp.eventTypes) ? notifsResp.eventTypes : [];
     renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
-    setPanelChecked($("usersEmailPanel"), eventTypes);
+    setPanelChecked($("usersEmailPanel"), notifsResp.eventTypes || []);
   } catch (e) {
     console.warn("notifications load failed:", e);
     renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
     setPanelChecked($("usersEmailPanel"), []);
   }
 }
+
 
 
 export { fillUserSelect };
