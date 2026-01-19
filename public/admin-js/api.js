@@ -1,7 +1,8 @@
 // admin‑js/api.js
 
-import { setStatus } from "./helpers.js"; // import setStatus for error handling
+import { setStatus } from "./helpers.js";
 
+// Return headers including the stored admin API key
 export function requireAuthHeaders() {
   const headers = { "Content-Type": "application/json" };
   const key = localStorage.getItem("geata_admin_api_key");
@@ -9,6 +10,18 @@ export function requireAuthHeaders() {
   return headers;
 }
 
+// Return the currently stored API key (for auth UI)
+export function getApiKey() {
+  return localStorage.getItem("geata_admin_api_key") || "";
+}
+
+// Set the API key in localStorage
+export function setApiKey(key) {
+  if (key) localStorage.setItem("geata_admin_api_key", key);
+  else localStorage.removeItem("geata_admin_api_key");
+}
+
+// JSON fetch helper used by the UI
 export async function apiJson(path, { method="GET", body=null, statusEl=null }={}) {
   try {
     const res = await fetch(path, {
