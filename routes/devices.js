@@ -114,5 +114,84 @@ router.put("/devices/:id/settings", requireAdminKey, async (req, res) => {
   );
   res.json(r.rows[0].settings || {});
 });
+// =========================
+// User–Gate Nested Routes
+// =========================
+
+// GET current schedule assignment for a user at a gate
+router.get(
+  "/devices/:deviceId/users/:userId/schedule-assignment",
+  requireAdminKey,
+  async (req, res) => {
+    const { deviceId, userId } = req.params;
+    const r = await one(
+      `SELECT schedule_id FROM device_users WHERE device_id=$1 AND user_id=$2`,
+      [deviceId, userId]
+    );
+    res.json({ scheduleId: r?.schedule_id || null });
+  }
+);
+
+// PUT update schedule assignment
+router.put(
+  "/devices/:deviceId/users/:userId/schedule-assignment",
+  requireAdminKey,
+  async (req, res) => {
+    const { deviceId, userId } = req.params;
+    const { scheduleId } = req.body || {};
+    await q(
+      `UPDATE device_users SET schedule_id=$1 WHERE device_id=$2 AND user_id=$3`,
+      [scheduleId, deviceId, userId]
+    );
+    res.json({ scheduleId });
+  }
+);
+
+// GET current notifications (event types) for a user at a gate
+router.get(
+  "/devices/:deviceId/users/:userId/notifications",
+  requireAdminKey,
+  async (req, res) => {
+    const { deviceId, userId } = req.params;
+    const r = await q(
+      `SELECT event_type FROM device_notifications_subscriptions
+       WHERE device_id=$1 AND user_id=$2 AND enabled=TRUE`,
+      [deviceId, userId]
+    );
+    const eventTypes = r.rows.map(r => r.event_type);
+    res.json({ eventTypes });
+  }
+);
+
+// PUT update notifications
+router.put(
+  "/devices/:deviceId/users/:userId/notifications",
+  requireAdminKey,
+  async (req, res) => {
+    const { deviceId, userId } = req.params;
+    const { eventTypes } = req.body || {};
+    if (!Array.isArray(eventTypes))
+      return badRequest(res, "eventTypes must be an array");
+
+    // Delete old subscriptions
+    await q(
+      `DELETE FROM device_notifications_subscriptions
+       WHERE device_id=$1 AND user_id=$2`,
+      [deviceId, userId]
+    );
+
+    // Insert new ones
+    for (const eventType of eventTypes) {
+      await q(
+        `INSERT INTO device_notifications_subscriptions (device_id, user_id, event_type, enabled)
+         VALUES ($1, $2, $3, TRUE)`,
+        [deviceId, userId, eventType]
+      );
+    }
+
+    res.json({ eventTypes });
+  }
+);
+
 
 export default router;
