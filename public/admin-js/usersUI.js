@@ -10,6 +10,9 @@ let allDevices = [];
 let currentUserId = "";
 let currentUserProfile = null;
 let currentUserDeviceId = "";
+let userCredEditing = false;
+let currentUserIdForCreds = null;
+
 
 // ==========================
 // Users Screen
