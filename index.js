@@ -9,6 +9,7 @@ import reportRoutes from "./routes/reports.js";
 import adminRoutes from "./routes/admin.js";
 import pollingRoutes from "./routes/polling.js";
 import { pool } from "./utils/db.js";
+import profilesRoutes from "./routes/profiles.js";
 
 const app = express();
 app.use(express.json());
@@ -23,6 +24,8 @@ app.use(eventRoutes);
 app.use(reportRoutes);
 app.use(adminRoutes);
 app.use(pollingRoutes);
+app.use(profilesRoutes);
+
 
 // Error handler
 app.use((err, req, res, next) => {
