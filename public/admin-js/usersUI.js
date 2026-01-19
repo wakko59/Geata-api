@@ -79,6 +79,9 @@ $("usersLoadProfileBtn")?.addEventListener("click", async () => {
   try {
     const user = await apiJson(`/users/${encodeURIComponent(userId)}`);
     currentUserProfile = user;
+	currentUserId = user.id;
+
+	
 
     $("usersProfileJson").textContent = JSON.stringify(user, null, 2);
     setStatus($("usersProfileStatus"), "User loaded", false);
