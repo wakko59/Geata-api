@@ -60,4 +60,4 @@ router.get("/profiles/users/:id", requireAdminKey, async (req, res) => {
   }
 });
 
-export default routes;
+export default router;
