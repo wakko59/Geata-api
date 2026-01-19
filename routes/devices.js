@@ -138,14 +138,25 @@ router.put(
   requireAdminKey,
   async (req, res) => {
     const { deviceId, userId } = req.params;
-    const { scheduleId } = req.body || {};
-    await q(
-      `UPDATE device_users SET schedule_id=$1 WHERE device_id=$2 AND user_id=$3`,
-      [scheduleId, deviceId, userId]
-    );
-    res.json({ scheduleId });
+    const { scheduleId } = req.body;
+
+    try {
+      await q(
+        `INSERT INTO device_users (device_id, user_id, schedule_id)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (device_id, user_id)
+         DO UPDATE SET schedule_id = EXCLUDED.schedule_id`,
+        [deviceId, userId, scheduleId]
+      );
+
+      res.json({ deviceId, userId, scheduleId });
+    } catch (err) {
+      console.error("PUT schedule-assignment failed:", err);
+      res.status(500).json({ error: "Failed to save schedule assignment" });
+    }
   }
 );
+
 
 // GET current notifications (event types) for a user at a gate
 router.get(
