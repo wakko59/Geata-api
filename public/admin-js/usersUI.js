@@ -3,6 +3,19 @@
 import { $, setStatus, renderEventCheckboxPanel, setPanelChecked, getPanelChecked } from "./helpers.js";
 import { apiJson } from "./api.js";
 
+export function fillUserSelect(selectEl, users) {
+  if (!selectEl) return;
+  const list = users || allUsers;
+  selectEl.innerHTML = `<option value="">-- Select a user --</option>`;
+  list.forEach(u => {
+    const o = document.createElement("option");
+    o.value = u.id;
+    o.textContent = `${u.name || "(no name)"}${u.email ? " · " + u.email : ""} [${u.id}]`;
+    selectEl.appendChild(o);
+  });
+}
+
+
 // State
 let allUsers = [];
 let allSchedules = [];
@@ -10,6 +23,7 @@ let allDevices = [];
 let currentUserId = "";
 let currentUserProfile = null;
 let currentUserDeviceId = "";
+
 
 // ==========================
 // Load Users
