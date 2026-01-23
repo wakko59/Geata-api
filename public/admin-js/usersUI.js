@@ -2,7 +2,7 @@
 
 import { $, setStatus, renderEventCheckboxPanel, setPanelChecked, getPanelChecked } from "./helpers.js";
 import { apiJson } from "./api.js";
-
+import { loadUserProfile, loadAndRenderUserProfile } from "./usersUI.js"; // (or local loadUserProfile)
 // State
 let allUsers = [];
 let allSchedules = [];
@@ -72,7 +72,25 @@ export function initUsersUI() {
   });
 
   // Load Profile
+ 
 $("usersLoadProfileBtn")?.addEventListener("click", async () => {
+  const userId = $("usersSelect").value;
+  if (!userId) {
+    setStatus($("usersProfileStatus"), "Select a user first", true);
+    return;
+  }
+  setStatus($("usersProfileStatus"), "Loading user profile…", false);
+
+  try {
+    await loadAndRenderUserProfile(userId);
+  } catch (e) {
+    setStatus($("usersProfileStatus"), "Error loading profile: " + e.message, true);
+  }
+});
+
+  
+  
+/*$("usersLoadProfileBtn")?.addEventListener("click", async () => {
   const userId = $("usersSelect").value;
   if (!userId) {
     setStatus($("usersProfileStatus"), "Select a user first", true);
@@ -109,7 +127,7 @@ $("usersLoadProfileBtn")?.addEventListener("click", async () => {
   } catch (e) {
     setStatus($("usersProfileStatus"), "Error loading user: " + e.message, true);
   }
-});
+});*/
 
 
 
