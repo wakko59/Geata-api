@@ -14,6 +14,31 @@ export function fillUserSelect(selectEl, users) {
     selectEl.appendChild(o);
   });
 }
+// ==========================
+// Credential Editor Helpers
+// ==========================
+
+// Controls whether credential inputs are editable or read‑only
+let userCredEditing = false;
+
+export function setUserCredEditing(enabled) {
+  userCredEditing = !!enabled;
+
+  $("userCredName").disabled = !userCredEditing;
+  $("userCredEmail").disabled = !userCredEditing;
+  $("userCredPhone").disabled = !userCredEditing;
+  $("userCredPassword").disabled = !userCredEditing;
+
+  // Optionally update UI appearance (add/remove a class, etc.)
+  if (userCredEditing) {
+    $("editUserBtn")?.classList.add("editing");
+  } else {
+    $("editUserBtn")?.classList.remove("editing");
+  }
+
+  // Save button should only be active while editing
+  $("saveUserBtn").disabled = !userCredEditing;
+}
 
 
 // State
