@@ -2,7 +2,7 @@
 
 import { $, setStatus, renderEventCheckboxPanel, setPanelChecked, getPanelChecked } from "./helpers.js";
 import { apiJson } from "./api.js";
-import { loadUserProfile, loadAndRenderUserProfile } from "./usersUI.js"; // (or local loadUserProfile)
+
 // State
 let allUsers = [];
 let allSchedules = [];
