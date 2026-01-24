@@ -2,6 +2,14 @@
 
 import { $, setStatus, renderEventCheckboxPanel, setPanelChecked, getPanelChecked } from "./helpers.js";
 import { apiJson } from "./api.js";
+export { getPanelChecked } from "./helpers.js";
+
+
+// Expose helper functions and state for console & handler use
+window.getPanelChecked = getPanelChecked;
+window.setPanelChecked = setPanelChecked;
+window.loadAndRenderUserProfile = loadAndRenderUserProfile;
+
 
 export function fillUserSelect(selectEl, users) {
   if (!selectEl) return;
@@ -21,32 +29,32 @@ export function fillUserSelect(selectEl, users) {
 export function onUsersGateChanged() {
   const deviceId = $("usersDeviceSelect").value;
   currentUserDeviceId = deviceId;
+  window.currentUserDeviceId = currentUserDeviceId; // expose
 
-  // If no device selected, clear and disable related UI
+  // If no device selected, clear related UI
   if (!currentUserProfile || !deviceId) {
-    $("usersScheduleSelect").innerHTML = ""; 
+    $("usersScheduleSelect").innerHTML = "";
     $("usersScheduleSelect").disabled = true;
     $("usersSaveScheduleBtn").disabled = true;
+    $("usersEmailPanel").innerHTML = "";
     $("usersSaveEmailBtn").disabled = true;
-    setPanelChecked($("usersEmailPanel"), []);
     return;
   }
 
-  // Find this device’s profile record
-  const dev = (currentUserProfile.devices || [])
-    .find(d => d.deviceId === deviceId);
+  // Find this device’s entry in the profile
+  const dev = currentUserProfile.devices.find(d => d.deviceId === deviceId) || {};
 
-  // Populate schedule dropdown
+  // ===== Populate schedule dropdown =====
   const schedSel = $("usersScheduleSelect");
   schedSel.innerHTML = "";
 
   // Always add default 24/7 option
   const optDefault = document.createElement("option");
   optDefault.value = "";
-  optDefault.textContent = "24/7 (no schedule)";
+  optDefault.textContent = "24/7 (default)";
   schedSel.appendChild(optDefault);
 
-  // Add all schedules (loaded globally via loadSchedules)
+  // Add each loaded schedule
   (window.appSchedules || []).forEach(s => {
     const o = document.createElement("option");
     o.value = String(s.id);
@@ -54,23 +62,20 @@ export function onUsersGateChanged() {
     schedSel.appendChild(o);
   });
 
-  // Select this device’s schedule if any
-  schedSel.value = dev && dev.scheduleId != null ? String(dev.scheduleId) : "";
+  // Pre‑select whatever schedule is assigned
+  schedSel.value = dev.scheduleId != null ? String(dev.scheduleId) : "";
 
-  // Enable schedule elements
   schedSel.disabled = false;
-  $("usersSaveScheduleBtn").disabled = !deviceId;
+  $("usersSaveScheduleBtn").disabled = false;
 
-  // Populate email alerts panel
+  // ===== Populate email alert checkboxes =====
   renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
 
-  const eventTypes = (dev && dev.notifications && Array.isArray(dev.notifications.eventTypes))
-    ? dev.notifications.eventTypes
-    : [];
-
-  setPanelChecked($("usersEmailPanel"), eventTypes);
-  $("usersSaveEmailBtn").disabled = !deviceId;
+  // If there are existing subscriptions for this user+gate, check them
+  setPanelChecked($("usersEmailPanel"), dev.notifications?.eventTypes || []);
+  $("usersSaveEmailBtn").disabled = false;
 }
+
 
 // ==========================
 // Credential Editor Helpers
@@ -138,6 +143,7 @@ export async function loadUserProfile(userId, { force=false }={}) {
 export async function loadAndRenderUserProfile(userId) {
   currentUserId = userId;
   currentUserProfile = null;
+  window.currentUserId = currentUserId;
   currentUserDeviceId = "";
 
   // Reset UI
@@ -294,5 +300,55 @@ export function initUsersUI() {
     onUsersGateChanged();
   });
 
-  // … rest of the listeners remain unchanged …
+  // Save Schedule
+$("usersSaveScheduleBtn")?.addEventListener("click", async () => {
+  const scheduleId = $("usersScheduleSelect").value || null;
+  console.log("SaveSchedule clicked:", {
+    userId: $("usersSelect").value,
+    deviceId: $("usersDeviceSelect").value,
+    scheduleId
+  });
+
+  // Basic validation
+  if (!$("usersSelect").value || !$("usersDeviceSelect").value) {
+    setStatus($("usersScheduleStatus"), "Pick user + gate", true);
+    return;
+  }
+
+  try {
+    await apiJson(
+      `/devices/${encodeURIComponent($("usersDeviceSelect").value)}/users/${encodeURIComponent($("usersSelect").value)}/schedule-assignment`,
+      { method: "PUT", body: { scheduleId } }
+    );
+    setStatus($("usersScheduleStatus"), "Schedule saved", false);
+  } catch (e) {
+    setStatus($("usersScheduleStatus"), "Save error: " + e.message, true);
+  }
+});
+
+// Save Email Alerts
+$("usersSaveEmailBtn")?.addEventListener("click", async () => {
+  const eventTypes = getPanelChecked($("usersEmailPanel"));
+  console.log("SaveEmail clicked:", {
+    userId: $("usersSelect").value,
+    deviceId: $("usersDeviceSelect").value,
+    eventTypes
+  });
+
+  if (!$("usersSelect").value || !$("usersDeviceSelect").value) {
+    setStatus($("usersEmailStatus"), "Pick user + gate", true);
+    return;
+  }
+
+  try {
+    await apiJson(
+      `/devices/${encodeURIComponent($("usersDeviceSelect").value)}/users/${encodeURIComponent($("usersSelect").value)}/notifications`,
+      { method: "PUT", body: { eventTypes } }
+    );
+    setStatus($("usersEmailStatus"), "Email subscriptions saved", false);
+  } catch (e) {
+    setStatus($("usersEmailStatus"), "Save email error: " + e.message, true);
+  }
+});
+// … rest of the listeners remain unchanged …
 }
