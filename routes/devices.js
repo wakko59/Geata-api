@@ -227,5 +227,54 @@ router.put(
   }
 );
 
+// Add user to a gate
+router.post("/devices/:deviceId/users", requireAdminKey, async (req, res) => {
+  const { deviceId } = req.params;
+  const { userId, role, scheduleId, eventTypes } = req.body || {};
+
+  if (!userId || !role) {
+    return badRequest(res, "userId and role are required");
+  }
+
+  // Upsert into device_users
+  await q(
+    `INSERT INTO device_users (device_id, user_id, role, schedule_id)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (device_id, user_id) DO UPDATE
+     SET role = EXCLUDED.role, schedule_id = EXCLUDED.schedule_id`,
+    [deviceId, userId, role, scheduleId || null]
+  );
+
+  // Optionally insert notification subscriptions
+  if (Array.isArray(eventTypes)) {
+    // remove old
+    await q(
+      "DELETE FROM device_notifications_subscriptions WHERE device_id=$1 AND user_id=$2",
+      [deviceId, userId]
+    );
+    // insert new
+    for (const ev of eventTypes) {
+      await q(
+        `INSERT INTO device_notifications_subscriptions (device_id,user_id,event_type,enabled)
+         VALUES ($1,$2,$3,true)`,
+        [deviceId, userId, ev]
+      );
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// Remove user from a gate
+router.delete("/devices/:deviceId/users/:userId", requireAdminKey, async (req, res) => {
+  const { deviceId, userId } = req.params;
+
+  await q(
+    "DELETE FROM device_users WHERE device_id=$1 AND user_id=$2",
+    [deviceId, userId]
+  );
+
+  res.json({ success: true });
+});
 
 export default router;

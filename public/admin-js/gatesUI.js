@@ -144,6 +144,47 @@ export async function loadGateSettings(gateId) {
     setStatus($("gatesSettingsStatus"), "Settings load error: " + e.message, true);
   }
 }
+async function renderGateUsers(gateId) {
+  const tbody = $("gatesUsersTable");
+  tbody.innerHTML = "";
+
+  try {
+    // Fetch profiles including this gate
+    const r = await apiJson(`/devices/${encodeURIComponent(gateId)}/users`);
+    // Expect array of { userId, role, scheduleId, … }
+    (r || []).forEach(u => {
+      const tr = document.createElement("tr");
+
+      const userCell = document.createElement("td");
+      userCell.textContent = `${u.name} [${u.userId}]`;
+      tr.appendChild(userCell);
+
+      const roleCell = document.createElement("td");
+      roleCell.textContent = u.role;
+      tr.appendChild(roleCell);
+
+      const actionsCell = document.createElement("td");
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "Remove";
+      removeBtn.className = "btn-small btn-danger";
+      removeBtn.addEventListener("click", async () => {
+        if (!confirm(`Remove ${u.name} from gate ${gateId}?`)) return;
+        try {
+          await apiJson(`/devices/${encodeURIComponent(gateId)}/users/${encodeURIComponent(u.userId)}`, { method: "DELETE" });
+          tr.remove();
+        } catch (e) {
+          setStatus($("gatesUsersStatus"), "Remove failed: " + e.message, true);
+        }
+      });
+      actionsCell.appendChild(removeBtn);
+      tr.appendChild(actionsCell);
+
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    setStatus($("gatesUsersStatus"), "Load users failed: " + e.message, true);
+  }
+}
 
 export async function saveGateSettings(gateId) {
   if (!gateId) return;

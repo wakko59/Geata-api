@@ -72,6 +72,7 @@
 
 <div id="screen-users" class="screen">
   <h2>Users</h2>
+
   <div class="section">
     <input id="usersSearch" placeholder="Search users...">
     <button id="usersSearchBtn">Search</button>
@@ -90,21 +91,61 @@
     <pre id="usersProfileJson"></pre>
   </div>
 
+  <!-- ================= Gate‑Specific Settings ================= -->
+
   <div class="section">
     <label>Gate</label>
     <select id="usersDeviceSelect"></select>
+  </div>
 
+  <div class="section">
     <label>Schedule</label>
     <select id="usersScheduleSelect"></select>
     <button id="usersSaveScheduleBtn">Save Schedule</button>
     <div id="usersScheduleStatus" class="status"></div>
+  </div>
 
-    <label>Email Alerts</label> <div id="usersEmailPanel"></div>
+  <div class="section">
+    <label>Email Alerts</label>
+    <div id="usersEmailPanel"></div>
     <button id="usersSaveEmailBtn">Save Email Subscriptions</button>
     <div id="usersEmailStatus" class="status"></div>
   </div>
-  
 
+  <div class="section">
+    <label>Role</label>
+    <select id="usersGateRole">
+      <option value="operator">operator</option>
+      <option value="administrator">administrator</option>
+    </select>
+    <button id="usersSaveRoleBtn">Save Role</button>
+    <div id="usersRoleStatus" class="status"></div>
+  </div>
+  
+  <div class="section" id="usersAddToGateSection">
+  <h4>Add This User to Another Gate</h4>
+
+  <label>Select Gate</label>
+  <select id="usersAddGateSelect"></select>
+
+  <label>Role</label>
+  <select id="usersAddGateRole">
+    <option value="operator">operator</option>
+    <option value="administrator">administrator</option>
+  </select>
+
+  <label>Initial Schedule</label>
+  <select id="usersAddGateSchedule"></select>
+
+  <label>Initial Alerts</label>
+  <div id="usersAddGateEmailPanel"></div>
+
+  <button id="usersAddGateBtn">Add to Gate</button>
+  <div id="usersAddGateStatus" class="status"></div>
+</div>
+
+
+  <!-- =============== User Credentials (Global) =============== -->
 
   <div class="section">
     <h3>User Credentials</h3>
@@ -113,12 +154,14 @@
       <label>Name <input id="userCredName"></label>
       <label>Email <input id="userCredEmail"></label>
       <label>Phone <input id="userCredPhone"></label>
-      <label>Password <input id="userCredPassword"></label>
+      <label>Password <input id="userCredPassword" placeholder="leave blank to keep"></label>
     </div>
     <button id="editUserBtn">Edit User</button>
     <button id="saveUserBtn">Save User</button>
     <div id="userCredStatus" class="status"></div>
   </div>
+
+  <!-- ============== Create New User Panel ============== -->
 
   <div class="section">
     <button id="addUserBtn">Add New User</button>
@@ -128,9 +171,9 @@
       <label>Email <input id="newUserEmail"></label>
       <label>Phone <input id="newUserPhone"></label>
       <label>Password <input id="newUserPassword"></label>
-      <label>Attach Role <select id="newUserAttachRole">
-        <option value="administrator">administrator</option>
+      <label>Role <select id="newUserAttachRole">
         <option value="operator">operator</option>
+        <option value="administrator">administrator</option>
       </select></label>
       <div id="newUserDevicesPanel"></div>
       <button id="createUserSaveBtn">Save</button>
@@ -140,6 +183,7 @@
   </div>
 </div>
 
+
 <div id="screen-gates" class="screen">
   <h2>Gates</h2>
   <label>Select a gate</label>
@@ -148,9 +192,10 @@
 
   <div style="margin-top:.8rem;">
     <table>
-      <tr><td>Users in Gate</td><td>Actions</td></tr>
-      <tbody id="gatesUsersTable"></tbody>
-    </table>
+  <tr><th>User</th><th>Role</th><th>Actions</th></tr>
+  <tbody id="gatesUsersTable"></tbody>
+</table>
+
     <div id="gatesUsersStatus" class="status"></div>
   </div>
 

@@ -61,6 +61,7 @@ export function onUsersGateChanged() {
     o.textContent = s.name;
     schedSel.appendChild(o);
   });
+ 
 
   // Pre‑select whatever schedule is assigned
   schedSel.value = dev.scheduleId != null ? String(dev.scheduleId) : "";
@@ -70,6 +71,7 @@ export function onUsersGateChanged() {
 
   // ===== Populate email alert checkboxes =====
   renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
+  
 
   // If there are existing subscriptions for this user+gate, check them
   setPanelChecked($("usersEmailPanel"), dev.notifications?.eventTypes || []);
@@ -247,6 +249,45 @@ export function initUsersUI() {
       setStatus($("usersListStatus"), "Search error: " + e.message, true);
     }
   });
+async function populateUsersAddToGateSelect() {
+  // List all devices
+  const allDevices = await apiJson("/devices");
+  const sel = $("usersAddGateSelect");
+  sel.innerHTML = `<option value="">-- Select a gate --</option>`;
+  allDevices.forEach(d => {
+    const o = document.createElement("option");
+    o.value = d.id;
+    o.textContent = d.name || d.id;
+    sel.appendChild(o);
+  });
+}
+
+// Populate schedules in “add” panel
+function populateUsersAddScheduleSelect() {
+  const sel = $("usersAddGateSchedule");
+  sel.innerHTML = "";
+  const optDefault = document.createElement("option");
+  optDefault.value = "";
+  optDefault.textContent = "24/7 (no schedule)";
+  sel.appendChild(optDefault);
+
+  (window.appSchedules || []).forEach(s => {
+    const o = document.createElement("option");
+    o.value = String(s.id);
+    o.textContent = s.name;
+    sel.appendChild(o);
+  });
+}
+
+// Init Add to Gate UI
+function initUsersAddToGateUI() {
+  populateUsersAddToGateSelect();
+  populateUsersAddScheduleSelect();
+  renderEventCheckboxPanel($("usersAddGateEmailPanel"), window.ALERT_EVENT_TYPES);
+}
+
+// Call as part of initUsersUI
+initUsersAddToGateUI();
 
   $("usersShowAllBtn")?.addEventListener("click", async () => {
     $("usersSearch").value = "";
@@ -308,6 +349,7 @@ $("usersSaveScheduleBtn")?.addEventListener("click", async () => {
     deviceId: $("usersDeviceSelect").value,
     scheduleId
   });
+  
 
   // Basic validation
   if (!$("usersSelect").value || !$("usersDeviceSelect").value) {
@@ -351,4 +393,27 @@ $("usersSaveEmailBtn")?.addEventListener("click", async () => {
   }
 });
 // … rest of the listeners remain unchanged …
+$("usersAddGateBtn")?.addEventListener("click", async () => {
+  const userId = $("usersSelect").value;
+  const deviceId = $("usersAddGateSelect").value;
+  const role = $("usersAddGateRole").value;
+  const scheduleId = $("usersAddGateSchedule").value || null;
+  const eventTypes = getPanelChecked($("usersAddGateEmailPanel"));
+
+  if (!userId || !deviceId) {
+    setStatus($("usersAddGateStatus"), "Pick user + gate", true);
+    return;
+  }
+
+  try {
+    await apiJson(`/devices/${encodeURIComponent(deviceId)}/users`, {
+      method: "POST",
+      body: { userId, role, scheduleId, eventTypes }
+    });
+    setStatus($("usersAddGateStatus"), "Added user to gate", false);
+  } catch (e) {
+    setStatus($("usersAddGateStatus"), "Add to gate error: " + e.message, true);
+  }
+});
+
 }
