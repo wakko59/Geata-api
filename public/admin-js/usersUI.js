@@ -69,7 +69,15 @@ export function onUsersGateChanged() {
   schedSel.disabled = false;
   $("usersSaveScheduleBtn").disabled = false;
 
- // No email alerts panel on Users screen anymore
+ // ===== Populate email alert checkboxes =====
+renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
+
+// If there are existing subscriptions for this user + gate, check them
+setPanelChecked($("usersEmailPanel"), dev.notifications?.eventTypes || []);
+
+// Enable the Save Email button
+$("usersSaveEmailBtn").disabled = false;
+
 
 }
 
@@ -146,10 +154,13 @@ export async function loadAndRenderUserProfile(userId) {
   // Reset UI
   $("usersDeviceSelect").innerHTML = "";
   $("usersScheduleSelect").innerHTML = "";
-  $("usersScheduleSelect").disabled = true;
-  $("usersSaveScheduleBtn").disabled = true;
-  $("usersSaveEmailBtn").disabled = true;
-  setPanelChecked($("usersEmailPanel"), []);
+ $("usersScheduleSelect").disabled = true;
+$("usersSaveScheduleBtn").disabled = true;
+
+// Prepare email alerts for gate UI
+$("usersEmailPanel").innerHTML = "";
+$("usersSaveEmailBtn").disabled = true;
+$("usersEmailStatus") && ($("usersEmailStatus").textContent = "");
   $("usersProfileJson").textContent = "";
 
   $("usersPickedUser") && ($("usersPickedUser").textContent = "");
@@ -323,6 +334,33 @@ $("usersSaveScheduleBtn")?.addEventListener("click", async () => {
     setStatus($("usersScheduleStatus"), "Schedule saved", false);
   } catch (e) {
     setStatus($("usersScheduleStatus"), "Save error: " + e.message, true);
+  }
+});
+// Save Email Alerts for selected gate
+$("usersSaveEmailBtn")?.addEventListener("click", async () => {
+  const userId = $("usersSelect").value;
+  const deviceId = $("usersDeviceSelect").value;
+  const eventTypes = getPanelChecked($("usersEmailPanel"));
+
+  if (!userId || !deviceId) {
+    setStatus($("usersEmailStatus"), "Pick user + gate", true);
+    return;
+  }
+
+  setStatus($("usersEmailStatus"), "Saving email subscriptions…", false);
+
+  try {
+    await apiJson(
+      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/notifications`,
+      {
+        method: "PUT",
+        body: { eventTypes }
+      }
+    );
+
+    setStatus($("usersEmailStatus"), "Email subscriptions saved", false);
+  } catch (e) {
+    setStatus($("usersEmailStatus"), "Save email error: " + e.message, true);
   }
 });
 
