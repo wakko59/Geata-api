@@ -69,13 +69,8 @@ export function onUsersGateChanged() {
   schedSel.disabled = false;
   $("usersSaveScheduleBtn").disabled = false;
 
-  // ===== Populate email alert checkboxes =====
-  renderEventCheckboxPanel($("usersEmailPanel"), window.ALERT_EVENT_TYPES);
-  
+ // No email alerts panel on Users screen anymore
 
-  // If there are existing subscriptions for this user+gate, check them
-  setPanelChecked($("usersEmailPanel"), dev.notifications?.eventTypes || []);
-  $("usersSaveEmailBtn").disabled = false;
 }
 
 
@@ -249,56 +244,8 @@ export function initUsersUI() {
       setStatus($("usersListStatus"), "Search error: " + e.message, true);
     }
   });
-async function populateUsersAddToGateSelect() {
-  const userId = $("usersSelect").value;
-  if (!userId) return;
-
-  // Get all devices
-  const allDevices = await apiJson("/devices");
-  // Get gates this user already belongs to
-  const existingGates = (currentUserProfile?.devices || []).map(d => d.deviceId);
-
-  const sel = $("usersAddGateSelect");
-  sel.innerHTML = `<option value="">-- Select a gate --</option>`;
-
-  allDevices.forEach(d => {
-    // Only show gates user is NOT on
-    if (!existingGates.includes(d.id)) {
-      const o = document.createElement("option");
-      o.value = d.id;
-      o.textContent = d.name || d.id;
-      sel.appendChild(o);
-    }
-  });
-}
-
-
-// Populate schedules in “add” panel
-function populateUsersAddScheduleSelect() {
-  const sel = $("usersAddGateSchedule");
-  sel.innerHTML = "";
-  const optDefault = document.createElement("option");
-  optDefault.value = "";
-  optDefault.textContent = "24/7 (no schedule)";
-  sel.appendChild(optDefault);
-
-  (window.appSchedules || []).forEach(s => {
-    const o = document.createElement("option");
-    o.value = String(s.id);
-    o.textContent = s.name;
-    sel.appendChild(o);
-  });
-}
-
-// Init Add to Gate UI
-function initUsersAddToGateUI() {
-  populateUsersAddToGateSelect();
-  populateUsersAddScheduleSelect();
-  renderEventCheckboxPanel($("usersAddGateEmailPanel"), window.ALERT_EVENT_TYPES);
-}
 
 // Call as part of initUsersUI
-initUsersAddToGateUI();
 
   $("usersShowAllBtn")?.addEventListener("click", async () => {
     $("usersSearch").value = "";
@@ -379,59 +326,8 @@ $("usersSaveScheduleBtn")?.addEventListener("click", async () => {
   }
 });
 
-// Save Email Alerts
-$("usersSaveEmailBtn")?.addEventListener("click", async () => {
-  const eventTypes = getPanelChecked($("usersEmailPanel"));
-  console.log("SaveEmail clicked:", {
-    userId: $("usersSelect").value,
-    deviceId: $("usersDeviceSelect").value,
-    eventTypes
-  });
 
-  if (!$("usersSelect").value || !$("usersDeviceSelect").value) {
-    setStatus($("usersEmailStatus"), "Pick user + gate", true);
-    return;
-  }
 
-  try {
-    await apiJson(
-      `/devices/${encodeURIComponent($("usersDeviceSelect").value)}/users/${encodeURIComponent($("usersSelect").value)}/notifications`,
-      { method: "PUT", body: { eventTypes } }
-    );
-    setStatus($("usersEmailStatus"), "Email subscriptions saved", false);
-  } catch (e) {
-    setStatus($("usersEmailStatus"), "Save email error: " + e.message, true);
-  }
-});
-$("usersAddGateBtn")?.addEventListener("click", async () => {
-  const userId = $("usersSelect").value;
-  const deviceId = $("usersAddGateSelect").value;
-  const role = $("usersAddGateRole").value;
-  const scheduleId = $("usersAddGateSchedule").value || null;
-  const eventTypes = getPanelChecked($("usersAddGateEmailPanel"));
-
-  if (!userId || !deviceId) {
-    setStatus($("usersAddGateStatus"), "Pick user + gate", true);
-    return;
-  }
-
-  setStatus($("usersAddGateStatus"), "Adding user to gate…", false);
-
-  try {
-    await apiJson(`/devices/${encodeURIComponent(deviceId)}/users`, {
-      method: "POST",
-      body: { userId, role, scheduleId, eventTypes }
-    });
-    setStatus($("usersAddGateStatus"), "Added user to gate", false);
-
-    // Refresh the user profile and gate dropdowns
-    await loadAndRenderUserProfile(userId);
-    populateUsersAddToGateSelect();
-
-  } catch (e) {
-    setStatus($("usersAddGateStatus"), "Add to gate error: " + e.message, true);
-  }
-});
   // ————————————————
   // Edit / Save User Credentials
   // ————————————————
