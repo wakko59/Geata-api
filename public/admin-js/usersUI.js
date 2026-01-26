@@ -500,5 +500,44 @@ $("usersSaveRoleBtn")?.addEventListener("click", async () => {
   }
 });
 
+// ————————————————
+// Edit / Save User Credentials
+// ————————————————
+
+// When "Edit User" clicked → allow editing
+$("editUserBtn")?.addEventListener("click", () => {
+  setUserCredEditing(true);
+});
+
+// When "Save User" clicked → send update
+$("saveUserBtn")?.addEventListener("click", async () => {
+  const id = $("userCredId").textContent.trim();
+  const body = {
+    name: $("userCredName").value.trim(),
+    email: $("userCredEmail").value.trim(),
+    phone: $("userCredPhone").value.trim(),
+    // Only include password if it’s non‑empty
+    ...( $("userCredPassword").value ? { password: $("userCredPassword").value } : {} )
+  };
+
+  setStatus($("userCredStatus"), "Saving user…", false);
+
+  try {
+    await apiJson(`/users/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body
+    });
+
+    setStatus($("userCredStatus"), "User credentials saved", false);
+
+    // Disable editing again
+    setUserCredEditing(false);
+
+    // Refresh profile display
+    await loadAndRenderUserProfile(id);
+  } catch (e) {
+    setStatus($("userCredStatus"), "Save user error: " + e.message, true);
+  }
+});
 
 }
