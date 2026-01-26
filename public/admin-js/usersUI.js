@@ -250,17 +250,28 @@ export function initUsersUI() {
     }
   });
 async function populateUsersAddToGateSelect() {
-  // List all devices
+  const userId = $("usersSelect").value;
+  if (!userId) return;
+
+  // Get all devices
   const allDevices = await apiJson("/devices");
+  // Get gates this user already belongs to
+  const existingGates = (currentUserProfile?.devices || []).map(d => d.deviceId);
+
   const sel = $("usersAddGateSelect");
   sel.innerHTML = `<option value="">-- Select a gate --</option>`;
+
   allDevices.forEach(d => {
-    const o = document.createElement("option");
-    o.value = d.id;
-    o.textContent = d.name || d.id;
-    sel.appendChild(o);
+    // Only show gates user is NOT on
+    if (!existingGates.includes(d.id)) {
+      const o = document.createElement("option");
+      o.value = d.id;
+      o.textContent = d.name || d.id;
+      sel.appendChild(o);
+    }
   });
 }
+
 
 // Populate schedules in “add” panel
 function populateUsersAddScheduleSelect() {
@@ -392,7 +403,6 @@ $("usersSaveEmailBtn")?.addEventListener("click", async () => {
     setStatus($("usersEmailStatus"), "Save email error: " + e.message, true);
   }
 });
-// … rest of the listeners remain unchanged …
 $("usersAddGateBtn")?.addEventListener("click", async () => {
   const userId = $("usersSelect").value;
   const deviceId = $("usersAddGateSelect").value;
@@ -405,15 +415,90 @@ $("usersAddGateBtn")?.addEventListener("click", async () => {
     return;
   }
 
+  setStatus($("usersAddGateStatus"), "Adding user to gate…", false);
+
   try {
     await apiJson(`/devices/${encodeURIComponent(deviceId)}/users`, {
       method: "POST",
       body: { userId, role, scheduleId, eventTypes }
     });
     setStatus($("usersAddGateStatus"), "Added user to gate", false);
+
+    // Refresh the user profile and gate dropdowns
+    await loadAndRenderUserProfile(userId);
+    populateUsersAddToGateSelect();
+
   } catch (e) {
     setStatus($("usersAddGateStatus"), "Add to gate error: " + e.message, true);
   }
 });
+  // ————————————————
+  // Edit / Save User Credentials
+  // ————————————————
+
+  // When "Edit User" clicked → enable editing
+  $("editUserBtn")?.addEventListener("click", () => {
+    setUserCredEditing(true);
+  });
+
+  // When "Save User" clicked → save changes
+  $("saveUserBtn")?.addEventListener("click", async () => {
+    const id = $("userCredId").textContent.trim();
+    const body = {
+      name: $("userCredName").value,
+      email: $("userCredEmail").value,
+      phone: $("userCredPhone").value,
+      // Only include password if not blank
+      ...( $("userCredPassword").value ? { password: $("userCredPassword").value } : {} )
+    };
+
+    setStatus($("userCredStatus"), "Saving user…", false);
+
+    try {
+      await apiJson(`/users/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body
+      });
+
+      setStatus($("userCredStatus"), "User credentials saved", false);
+      setUserCredEditing(false);
+
+      // Refresh profile in panel
+      await loadAndRenderUserProfile(id);
+    } catch (e) {
+      setStatus($("userCredStatus"), "Save user error: " + e.message, true);
+    }
+  });
+
+
+$("usersSaveRoleBtn")?.addEventListener("click", async () => {
+  const userId = $("usersSelect").value;
+  const deviceId = $("usersDeviceSelect").value;
+  const role = $("usersGateRole").value;
+
+  if (!userId || !deviceId) {
+    setStatus($("usersRoleStatus"), "Pick user + gate", true);
+    return;
+  }
+
+  setStatus($("usersRoleStatus"), "Saving role…", false);
+
+  try {
+    await apiJson(
+      `/devices/${encodeURIComponent(deviceId)}/users/${encodeURIComponent(userId)}/role`,
+      {
+        method: "PUT",
+        body: { role }
+      }
+    );
+    setStatus($("usersRoleStatus"), "Role saved", false);
+
+    // Refresh profile’s gate info
+    await loadAndRenderUserProfile(userId);
+  } catch (e) {
+    setStatus($("usersRoleStatus"), "Save role error: " + e.message, true);
+  }
+});
+
 
 }
