@@ -276,5 +276,34 @@ router.delete("/devices/:deviceId/users/:userId", requireAdminKey, async (req, r
 
   res.json({ success: true });
 });
+// Update role for a user on a specific gate
+router.put(
+  "/devices/:deviceId/users/:userId/role",
+  requireAdminKey,
+  async (req, res) => {
+    const { deviceId, userId } = req.params;
+    const { role } = req.body || {};
+
+    if (!role) {
+      return badRequest(res, "role is required");
+    }
+
+    try {
+      await q(
+        `UPDATE device_users
+         SET role = $1
+         WHERE device_id = $2
+           AND user_id = $3`,
+        [role, deviceId, userId]
+      );
+
+      res.json({ success: true });
+    } catch (e) {
+      console.error("Role update error:", e);
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
 
 export default router;
