@@ -5,6 +5,8 @@ import { signToken } from "../utils/auth.js";
 import { one, q } from "../utils/db.js";
 import bcrypt from "bcryptjs";
 import { badRequest } from "../utils/errors.js";
+import jwt from "jsonwebtoken";
+
 
 const router = express.Router();
 
@@ -37,6 +39,9 @@ router.post("/auth/register", async (req, res) => {
 // ================================
 // GET /me — return logged-in user
 // ================================
+// ================================
+// GET /me — Return the logged‑in user
+// ================================
 router.get("/me", async (req, res) => {
   try {
     const auth = req.headers.authorization || "";
@@ -45,13 +50,16 @@ router.get("/me", async (req, res) => {
     }
 
     const token = auth.slice(7);
+
     let payload;
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (e) {
+    } catch (err) {
+      console.error("JWT verify failed:", err);
       return res.status(401).json({ error: "Invalid token" });
     }
 
+    // Fetch user (exclude password_hash)
     const user = await one(
       "SELECT id, name, email, phone FROM users WHERE id=$1",
       [payload.userId]
@@ -67,6 +75,7 @@ router.get("/me", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 
 
 // Login Route
