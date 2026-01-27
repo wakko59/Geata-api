@@ -31,8 +31,45 @@ router.post("/auth/register", async (req, res) => {
   const token = signToken(id);
   res.status(201).json({ token, user: { id, name, email, phone: p } });
 });
+// ————————————————
+// Return the current logged‑in user
+// ————————————————
+// ================================
+// GET /me — return logged-in user
+// ================================
+router.get("/me", async (req, res) => {
+  try {
+    const auth = req.headers.authorization || "";
+    if (!auth.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing token" });
+    }
 
-// Login
+    const token = auth.slice(7);
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const user = await one(
+      "SELECT id, name, email, phone FROM users WHERE id=$1",
+      [payload.userId]
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (e) {
+    console.error("GET /me error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// Login Route
 router.post("/auth/login", async (req, res) => {
   const { phone, email, password } = req.body || {};
   if ((!phone && !email) || !password) {
