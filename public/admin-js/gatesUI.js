@@ -223,52 +223,34 @@ async function ioPulse(gateId, path, durationMs, statusEl) {
 }
 
 export function initGatesUI() {
+  // When the Load Gate button is clicked
   $("gatesLoadBtn")?.addEventListener("click", async () => {
-    const gateId = $("gatesSelect").value || "";
+    const gateId = $("gatesSelect").value;
     if (!gateId) {
-      setStatus($("gatesStatus"), "Select a gate", true);
+      setStatus($("gatesUsersStatus"), "Select a gate", true);
       return;
     }
-    // Load gate details
-    await loadGateUsers(gateId);
-    await loadGateSettings(gateId);
-  });
 
-  $("gatesSaveSettingsBtn")?.addEventListener("click", () => {
-    const gateId = $("gatesSelect").value || "";
-    saveGateSettings(gateId);
-  });
+    setStatus($("gatesUsersStatus"), "Loading users…", false);
 
-  $("gatesAux1PulseBtn")?.addEventListener("click", () =>
-    ioPulse($("gatesSelect").value, "aux1-test", 1000, $("gatesIoStatus"))
-  );
+    try {
+      // Render the user list for this gate
+      await renderGateUsers(gateId);
 
-  $("gatesAux2PulseBtn")?.addEventListener("click", () =>
-    ioPulse($("gatesSelect").value, "aux2-test", 2000, $("gatesIoStatus"))
-  );
+      // (Optional) load other gate settings if you have logic here
+      await loadGateSettings(gateId);
 
-  $("simGateOpenedBtn")?.addEventListener("click", () =>
-    ioPulse($("gatesSelect").value, "simulate-event", { type: "GATE_OPENED" }, $("gatesSimStatus"))
-  );
-
-  $("simGateClosedBtn")?.addEventListener("click", () =>
-    ioPulse($("gatesSelect").value, "simulate-event", { type: "GATE_CLOSED" }, $("gatesSimStatus"))
-  );
-
-  $("simForcedBtn")?.addEventListener("click", () =>
-    ioPulse($("gatesSelect").value, "simulate-event", { type: "GATE_FORCED_OPEN" }, $("gatesSimStatus"))
-  );
-
-  $("simTamperBtn")?.addEventListener("click", () =>
-    ioPulse($("gatesSelect").value, "simulate-event", { type: "TAMPER_OPENED" }, $("gatesSimStatus"))
-  );
-
-  // ===== Add User to Gate =====
-  $("gatesAddUserBtn")?.addEventListener("click", async () => {
-    // Ensure user list loaded
-    if (!allUsers.length) {
-      await loadUsers(null);
+      setStatus($("gatesUsersStatus"), `Users loaded for gate ${gateId}`, false);
+    } catch (e) {
+      setStatus($("gatesUsersStatus"), "Load gate error: " + e.message, true);
+      console.error("Gate load error:", e);
     }
+  });
+
+  // Add User to Gate — show panel
+  $("gatesAddUserBtn")?.addEventListener("click", async () => {
+    // Load users for selection
+    await loadUsers(null);
     fillUserSelect($("gateAddUserSelect"), allUsers);
 
     $("gateAddUserPanel").style.display = "block";
@@ -283,20 +265,84 @@ export function initGatesUI() {
     const userId = $("gateAddUserSelect").value;
     const role = $("gateAddUserRole").value;
 
+    if (!gateId || !userId) {
+      return setStatus($("gateAddUserStatus"), "Select gate + user", true);
+    }
+
+    setStatus($("gateAddUserStatus"), "Adding user…", false);
+
     try {
       await apiJson(`/devices/${encodeURIComponent(gateId)}/users`, {
         method: "POST",
-        body: { userId, role },
+        body: { userId, role }
       });
 
-      setStatus($("gateAddUserStatus"), "User added", false);
-      $("gateAddUserPanel").style.display = "none";
-      await loadGateUsers(gateId);
+      setStatus($("gateAddUserStatus"), "User added to gate", false);
 
+      // Refresh gate user list
+      await renderGateUsers(gateId);
+
+      $("gateAddUserPanel").style.display = "none";
     } catch (e) {
-      setStatus($("gateAddUserStatus"), "Add user error: " + e.message, true);
+      setStatus($("gateAddUserStatus"), "Add user failed: " + e.message, true);
     }
   });
+}
+export async function renderGateUsers(gateId) {
+  const tbody = $("gatesUsersTable");
+  if (!tbody) return;
 
-  $("gateAddUserPanel").style.display = "none";
+  tbody.innerHTML = ""; // Clear existing rows
+
+  try {
+    // Fetch all user memberships for this gate
+    const usersOnGate = await apiJson(`/devices/${encodeURIComponent(gateId)}/users`);
+    // Expected: array like [{ userId, name, role, scheduleId, notifications: { eventTypes: [...] }}, …]
+
+    if (!Array.isArray(usersOnGate) || usersOnGate.length === 0) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="3">No users assigned to this gate</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    usersOnGate.forEach(u => {
+      const tr = document.createElement("tr");
+
+      const userCell = document.createElement("td");
+      userCell.textContent = `${u.name || ""} [${u.userId || u.id}]`;
+      tr.appendChild(userCell);
+
+      const roleCell = document.createElement("td");
+      roleCell.textContent = u.role || "";
+      tr.appendChild(roleCell);
+
+      const actionsCell = document.createElement("td");
+
+      // Remove button
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "Remove";
+      removeBtn.className = "btn-small btn-danger";
+      removeBtn.addEventListener("click", async () => {
+        if (!confirm(`Remove ${u.name} from gate ${gateId}?`)) return;
+        try {
+          await apiJson(`/devices/${encodeURIComponent(gateId)}/users/${encodeURIComponent(u.userId || u.id)}`, {
+            method: "DELETE"
+          });
+          tr.remove();
+        } catch (err) {
+          setStatus($("gatesUsersStatus"), "Remove failed: " + err.message, true);
+        }
+      });
+
+      actionsCell.appendChild(removeBtn);
+
+      tr.appendChild(actionsCell);
+
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    setStatus($("gatesUsersStatus"), "Error loading users: " + e.message, true);
+    console.error("renderGateUsers error:", e);
+  }
 }

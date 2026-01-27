@@ -304,6 +304,44 @@ router.put(
     }
   }
 );
+// List users assigned to a specific gate
+router.get("/devices/:deviceId/users", requireAdminKey, async (req, res) => {
+  const { deviceId } = req.params;
+
+  try {
+    const rows = await q(
+      `
+      SELECT 
+        du.user_id AS "userId",
+        u.name AS name,
+        du.role AS role,
+        du.schedule_id AS "scheduleId",
+        json_agg(dns.event_type) AS "eventTypes"
+      FROM device_users du
+      JOIN users u ON u.id = du.user_id
+      LEFT JOIN device_notifications_subscriptions dns
+        ON dns.device_id = du.device_id
+       AND dns.user_id = du.user_id
+      WHERE du.device_id = $1
+      GROUP BY du.user_id, u.name, du.role, du.schedule_id
+      `,
+      [deviceId]
+    );
+
+    // Map eventTypes from aggregated row
+    const result = rows.map(r => ({
+      userId: r.userId,
+      name: r.name,
+      role: r.role,
+      scheduleId: r.scheduleId,
+      notifications: { eventTypes: r.eventTypes || [] }
+    }));
+    res.json(result);
+  } catch (e) {
+    console.error("GET /devices/:deviceId/users error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 
 export default router;
