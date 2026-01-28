@@ -7,6 +7,22 @@ import bcrypt from "bcryptjs";
 import { badRequest } from "../utils/errors.js";
 import jwt from "jsonwebtoken";
 
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization || "";
+  if (!auth.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing token" });
+  }
+  const token = auth.slice(7);
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = payload.userId;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+}
+
+
 
 const router = express.Router();
 
@@ -145,5 +161,99 @@ router.get("/me/devices", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+// ============================
+// GET /devices/:deviceId/user-settings
+// Return merged device settings
+// ============================
+router.get("/devices/:deviceId/user-settings", async (req, res) => {
+  const { deviceId } = req.params;
+
+  try {
+    const row = await one(
+      `
+      SELECT
+        aux1_mode,
+        gate_ajar_seconds,
+        notify_supervisor_eng,
+        settings
+      FROM device_settings
+      WHERE device_id = $1
+      `,
+      [deviceId]
+    );
+
+    // Defaults (ALWAYS returned)
+    const defaults = {
+      aux1Mode: "relay",
+      gateAjarSeconds: 60,
+      notifySupervisorOnEng: false
+    };
+
+    if (!row) {
+      return res.json(defaults);
+    }
+
+    // Merge priority:
+    // 1. defaults
+    // 2. legacy JSON settings
+    // 3. explicit columns (win)
+    const merged = {
+      ...defaults,
+      ...(row.settings || {}),
+      ...(row.aux1_mode != null && { aux1Mode: row.aux1_mode }),
+      ...(row.gate_ajar_seconds != null && {
+        gateAjarSeconds: row.gate_ajar_seconds
+      }),
+      ...(row.notify_supervisor_eng != null && {
+        notifySupervisorOnEng: row.notify_supervisor_eng
+      })
+    };
+
+    res.json(merged);
+  } catch (e) {
+    console.error("GET user-settings error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+// ================================
+// POST /devices/:deviceId/open
+// Queue an OPEN command
+// ================================
+router.post("/devices/:deviceId/open", requireAuth, async (req, res) => {
+  const { deviceId } = req.params;
+  try {
+    // Insert a new command into a command queue
+    await q(
+      `INSERT INTO device_commands (device_id, command_type, args, created_at)
+       VALUES ($1, 'OPEN', $2, NOW())`,
+      [deviceId, JSON.stringify(req.body || {})]
+    );
+
+    res.json({ status: "queued", command: "OPEN" });
+  } catch (e) {
+    console.error("POST /devices/:deviceId/open error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+// ================================
+// POST /devices/:deviceId/aux1
+// Queue an AUX1 command
+// ================================
+router.post("/devices/:deviceId/aux1", requireAuth, async (req, res) => {
+  const { deviceId } = req.params;
+  try {
+    await q(
+      `INSERT INTO device_commands (device_id, command_type, args, created_at)
+       VALUES ($1, 'AUX1', $2, NOW())`,
+      [deviceId, JSON.stringify(req.body || {})]
+    );
+
+    res.json({ status: "queued", command: "AUX1" });
+  } catch (e) {
+    console.error("POST /devices/:deviceId/aux1 error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 export default router;
