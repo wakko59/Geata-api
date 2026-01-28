@@ -93,7 +93,6 @@ router.post("/auth/login", async (req, res) => {
   const token = signToken(user.id);
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, phone: user.phone } });
 });
-import jwt from "jsonwebtoken"; // ensure this is at the top of the file
 
 // =======================================================
 // GET /me/devices — return devices for logged‑in user
