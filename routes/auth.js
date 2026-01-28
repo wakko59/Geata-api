@@ -161,60 +161,7 @@ router.get("/me/devices", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-// ============================
-// GET /devices/:deviceId/user-settings
-// Return merged device settings
-// ============================
-router.get("/devices/:deviceId/user-settings", async (req, res) => {
-  const { deviceId } = req.params;
 
-  try {
-    const row = await one(
-      `
-      SELECT
-        aux1_mode,
-        gate_ajar_seconds,
-        notify_supervisor_eng,
-        settings
-      FROM device_settings
-      WHERE device_id = $1
-      `,
-      [deviceId]
-    );
-
-    // Defaults (ALWAYS returned)
-    const defaults = {
-      aux1Mode: "relay",
-      gateAjarSeconds: 60,
-      notifySupervisorOnEng: false
-    };
-
-    if (!row) {
-      return res.json(defaults);
-    }
-
-    // Merge priority:
-    // 1. defaults
-    // 2. legacy JSON settings
-    // 3. explicit columns (win)
-    const merged = {
-      ...defaults,
-      ...(row.settings || {}),
-      ...(row.aux1_mode != null && { aux1Mode: row.aux1_mode }),
-      ...(row.gate_ajar_seconds != null && {
-        gateAjarSeconds: row.gate_ajar_seconds
-      }),
-      ...(row.notify_supervisor_eng != null && {
-        notifySupervisorOnEng: row.notify_supervisor_eng
-      })
-    };
-
-    res.json(merged);
-  } catch (e) {
-    console.error("GET user-settings error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
 // ================================
 // POST /devices/:deviceId/open
 // Queue an OPEN command
@@ -252,6 +199,58 @@ router.post("/devices/:deviceId/aux1", requireAuth, async (req, res) => {
   } catch (e) {
     console.error("POST /devices/:deviceId/aux1 error:", e);
     res.status(500).json({ error: e.message });
+  }
+});
+// ============================
+// GET /devices/:deviceId/user-settings
+// Return merged device settings
+// ============================
+router.get("/devices/:deviceId/user-settings", requireAuth, async (req, res) => {
+  const { deviceId } = req.params;
+
+  try {
+    const row = await one(
+      `
+      SELECT
+        aux1_mode,
+        gate_ajar_seconds,
+        notify_supervisor_eng,
+        settings
+      FROM device_settings
+      WHERE device_id = $1
+      `,
+      [deviceId]
+    );
+
+    // Defaults (always returned)
+    const defaults = {
+      aux1Mode: "relay",            // default if nothing stored
+      gateAjarSeconds: 60,          // default if nothing stored
+      notifySupervisorOnEng: false  // default if nothing stored
+    };
+
+    // If no row at all, just return defaults
+    if (!row) {
+      return res.json(defaults);
+    }
+
+    // Merge values: structured columns override JSON
+    const merged = {
+      ...defaults,
+      ...(row.settings || {}), // apply JSON settings first
+      ...(row.aux1_mode != null && { aux1Mode: row.aux1_mode }),
+      ...(row.gate_ajar_seconds != null && {
+        gateAjarSeconds: row.gate_ajar_seconds
+      }),
+      ...(row.notify_supervisor_eng != null && {
+        notifySupervisorOnEng: row.notify_supervisor_eng
+      })
+    };
+
+    return res.json(merged);
+  } catch (err) {
+    console.error("GET /devices/:deviceId/user-settings error:", err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
