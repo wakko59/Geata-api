@@ -93,8 +93,10 @@ router.post("/auth/login", async (req, res) => {
   const token = signToken(user.id);
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, phone: user.phone } });
 });
+import jwt from "jsonwebtoken"; // ensure this is at the top of the file
+
 // =======================================================
-// GET /me/devices — return devices for logged-in user
+// GET /me/devices — return devices for logged‑in user
 // =======================================================
 router.get("/me/devices", async (req, res) => {
   try {
@@ -109,11 +111,12 @@ router.get("/me/devices", async (req, res) => {
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
+      console.error("JWT verify failed:", err);
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    // Fetch devices this user belongs to
-    const rows = await q(
+    // Run query for devices
+    const result = await q(
       `
       SELECT 
         du.device_id AS id,
@@ -126,8 +129,12 @@ router.get("/me/devices", async (req, res) => {
       [payload.userId]
     );
 
-    // Normalize response
-    const devices = (rows || []).map((d) => ({
+    // If q() returns { rows: [...] }, use that; otherwise use result
+    const rows = Array.isArray(result)
+      ? result
+      : result?.rows || [];
+
+    const devices = rows.map((d) => ({
       id: d.id,
       name: d.name,
       role: d.role,
@@ -139,4 +146,5 @@ router.get("/me/devices", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 export default router;

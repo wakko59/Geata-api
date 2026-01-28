@@ -517,40 +517,63 @@ async function apiFetch(path, opts) {
       // -------------------------
       // Auth + Device Load
       // -------------------------
-      async function loadMeAndDevices() {
-        me = await apiFetch("/me", { method: "GET" });
-        const devs = await apiFetch("/me/devices", { method: "GET" });
+  async function loadMeAndDevices() {
+  // Ensure token is available
+  if (!token) {
+    setStatus(authStatus, "No token available", true);
+    return;
+  }
 
-        // Normalize to {id,name,role}
-        devices = (devs || [])
-          .map((d) => ({
-            id: d.id || d.deviceId || d.device_id,
-            name: d.name || "",
-            role: d.role || "operator",
-          }))
-          .filter((d) => !!d.id);
+  // First get user profile
+  let user;
+  try {
+    user = await apiFetch("/me", { method: "GET" });
+  } catch (err) {
+    setStatus(authStatus, "Error loading profile: " + err.message, true);
+    return;
+  }
+  me = user;
 
-        rebuildDeviceSelect();
-        refreshBtn.disabled = false;
-        deviceSelect.disabled = false;
+  // Now get devices with token
+  let devs;
+  try {
+    devs = await apiFetch("/me/devices", { method: "GET" });
+  } catch (err) {
+    setStatus(authStatus, "Error loading devices: " + err.message, true);
+    return;
+  }
 
-        setStatus(
-          authStatus,
-          "Logged in as " + (me.name || me.email || me.phone || me.id),
-          false,
-        );
+  // Normalize devices
+  devices = (devs || []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    role: d.role,
+  }));
 
-        if (!selectedDeviceId && devices.length) {
-          selectedDeviceId = devices[0].id;
-          localStorage.setItem("geata_deviceId", selectedDeviceId);
-        }
-        deviceSelect.value = selectedDeviceId || "";
-        applyDeviceRoleFromList();
+  rebuildDeviceSelect();
 
-        await loadDeviceSettingsSafe();
-        startPolling();
-        updateControlsEnabled();
-      }
+  refreshBtn.disabled = false;
+  deviceSelect.disabled = false;
+
+  setStatus(
+    authStatus,
+    "Logged in as " + (me.name || me.email || me.phone || me.id),
+    false
+  );
+
+  if (!selectedDeviceId && devices.length) {
+    selectedDeviceId = devices[0].id;
+    localStorage.setItem("geata_deviceId", selectedDeviceId);
+  }
+  
+  deviceSelect.value = selectedDeviceId;
+  applyDeviceRoleFromList();
+
+  await loadDeviceSettingsSafe();
+  startPolling();
+  updateControlsEnabled();
+}
+
 
       function rebuildDeviceSelect() {
         deviceSelect.innerHTML = "";
